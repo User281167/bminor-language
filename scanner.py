@@ -45,6 +45,16 @@ class TokenType(Enum):
     VOID_KEY = 'VOID_KEY'
     WHILE_KEY = 'WHILE_KEY'
 
+    # Operators
+    LT = 'LT'
+    LE = 'LE'
+    GT = 'GT'
+    GE = 'GE'
+    EQ = 'EQ'
+    NE = 'NE'
+    LAND = 'LAND'
+    LOR = 'LOR'
+
 
 class Lexer(sly.Lexer):
     tokens = {
@@ -53,8 +63,7 @@ class Lexer(sly.Lexer):
         FLOAT,
         STRING,
         CHAR,
-        INCREMENT,
-        DECREMENT,
+
         # keywords
         ARRAY_KEY,
         AUTO_KEY,
@@ -72,16 +81,20 @@ class Lexer(sly.Lexer):
         STRING_KEY,
         TRUE_KEY,
         VOID_KEY,
-        WHILE_KEY
+        WHILE_KEY,
+
+        # Operators
+        LE, LT, GE, GT, EQ, NE, LAND, LOR,
+        INCREMENT,
+        DECREMENT,
     }
 
-    literals = '+-*/%^=()[]{}:,;'
+    literals = '+-*/%^=()[]{}:,;!'
     ignore = ' \t\r'
 
     ID = r'[_a-zA-Z]\w*'
-    INCREMENT = r'\+\+'
-    DECREMENT = r'--'
 
+    # Keywords
     ID['array'] = ARRAY_KEY
     ID['auto'] = AUTO_KEY
     ID['boolean'] = BOOLEAN_KEY
@@ -99,6 +112,18 @@ class Lexer(sly.Lexer):
     ID['true'] = TRUE_KEY
     ID['void'] = VOID_KEY
     ID['while'] = WHILE_KEY
+
+    # Operators
+    INCREMENT = r'\+\+'
+    DECREMENT = r'--'
+    LE = r'<='
+    LT = r'<'
+    GE = r'>='
+    GT = r'>'
+    EQ = r'=='
+    NE = r'!='
+    LAND = r'&&'
+    LOR = r'\`'
 
     @_(r'\n+')
     def ignored_newline(self, t):
