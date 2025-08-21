@@ -44,7 +44,6 @@ class TestNumbers(unittest.TestCase):
     def test_valid_float(self):
         test_input = "3.14\n"
         tokens = list(self.lexer.tokenize(test_input))
-        print(tokens)
         self.assertEqual(len(tokens), 1)
         self.assertEqual(tokens[0].type, TokenType.FLOAT.value)
         # is instantiated as float and not int

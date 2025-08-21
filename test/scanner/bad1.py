@@ -67,7 +67,6 @@ class TestBadNumbers(unittest.TestCase):
         # no get a float because no math regex
         # so lexer only get valid tokens for this case float, ID, minus
         log, tokens = self.capture_lexer_log("3.14e-")
-        print(tokens)
         self.assertEqual(len(tokens), 3)
 
         expected = [
@@ -84,7 +83,6 @@ class TestBadNumbers(unittest.TestCase):
         # no get a float because no math regex
         # so lexer only get valid tokens for this case float, ID, plus
         log, tokens = self.capture_lexer_log("3.14e+")
-        print(tokens)
         self.assertEqual(len(tokens), 3)
 
         expected = [
@@ -131,12 +129,27 @@ class TestBadNumbers(unittest.TestCase):
     def test_bad_integer_trailing_literals(self):
         log, tokens = self.capture_lexer_log("42++-2")
 
-        self.assertEqual(len(tokens), 5)
+        self.assertEqual(len(tokens), 4)
 
         expected = [
             (TokenType.INTEGER.value, 42),
-            ('+', '+'),
-            ('+', '+'),
+            (TokenType.INCREMENT.value, '++'),
+            ('-', '-'),
+            (TokenType.INTEGER.value, 2)
+        ]
+
+        for i in range(len(tokens)):
+            self.assertEqual(tokens[i].value, expected[i][1])
+            self.assertEqual(tokens[i].type, expected[i][0])
+
+    def test_bad_integer_trailing_literals_no_space(self):
+        log, tokens = self.capture_lexer_log("42-- -2")
+
+        self.assertEqual(len(tokens), 4)
+
+        expected = [
+            (TokenType.INTEGER.value, 42),
+            (TokenType.DECREMENT.value, '--'),
             ('-', '-'),
             (TokenType.INTEGER.value, 2)
         ]

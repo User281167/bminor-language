@@ -23,21 +23,27 @@ class TokenType(Enum):
     FLOAT = 'FLOAT'
     STRING = 'STRING'
     CHAR = 'CHAR'
+    INCREMENT = 'INCREMENT'
+    DECREMENT = 'DECREMENT'
 
 
 class Lexer(sly.Lexer):
     tokens = {
-        TokenType.ID.value,
-        TokenType.INTEGER.value,
-        TokenType.FLOAT.value,
-        TokenType.STRING.value,
-        TokenType.CHAR.value
+        ID,
+        INTEGER,
+        FLOAT,
+        STRING,
+        CHAR,
+        INCREMENT,
+        DECREMENT
     }
 
     literals = '+-*/%^=()[]{}:,;'
     ignore = ' \t\r'
 
     ID = r'[_a-zA-Z]\w*'
+    INCREMENT = r'\+\+'
+    DECREMENT = r'--'
 
     @_(r'\n+')
     def ignored_newline(self, t):
@@ -51,9 +57,9 @@ class Lexer(sly.Lexer):
     def ignore_comment(self, t):
         self.lineno = t.value.count('\n')
 
-    @_(r'\d+\.\d*([eE][+-]?\d+)?'     # e.g., 3.14, 2.0e10
-       r'|\.\d+([eE][+-]?\d+)?'       # e.g., .42, .42e1
-       r'|\d+[eE][+-]?\d+')           # e.g., 2e10
+    @_(r'\d+\.\d*([eE][+-]?\d+)?',     # e.g., 3.14, 2.0e10
+       r'\.\d+([eE][+-]?\d+)?',        # e.g., .42, .42e1
+       r'\d+[eE][+-]?\d+')             # e.g., 2e10
     def FLOAT(self, t):
         try:
             t.value = float(t.value)
