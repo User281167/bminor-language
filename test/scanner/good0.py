@@ -1,9 +1,4 @@
-
 import unittest
-import sys
-import os
-
-
 from scanner import Lexer
 
 
@@ -12,7 +7,52 @@ class TestComments(unittest.TestCase):
         self.lexer = Lexer()
 
     def test_valid_cpp_comment(self):
-        test_input = "/*/ This is a valid C++ comment\n"
+        test_input = "// This is a valid C++ comment\n"
         tokens = list(self.lexer.tokenize(test_input))
-
         self.assertEqual(len(tokens), 0)
+
+    def test_valid_multiline_comment(self):
+        test_input = "/* This is a valid\nmultiline comment */\n"
+        tokens = list(self.lexer.tokenize(test_input))
+        self.assertEqual(len(tokens), 0)
+
+    def test_valid_nested_comments(self):
+        test_input = """
+        /* This is a comment with // nested single-line comment */
+        /* This is a comment with /* nested multi-line comment */ still in comment \n\n*/
+        """
+        tokens = list(self.lexer.tokenize(test_input))
+        self.assertEqual(len(tokens), 0)
+
+    def test_inline_comment(self):
+        test_input = "x = 42; // This is an inline comment\n"
+        tokens = list(self.lexer.tokenize(test_input))
+        self.assertEqual(len(tokens), 4)  # x, =, 42, ;
+
+    def test_comment_with_newlines(self):
+        test_input = "/* This is a comment\nthat spans multiple\nlines */\n"
+        tokens = list(self.lexer.tokenize(test_input))
+        self.assertEqual(len(tokens), 0)
+        self.assertEqual(self.lexer.lineno, 3)  # 3 newlines in comment
+
+    def test_comment_with_newlines_and_tokens(self):
+        test_input = "x = 42;/* This is a comment\nthat spans multiple\nlines */\n"
+        tokens = list(self.lexer.tokenize(test_input))
+        self.assertEqual(len(tokens), 4)  # x, =, 42, ;
+        self.assertEqual(self.lexer.lineno, 3)  # 3 newlines in comment
+
+    def test_comment_tokens_in_comment(self):
+        test_input = "/* This is a comment\nthat spans multiple\nlines x = 42;\n a: float = 32; */\n"
+        tokens = list(self.lexer.tokenize(test_input))
+        self.assertEqual(len(tokens), 0)
+
+    def test_ignored_tabs_and_spaces(self):
+        test_input = "    \t   // Comment with spaces and tabs\n"
+        tokens = list(self.lexer.tokenize(test_input))
+        self.assertEqual(len(tokens), 0)
+
+    # def test_comment_delimiters_in_string(self):
+    #     test_input = '"This is not a comment: /* */"'
+    #     tokens = list(self.lexer.tokenize(test_input))
+    #     # Should not be treated as comment
+    #     self.assertIn('STRING', [token.type for token in tokens])
