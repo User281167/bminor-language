@@ -26,6 +26,25 @@ class TokenType(Enum):
     INCREMENT = 'INCREMENT'
     DECREMENT = 'DECREMENT'
 
+    # Keywords
+    ARRAY_KEY = 'ARRAY_KEY'
+    AUTO_KEY = 'AUTO_KEY'
+    BOOLEAN_KEY = 'BOOLEAN_KEY'
+    CHAR_KEY = 'CHAR_KEY'
+    ELSE_KEY = 'ELSE_KEY'
+    FALSE_KEY = 'FALSE_KEY'
+    FLOAT_KEY = 'FLOAT_KEY'
+    FOR_KEY = 'FOR_KEY'
+    FUNCTION_KEY = 'FUNCTION_KEY'
+    IF_KEY = 'IF_KEY'
+    INTEGER_KEY = 'INTEGER_KEY'
+    PRINT_KEY = 'PRINT_KEY'
+    RETURN_KEY = 'RETURN_KEY'
+    STRING_KEY = 'STRING_KEY'
+    TRUE_KEY = 'TRUE_KEY'
+    VOID_KEY = 'VOID_KEY'
+    WHILE_KEY = 'WHILE_KEY'
+
 
 class Lexer(sly.Lexer):
     tokens = {
@@ -35,7 +54,25 @@ class Lexer(sly.Lexer):
         STRING,
         CHAR,
         INCREMENT,
-        DECREMENT
+        DECREMENT,
+        # keywords
+        ARRAY_KEY,
+        AUTO_KEY,
+        BOOLEAN_KEY,
+        CHAR_KEY,
+        ELSE_KEY,
+        FALSE_KEY,
+        FLOAT_KEY,
+        FOR_KEY,
+        FUNCTION_KEY,
+        IF_KEY,
+        INTEGER_KEY,
+        PRINT_KEY,
+        RETURN_KEY,
+        STRING_KEY,
+        TRUE_KEY,
+        VOID_KEY,
+        WHILE_KEY
     }
 
     literals = '+-*/%^=()[]{}:,;'
@@ -44,6 +81,24 @@ class Lexer(sly.Lexer):
     ID = r'[_a-zA-Z]\w*'
     INCREMENT = r'\+\+'
     DECREMENT = r'--'
+
+    ID['array'] = ARRAY_KEY
+    ID['auto'] = AUTO_KEY
+    ID['boolean'] = BOOLEAN_KEY
+    ID['char'] = CHAR_KEY
+    ID['else'] = ELSE_KEY
+    ID['false'] = FALSE_KEY
+    ID['float'] = FLOAT_KEY
+    ID['for'] = FOR_KEY
+    ID['function'] = FUNCTION_KEY
+    ID['if'] = IF_KEY
+    ID['integer'] = INTEGER_KEY
+    ID['print'] = PRINT_KEY
+    ID['return'] = RETURN_KEY
+    ID['string'] = STRING_KEY
+    ID['true'] = TRUE_KEY
+    ID['void'] = VOID_KEY
+    ID['while'] = WHILE_KEY
 
     @_(r'\n+')
     def ignored_newline(self, t):
