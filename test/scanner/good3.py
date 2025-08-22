@@ -1,5 +1,5 @@
 import unittest
-from scanner import Lexer, TokenType
+from scanner import Lexer, TokenType, OperatorType, LiteralType
 
 
 class TestOperators(unittest.TestCase):
@@ -10,12 +10,12 @@ class TestOperators(unittest.TestCase):
         test_input = "< <= > >= == !="
         tokens = list(self.lexer.tokenize(test_input))
         expected_types = [
-            TokenType.LT.value,
-            TokenType.LE.value,
-            TokenType.GT.value,
-            TokenType.GE.value,
-            TokenType.EQ.value,
-            TokenType.NE.value
+            OperatorType.LT.value,
+            OperatorType.LE.value,
+            OperatorType.GT.value,
+            OperatorType.GE.value,
+            OperatorType.EQ.value,
+            OperatorType.NE.value
         ]
         self.assertEqual([t.type for t in tokens], expected_types)
 
@@ -23,8 +23,8 @@ class TestOperators(unittest.TestCase):
         test_input = "&& `"
         tokens = list(self.lexer.tokenize(test_input))
         expected_types = [
-            TokenType.LAND.value,
-            TokenType.LOR.value
+            OperatorType.LAND.value,
+            OperatorType.LOR.value
         ]
         self.assertEqual([t.type for t in tokens], expected_types)
 
@@ -33,16 +33,16 @@ class TestOperators(unittest.TestCase):
         tokens = list(self.lexer.tokenize(test_input))
         # '!' is not defined as a token, should be a literal
         self.assertEqual(len(tokens), 1)
-        self.assertEqual(tokens[0].type, '!')
+        self.assertEqual(tokens[0].type, LiteralType.BANG.value)
 
     def test_operator_hierarchy(self):
         test_input = "<="
         tokens = list(self.lexer.tokenize(test_input))
         self.assertEqual(len(tokens), 1)
-        self.assertEqual(tokens[0].type, TokenType.LE.value)
+        self.assertEqual(tokens[0].type, OperatorType.LE.value)
 
         test_input = "< ="
         tokens = list(self.lexer.tokenize(test_input))
         self.assertEqual(len(tokens), 2)
-        self.assertEqual(tokens[0].type, TokenType.LT.value)
+        self.assertEqual(tokens[0].type, OperatorType.LT.value)
         self.assertEqual(tokens[1].type, '=')

@@ -11,11 +11,12 @@ if __name__ == "__main__":
     from scanner import Lexer
 
     # options for console input
-    # bminor.py --scan [filename.bminor | test/scan/filename.py]
+    # bminor.py --scan [filename.bminor | test/scan/filename.py | test]
+    # test run all unitest in test/scanner/
 
     if len(sys.argv) < 3 or sys.argv[1] != "--scan":
         print(
-            "Usage: bminor.py --scan [filename.bminor | test/scan/filename.py]")
+            "Usage: bminor.py --scan [test | filename.bminor | test/scan/filename.py]")
         sys.exit(1)
 
     filename = sys.argv[2]
@@ -48,6 +49,11 @@ if __name__ == "__main__":
         # run unittest with output
         unittest.TextTestRunner(verbosity=2).run(
             unittest.TestLoader().loadTestsFromModule(test_module))
+    elif filename == "test":
+        # run all tests in test/scanner/
+        test_dir = os.path.join(os.path.dirname(__file__), 'test', 'scanner')
+        suite = unittest.TestLoader().discover(test_dir, pattern='*.py')
+        unittest.TextTestRunner(verbosity=2).run(suite)
     else:
         print("Invalid file type. Use .bminor or .py files")
         sys.exit(1)

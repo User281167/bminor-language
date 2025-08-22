@@ -42,7 +42,17 @@ class TestBadKeywords(unittest.TestCase):
             "strіng",  # Cyrillic 'і'
             "vоid",  # Cyrillic 'о'
         ]
+
+        expected = [
+            [(TokenType.ID.value, "f")],
+            [(TokenType.ID.value, "wh"), (TokenType.ID.value, "le")],
+            [(TokenType.ID.value, "tru")],
+            [(TokenType.ID.value, "f"), (TokenType.ID.value, "lse")],
+            [(TokenType.ID.value, "str"), (TokenType.ID.value, "ng")],
+            [(TokenType.ID.value, "v"), (TokenType.ID.value, "id")]
+        ]
+
         for kw in test_cases:
             tokens = list(self.lexer.tokenize(kw))
-            self.assertEqual(len(tokens), 1)
+            self.assertEqual(len(tokens), len(expected[test_cases.index(kw)]))
             self.assertEqual(tokens[0].type, TokenType.ID.value)

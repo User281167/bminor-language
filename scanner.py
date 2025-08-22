@@ -1,13 +1,19 @@
-from pip._vendor.tomli._parser import ILLEGAL_BASIC_STR_CHARS
 import sly
+
 from enum import Enum
 import logging
+import sys
 
 lexer_logger = logging.getLogger('lexer')
 
 
+def print_error(msg):
+    print(msg, file=sys.stderr)
+    lexer_logger.error(msg)
+
+
 class LexerError(Enum):
-    # Error class help to follow logs in test
+    # Error types help to follow logs in test
 
     ILLEGAL_CHARACTER = 'Illegal character'
     UNEXPECTED_TOKEN = 'Unexpected token'
@@ -19,33 +25,32 @@ class LexerError(Enum):
 
 class TokenType(Enum):
     ID = 'ID'
-    INTEGER = 'INTEGER'
-    FLOAT = 'FLOAT'
-    STRING = 'STRING'
-    CHAR = 'CHAR'
-    INCREMENT = 'INCREMENT'
-    DECREMENT = 'DECREMENT'
+    INTEGER_LITERAL = 'INTEGER_LITERAL'
+    FLOAT_LITERAL = 'FLOAT_LITERAL'
+    STRING_LITERAL = 'STRING_LITERAL'
+    CHAR_LITERAL = 'CHAR_LITERAL'
 
     # Keywords
-    ARRAY_KEY = 'ARRAY_KEY'
-    AUTO_KEY = 'AUTO_KEY'
-    BOOLEAN_KEY = 'BOOLEAN_KEY'
-    CHAR_KEY = 'CHAR_KEY'
-    ELSE_KEY = 'ELSE_KEY'
-    FALSE_KEY = 'FALSE_KEY'
-    FLOAT_KEY = 'FLOAT_KEY'
-    FOR_KEY = 'FOR_KEY'
-    FUNCTION_KEY = 'FUNCTION_KEY'
-    IF_KEY = 'IF_KEY'
-    INTEGER_KEY = 'INTEGER_KEY'
-    PRINT_KEY = 'PRINT_KEY'
-    RETURN_KEY = 'RETURN_KEY'
-    STRING_KEY = 'STRING_KEY'
-    TRUE_KEY = 'TRUE_KEY'
-    VOID_KEY = 'VOID_KEY'
-    WHILE_KEY = 'WHILE_KEY'
+    ARRAY = 'ARRAY'
+    AUTO = 'AUTO'
+    BOOLEAN = 'BOOLEAN'
+    CHAR = 'CHAR'
+    ELSE = 'ELSE'
+    FALSE = 'FALSE'
+    FLOAT = 'FLOAT'
+    FOR = 'FOR'
+    FUNCTION = 'FUNCTION'
+    IF = 'IF'
+    INTEGER = 'INTEGER'
+    PRINT = 'PRINT'
+    RETURN = 'RETURN'
+    STRING = 'STRING'
+    TRUE = 'TRUE'
+    VOID = 'VOID'
+    WHILE = 'WHILE'
 
-    # Operators
+
+class OperatorType(Enum):
     LT = 'LT'
     LE = 'LE'
     GT = 'GT'
@@ -54,64 +59,58 @@ class TokenType(Enum):
     NE = 'NE'
     LAND = 'LAND'
     LOR = 'LOR'
+    INCREMENT = 'INCREMENT'
+    DECREMENT = 'DECREMENT'
+
+
+class LiteralType(Enum):
+    PLUS = '+'
+    MINUS = '-'
+    STAR = '*'
+    SLASH = '/'
+    PERCENT = '%'
+    CARET = '^'
+    EQUAL = '='
+    LPAREN = '('
+    RPAREN = ')'
+    LBRACKET = '['
+    RBRACKET = ']'
+    LBRACE = '{'
+    RBRACE = '}'
+    COLON = ':'
+    COMMA = ','
+    SEMICOLON = ';'
+    BANG = '!'
 
 
 class Lexer(sly.Lexer):
-    tokens = {
-        ID,
-        INTEGER,
-        FLOAT,
-        STRING,
-        CHAR,
+    # Dynamically collect
+    tokens = {token.name for token in TokenType}
+    tokens |= {op.name for op in OperatorType}
 
-        # keywords
-        ARRAY_KEY,
-        AUTO_KEY,
-        BOOLEAN_KEY,
-        CHAR_KEY,
-        ELSE_KEY,
-        FALSE_KEY,
-        FLOAT_KEY,
-        FOR_KEY,
-        FUNCTION_KEY,
-        IF_KEY,
-        INTEGER_KEY,
-        PRINT_KEY,
-        RETURN_KEY,
-        STRING_KEY,
-        TRUE_KEY,
-        VOID_KEY,
-        WHILE_KEY,
-
-        # Operators
-        LE, LT, GE, GT, EQ, NE, LAND, LOR,
-        INCREMENT,
-        DECREMENT,
-    }
-
-    literals = '+-*/%^=()[]{}:,;!'
+    literals = {lit.value for lit in LiteralType}
     ignore = ' \t\r'
 
-    ID = r'[_a-zA-Z]\w*'
+    ID = r'[a-zA-Z_][a-zA-Z0-9_]*'
 
     # Keywords
-    ID['array'] = ARRAY_KEY
-    ID['auto'] = AUTO_KEY
-    ID['boolean'] = BOOLEAN_KEY
-    ID['char'] = CHAR_KEY
-    ID['else'] = ELSE_KEY
-    ID['false'] = FALSE_KEY
-    ID['float'] = FLOAT_KEY
-    ID['for'] = FOR_KEY
-    ID['function'] = FUNCTION_KEY
-    ID['if'] = IF_KEY
-    ID['integer'] = INTEGER_KEY
-    ID['print'] = PRINT_KEY
-    ID['return'] = RETURN_KEY
-    ID['string'] = STRING_KEY
-    ID['true'] = TRUE_KEY
-    ID['void'] = VOID_KEY
-    ID['while'] = WHILE_KEY
+    ID['array'] = ARRAY
+    ID['auto'] = AUTO
+    ID['boolean'] = BOOLEAN
+    ID['char'] = CHAR
+    ID['else'] = ELSE
+    ID['false'] = FALSE
+    ID['float'] = FLOAT
+    ID['for'] = FOR
+    ID['function'] = FUNCTION
+    ID['if'] = IF
+    ID['integer'] = INTEGER
+    ID['print'] = PRINT
+    ID['return'] = RETURN
+    ID['string'] = STRING
+    ID['true'] = TRUE
+    ID['void'] = VOID
+    ID['while'] = WHILE
 
     # Operators
     INCREMENT = r'\+\+'
@@ -140,29 +139,31 @@ class Lexer(sly.Lexer):
     @_(r'\d+\.\d*([eE][+-]?\d+)?',     # e.g., 3.14, 2.0e10
        r'\.\d+([eE][+-]?\d+)?',        # e.g., .42, .42e1
        r'\d+[eE][+-]?\d+')             # e.g., 2e10
-    def FLOAT(self, t):
+    def FLOAT_LITERAL(self, t):
         try:
             t.value = float(t.value)
         except ValueError:
-            msg = f"{LexerError.MALFORMED_FLOAT.value}: '{t.value}' at line {self.lineno}"
-            print(msg)
-            lexer_logger.error(msg)
+            print_error(
+                f"{LexerError.MALFORMED_FLOAT.value}: '{t.value}' at line {self.lineno}")
             t.type = LexerError.MALFORMED_FLOAT
         return t
 
     @_(r'\d+')
-    def INTEGER(self, t):
+    def INTEGER_LITERAL(self, t):
         try:
             t.value = int(t.value)
         except ValueError:
-            msg = f"{LexerError.MALFORMED_INTEGER.value}: '{t.value}' at line {self.lineno}"
-            print(msg)
-            lexer_logger.error(msg)
+            print_error(
+                f"{LexerError.MALFORMED_INTEGER.value}: '{t.value}' at line {self.lineno}"
+            )
             t.type = LexerError.MALFORMED_INTEGER
         return t
 
     def error(self, t):
-        msg = f"{LexerError.ILLEGAL_CHARACTER.value}: '{t.value[0]}' at line {self.lineno}"
-        print(msg)
-        lexer_logger.error(msg)
+        print_error(
+            f"{LexerError.ILLEGAL_CHARACTER.value}: '{t.value[0]}' at line {self.lineno}"
+        )
         self.index += 1
+        # print(t.type, t.value)
+        # t.type = LexerError.ILLEGAL_CHARACTER
+        # return t

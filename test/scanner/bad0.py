@@ -1,9 +1,4 @@
-from lib2to3.btm_utils import tokens
 import unittest
-import sys
-import os
-
-
 from scanner import Lexer
 
 
