@@ -112,6 +112,9 @@ class Lexer(sly.Lexer):
     ID['void'] = VOID
     ID['while'] = WHILE
 
+    # allows escape sequences like '\n', '\t', '\x41', etc.
+    CHAR_LITERAL = r"'([^'\\]|\\[abefnrtv'\"\\]|\\x[0-9a-fA-F]{2})'"
+
     # Operators
     INCREMENT = r'\+\+'
     DECREMENT = r'--'
@@ -155,6 +158,8 @@ class Lexer(sly.Lexer):
         # Determine error type
         if char in [lit.value for lit in LiteralType] or char == '.':
             error_type = LexerError.UNEXPECTED_TOKEN
+        elif char == '\'':  # for malformed char literal as 'aa' or 'a
+            error_type = LexerError.MALFORMED_CHAR
         else:
             error_type = LexerError.ILLEGAL_CHARACTER
 
