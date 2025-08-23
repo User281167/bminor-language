@@ -140,30 +140,32 @@ class Lexer(sly.Lexer):
        r'\.\d+([eE][+-]?\d+)?',        # e.g., .42, .42e1
        r'\d+[eE][+-]?\d+')             # e.g., 2e10
     def FLOAT_LITERAL(self, t):
-        try:
-            t.value = float(t.value)
-        except ValueError:
-            print_error(
-                f"{LexerError.MALFORMED_FLOAT.value}: '{t.value}' at line {self.lineno}")
-            t.type = LexerError.MALFORMED_FLOAT
+        t.value = float(t.value)
         return t
 
     @_(r'\d+')
     def INTEGER_LITERAL(self, t):
-        try:
-            t.value = int(t.value)
-        except ValueError:
-            print_error(
-                f"{LexerError.MALFORMED_INTEGER.value}: '{t.value}' at line {self.lineno}"
-            )
-            t.type = LexerError.MALFORMED_INTEGER
+        t.value = int(t.value)
         return t
 
     def error(self, t):
-        print_error(
-            f"{LexerError.ILLEGAL_CHARACTER.value}: '{t.value[0]}' at line {self.lineno}"
-        )
+        char = t.value[0]
+        value = t.value
+
+        # Determine error type
+        if char in [lit.value for lit in LiteralType] or char == '.':
+            error_type = LexerError.UNEXPECTED_TOKEN
+        else:
+            error_type = LexerError.ILLEGAL_CHARACTER
+
+        if len(value) == 1:
+            print_error(
+                f"{error_type.value}: '{char}' at line {t.lineno} column {t.index + 1}")
+        else:
+            print_error(
+                f"{error_type.value}: '{char}' in '{value}' at line {t.lineno} column {t.index + 1}")
+
+        t.type = error_type.value
+        t.value = t.value[0]
         self.index += 1
-        # print(t.type, t.value)
-        # t.type = LexerError.ILLEGAL_CHARACTER
-        # return t
+        return t

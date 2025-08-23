@@ -7,17 +7,17 @@ class TestInvalidInputs(unittest.TestCase):
     def test_illegal_character(self):
         log, tokens = capture_lexer_log("@")
         self.assertIn(LexerError.ILLEGAL_CHARACTER.value, log)
-        self.assertEqual(len(tokens), 0)
+        self.assertEqual(len(tokens), 1)
 
     def test_illegal_utf8_character(self):
         log, tokens = capture_lexer_log("π")
         self.assertIn(LexerError.ILLEGAL_CHARACTER.value, log)
-        self.assertEqual(len(tokens), 0)
+        self.assertEqual(len(tokens), 1)
 
     def test_unexpected_symbol(self):
         log, tokens = capture_lexer_log("$")
         self.assertIn(LexerError.ILLEGAL_CHARACTER.value, log)
-        self.assertEqual(len(tokens), 0)
+        self.assertEqual(len(tokens), 1)
 
     def test_malformed_id(self):
         log, tokens = capture_lexer_log("9abc")
@@ -37,7 +37,6 @@ class TestInvalidInputs(unittest.TestCase):
         # Use Cyrillic '≤' (U+2264) and '≥' (U+2265), which should NOT match
         test_input = "≤ ≥"
         log, tokens = capture_lexer_log(test_input)
-        self.assertEqual(len(tokens), 0)
-
-        # Illegal character in logs 4 error messages
+        # Should tokenize as two separate tokens as bad input
+        self.assertEqual(len(tokens), 2)
         self.assertIn(LexerError.ILLEGAL_CHARACTER.value, log)

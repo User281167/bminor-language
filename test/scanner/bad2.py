@@ -1,5 +1,5 @@
 import unittest
-from scanner import Lexer, TokenType
+from scanner import Lexer, TokenType, LexerError
 
 
 class TestBadKeywords(unittest.TestCase):
@@ -44,15 +44,26 @@ class TestBadKeywords(unittest.TestCase):
         ]
 
         expected = [
-            [(TokenType.ID.value, "f")],
-            [(TokenType.ID.value, "wh"), (TokenType.ID.value, "le")],
-            [(TokenType.ID.value, "tru")],
-            [(TokenType.ID.value, "f"), (TokenType.ID.value, "lse")],
-            [(TokenType.ID.value, "str"), (TokenType.ID.value, "ng")],
-            [(TokenType.ID.value, "v"), (TokenType.ID.value, "id")]
+            [(LexerError.ILLEGAL_CHARACTER.value, "і"), (TokenType.ID.value, "f")],
+            [(TokenType.ID.value, "wh"), (LexerError.ILLEGAL_CHARACTER.value,
+                                          "і"), (TokenType.ID.value, "le")],
+            [(TokenType.ID.value, "tru"), (LexerError.ILLEGAL_CHARACTER.value, "е")],
+            [(TokenType.ID.value, "f"), (LexerError.ILLEGAL_CHARACTER.value,
+                                         "а"), (TokenType.ID.value, "lse")],
+            [(TokenType.ID.value, "str"), (LexerError.ILLEGAL_CHARACTER.value,
+                                           "і"), (TokenType.ID.value, "ng")],
+            [(TokenType.ID.value, "v"), (LexerError.ILLEGAL_CHARACTER.value,
+                                         "о"), (TokenType.ID.value, "id")]
         ]
 
         for kw in test_cases:
             tokens = list(self.lexer.tokenize(kw))
+            print(tokens)
             self.assertEqual(len(tokens), len(expected[test_cases.index(kw)]))
-            self.assertEqual(tokens[0].type, TokenType.ID.value)
+
+            for i in range(len(tokens)):
+                # check type and value
+                self.assertEqual(
+                    tokens[i].type, expected[test_cases.index(kw)][i][0])
+                self.assertEqual(
+                    tokens[i].value, expected[test_cases.index(kw)][i][1])

@@ -7,14 +7,17 @@ class TestBadNumbers(unittest.TestCase):
     def test_malformed_float(self):
         # error illegal because . no match float literal
         log, tokens = capture_lexer_log("3.14.")
-        self.assertEqual(len(tokens), 1)
-        self.assertIn(LexerError.ILLEGAL_CHARACTER.value, log)
+        self.assertEqual(len(tokens), 2)
+        self.assertIn(LexerError.UNEXPECTED_TOKEN.value, log)
+        # second is a unexpected token
+        self.assertEqual(tokens[1].type, LexerError.UNEXPECTED_TOKEN.value)
 
     def test_malformed_float_with_leading_zeros(self):
         # error illegal because . no match float literal
         log, tokens = capture_lexer_log("0003.14.")
-        self.assertEqual(len(tokens), 1)
-        self.assertIn(LexerError.ILLEGAL_CHARACTER.value, log)
+        self.assertEqual(len(tokens), 2)
+        self.assertIn(LexerError.UNEXPECTED_TOKEN.value, log)
+        self.assertEqual(tokens[1].type, LexerError.UNEXPECTED_TOKEN.value)
 
     def test_bad_notation(self):
         # match float and ID
