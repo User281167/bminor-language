@@ -46,3 +46,23 @@ class TestOperators(unittest.TestCase):
         self.assertEqual(len(tokens), 2)
         self.assertEqual(tokens[0].type, OperatorType.LT.value)
         self.assertEqual(tokens[1].type, '=')
+
+    def test_increment_decrement(self):
+        test_input = "++ --"
+        tokens = list(self.lexer.tokenize(test_input))
+        expected_types = [
+            OperatorType.INCREMENT.value,
+            OperatorType.DECREMENT.value
+        ]
+        self.assertEqual([t.type for t in tokens], expected_types)
+
+    def test_increment_decrement_as_identifiers(self):
+        test_input = "a++ b--"
+        tokens = list(self.lexer.tokenize(test_input))
+        expected = [
+            (TokenType.ID.value, 'a'),
+            (OperatorType.INCREMENT.value, '++'),
+            (TokenType.ID.value, 'b'),
+            (OperatorType.DECREMENT.value, '--')
+        ]
+        self.assertEqual([(t.type, t.value) for t in tokens], expected)

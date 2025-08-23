@@ -1,12 +1,27 @@
 import unittest
-from utils import capture_lexer_log
 from scanner import Lexer, LexerError, lexer_logger, TokenType, OperatorType
+import logging
+from io import StringIO
 
 
 class TestBadNumbers(unittest.TestCase):
+    def setUp(self):
+        self.lexer = Lexer()
+
+    def capture_lexer_log(self, input_text):
+        stream = StringIO()
+        handler = logging.StreamHandler(stream)
+        logger = logging.getLogger('lexer')
+        logger.addHandler(handler)
+        logger.setLevel(logging.ERROR)
+        tokens = list(self.lexer.tokenize(input_text))
+        handler.flush()
+        logger.removeHandler(handler)
+        return stream.getvalue(), tokens
+
     def test_malformed_float(self):
         # error illegal because . no match float literal
-        log, tokens = capture_lexer_log("3.14.")
+        log, tokens = self.capture_lexer_log("3.14.")
         self.assertEqual(len(tokens), 2)
         self.assertIn(LexerError.UNEXPECTED_TOKEN.value, log)
         # second is a unexpected token
@@ -14,14 +29,14 @@ class TestBadNumbers(unittest.TestCase):
 
     def test_malformed_float_with_leading_zeros(self):
         # error illegal because . no match float literal
-        log, tokens = capture_lexer_log("0003.14.")
+        log, tokens = self.capture_lexer_log("0003.14.")
         self.assertEqual(len(tokens), 2)
         self.assertIn(LexerError.UNEXPECTED_TOKEN.value, log)
         self.assertEqual(tokens[1].type, LexerError.UNEXPECTED_TOKEN.value)
 
     def test_bad_notation(self):
         # match float and ID
-        log, tokens = capture_lexer_log("3.14e")
+        log, tokens = self.capture_lexer_log("3.14e")
         self.assertEqual(len(tokens), 2)
 
         expected = [
@@ -36,7 +51,7 @@ class TestBadNumbers(unittest.TestCase):
     def test_bad_notation_minus(self):
         # no get a float because no math regex
         # so lexer only get valid tokens for this case float, ID, minus
-        log, tokens = capture_lexer_log("3.14e-")
+        log, tokens = self.capture_lexer_log("3.14e-")
         self.assertEqual(len(tokens), 3)
 
         expected = [
@@ -52,7 +67,7 @@ class TestBadNumbers(unittest.TestCase):
     def test_bad_notations_plus(self):
         # no get a float because no math regex
         # so lexer only get valid tokens for this case float, ID, plus
-        log, tokens = capture_lexer_log("3.14e+")
+        log, tokens = self.capture_lexer_log("3.14e+")
         self.assertEqual(len(tokens), 3)
 
         expected = [
@@ -67,7 +82,7 @@ class TestBadNumbers(unittest.TestCase):
 
     def test_bad_notation_with_leading_zeros(self):
         # match float and ID
-        log, tokens = capture_lexer_log("0003.14e")
+        log, tokens = self.capture_lexer_log("0003.14e")
         self.assertEqual(len(tokens), 2)
 
         expected = [
@@ -80,7 +95,7 @@ class TestBadNumbers(unittest.TestCase):
             self.assertEqual(tokens[i].type, expected[i][0])
 
     def test_bad_float_trailing_literals(self):
-        log, tokens = capture_lexer_log("3.14e+-2")
+        log, tokens = self.capture_lexer_log("3.14e+-2")
 
         self.assertEqual(len(tokens), 5)
 
@@ -97,7 +112,7 @@ class TestBadNumbers(unittest.TestCase):
             self.assertEqual(tokens[i].type, expected[i][0])
 
     def test_bad_integer_trailing_literals(self):
-        log, tokens = capture_lexer_log("42++-2")
+        log, tokens = self.capture_lexer_log("42++-2")
 
         self.assertEqual(len(tokens), 4)
 
@@ -113,7 +128,7 @@ class TestBadNumbers(unittest.TestCase):
             self.assertEqual(tokens[i].type, expected[i][0])
 
     def test_bad_integer_trailing_literals_no_space(self):
-        log, tokens = capture_lexer_log("42-- -2")
+        log, tokens = self.capture_lexer_log("42-- -2")
 
         self.assertEqual(len(tokens), 4)
 
