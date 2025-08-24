@@ -21,6 +21,7 @@ class LexerError(Enum):
     MALFORMED_FLOAT = 'Malformed real number'
     MALFORMED_STRING = 'Malformed string'
     MALFORMED_CHAR = 'Malformed character literal'
+    INVALID_ID = 'Invalid identifier'
 
 
 class TokenType(Enum):
@@ -91,7 +92,7 @@ class Lexer(sly.Lexer):
     literals = {lit.value for lit in LiteralType}
     ignore = ' \t\r'
 
-    ID = r'[a-zA-Z_][a-zA-Z0-9_]*'
+    # ID = r'[a-zA-Z_][a-zA-Z0-9_]{0,254}'
 
     # Keywords
     ID['array'] = ARRAY
@@ -111,6 +112,15 @@ class Lexer(sly.Lexer):
     ID['true'] = TRUE
     ID['void'] = VOID
     ID['while'] = WHILE
+
+    @_(r'[a-zA-Z_][a-zA-Z0-9_]*')
+    def ID(self, t):
+        if (len(t.value) > 255):
+            print_error(
+                f"{LexerError.INVALID_ID.value}: '{t.value}' exceeds max length of 255 at line {t.lineno} column {t.index + 1}")
+            t.type = LexerError.INVALID_ID.value
+
+        return t
 
     # ascii printable characters from space (32) to tilde (126)
     # tabulate escape sequences

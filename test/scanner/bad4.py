@@ -50,3 +50,9 @@ class TestInvalidInputs(unittest.TestCase):
             self.assertEqual(len(tokens), 1)
             self.assertEqual(
                 tokens[0].type, LexerError.ILLEGAL_CHARACTER.value)
+
+    def test_id_max_length_exceeded(self):
+        long_id = "a" * 300
+        token = list(self.lexer.tokenize(long_id))
+        self.assertEqual(len(token), 1)
+        self.assertEqual(token[0].type, LexerError.INVALID_ID.value)
