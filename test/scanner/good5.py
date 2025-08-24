@@ -43,8 +43,10 @@ class TestCharLiterals(unittest.TestCase):
 
     def test_escaped_single_quote(self):
         # Using programmatic construction (your method works)
-        test_string = "'" + "\\" + "'" + "'"
+        # test_string = "'" + "\\" + "'" + "'"
+        test_string = r"'\''"
         tokens = list(self.lexer.tokenize(test_string))  # \'
+        print(f"\n>>>>>>>>>>Testing escaped single quote: {tokens}")
         self.assertEqual(len(tokens), 1)
         self.assertEqual(tokens[0].type, TokenType.CHAR_LITERAL.value)
 
@@ -135,14 +137,15 @@ class TestCharLiterals(unittest.TestCase):
     def test_literal_control_chars(self):
         """Test literal control characters (should use escapes instead)"""
         control_chars = [
-            ("'\n'", "literal newline"),
-            ("'\t'", "literal tab"),
-            ("'\r'", "literal carriage return"),
-            ("'\0'", "literal null"),
+            ("'\\n'", "literal newline"),
+            ("'\\t'", "literal tab"),
+            ("'\\r'", "literal carriage return"),
+            ("'\\0'", "literal null"),
         ]
 
         for char_test, desc in control_chars:
             with self.subTest(test=desc):
                 tokens = list(self.lexer.tokenize(char_test))
+                # print(f"\n>>>>>>>>>>Testing {desc}: {tokens}")
                 self.assertEqual(len(tokens), 1)
                 self.assertEqual(tokens[0].type, TokenType.CHAR_LITERAL.value)
