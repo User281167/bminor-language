@@ -186,7 +186,7 @@ class TestBadCharLiterals(unittest.TestCase):
     def test_illegal_utf8(self):
         # String with emoji and non-ascii chars
         for s in ["'🚀'", "'ñ'", "'é'"]:
-            tokens = list(self.lexer.tokenize(s))
-            print(f"\n\n---------------------{tokens}---------------------")
-            self.assertTrue(
-                any(t.type == LexerError.ILLEGAL_CHARACTER.value for t in tokens))
+            with self.subTest(utf8_char=s):
+                tokens = list(self.lexer.tokenize(s))
+                self.assertTrue(
+                    any(t.type == LexerError.ILLEGAL_CHARACTER.value for t in tokens))

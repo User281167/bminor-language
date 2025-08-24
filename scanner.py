@@ -8,7 +8,7 @@ lexer_logger = logging.getLogger('lexer')
 
 
 def print_error(msg):
-    print(msg, file=sys.stderr)
+    # print(msg, file=sys.stderr)
     lexer_logger.error(msg)
 
 
@@ -125,8 +125,17 @@ class Lexer(sly.Lexer):
     # ascii printable characters from space (32) to tilde (126)
     # tabulate escape sequences
     # avoid utf-8
-    CHAR_LITERAL = r"'(\\[abefnrtv0'\"\\]|\\x[0-9a-fA-F]{2}|[ -~])'"
-    STRING_LITERAL = r'"([ !#-\[\]-~]|\\[abefnrtv\'\"\\]|\\x[0-9a-fA-F]{2})*"'
+    CHAR_LITERAL = r"'(\\[abefnrtv0'\"\\]|\\x[0-9a-fA-F]{2}|[\x20-\x21\x23-\x5B\x5D-\x7E])'"
+
+    # exclude single \ and single "
+    @_(r'"((\\[abefnrtv0\'"\\]|\\x[0-9a-fA-F]{2}|[\x20-\x21\x23-\x5B\x5D-\x7E])*)"')
+    def STRING_LITERAL(self, t):
+        if (len(t.value) - 2 > 255):  # no count ""
+            print_error(
+                f"{LexerError.MALFORMED_STRING.value}: '{t.value}' exceeds max length of 255 at line {t.lineno} column {t.index + 1}")
+            t.type = LexerError.MALFORMED_STRING.value
+
+        return t
 
     # Operators
     INCREMENT = r'\+\+'
@@ -183,7 +192,7 @@ class Lexer(sly.Lexer):
                 f"{error_type.value}: '{char}' at line {t.lineno} column {t.index + 1}")
         else:
             print_error(
-                f"{error_type.value}: '{char}' in '{value}' at line {t.lineno} column {t.index + 1}")
+                f"{error_type.value}: '{char}' in '{value.strip()}' at line {t.lineno} column {t.index + 1}")
 
         t.type = error_type.value
         t.value = t.value[0]

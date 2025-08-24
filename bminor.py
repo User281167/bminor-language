@@ -25,8 +25,8 @@ if __name__ == "__main__":
         try:
             lex = Lexer()
             tokens = list(lex.tokenize(open(filename).read()))
-            for token in tokens:
-                print(token)
+            # for token in tokens:
+            # print(token)
         except Exception as e:
             print(e)
             sys.exit(1)

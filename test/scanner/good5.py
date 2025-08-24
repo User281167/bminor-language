@@ -88,7 +88,7 @@ class TestCharLiterals(unittest.TestCase):
         # ASCII 32 to 126 inclusive, excluding ' (39) and \ (92) which need escaping
         for code in range(32, 127):
             char = chr(code)
-            if char not in ["'", "\\"]:  # Skip chars that need escaping
+            if char not in ["'", "\\", '"']:  # Skip chars that need escaping
                 with self.subTest(ascii_code=code, char=char):
                     tokens = list(self.lexer.tokenize(f"'{char}'"))
                     self.assertEqual(
@@ -146,6 +146,28 @@ class TestCharLiterals(unittest.TestCase):
         for char_test, desc in control_chars:
             with self.subTest(test=desc):
                 tokens = list(self.lexer.tokenize(char_test))
-                # print(f"\n>>>>>>>>>>Testing {desc}: {tokens}")
+                self.assertEqual(len(tokens), 1)
+                self.assertEqual(tokens[0].type, TokenType.CHAR_LITERAL.value)
+
+    def test_space_in_char_literal(self):
+        tokens = list(self.lexer.tokenize("' '"))
+        self.assertEqual(len(tokens), 1)
+        self.assertEqual(tokens[0].type, TokenType.CHAR_LITERAL.value)
+
+    def test_char_literals_basic(self):
+        input_test = "[]{};:,.+-*/%&|^~!=<>?@#"
+
+        for char_test in input_test:
+            with self.subTest(char=char_test):
+                tokens = list(self.lexer.tokenize(f"'{char_test}'"))
+                self.assertEqual(len(tokens), 1)
+                self.assertEqual(tokens[0].type, TokenType.CHAR_LITERAL.value)
+
+    def test_char_literal_backslash(self):
+        # Casos válidos
+        valid = [r"'\\'", r"'\''", r"'\"'"]
+        for lit in valid:
+            with self.subTest(valid=lit):
+                tokens = list(self.lexer.tokenize(lit))
                 self.assertEqual(len(tokens), 1)
                 self.assertEqual(tokens[0].type, TokenType.CHAR_LITERAL.value)
