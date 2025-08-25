@@ -7,11 +7,6 @@ import sys
 lexer_logger = logging.getLogger('lexer')
 
 
-def print_error(msg):
-    # print(msg, file=sys.stderr)
-    lexer_logger.error(msg)
-
-
 class LexerError(Enum):
     # Error types help to follow logs in test
 
@@ -92,8 +87,6 @@ class Lexer(sly.Lexer):
     literals = {lit.value for lit in LiteralType}
     ignore = ' \t\r'
 
-    # ID = r'[a-zA-Z_][a-zA-Z0-9_]{0,254}'
-
     # Keywords
     ID['array'] = ARRAY
     ID['auto'] = AUTO
@@ -116,7 +109,7 @@ class Lexer(sly.Lexer):
     @_(r'[a-zA-Z_][a-zA-Z0-9_]*')
     def ID(self, t):
         if (len(t.value) > 255):
-            print_error(
+            lexer_logger.error(
                 f"{LexerError.INVALID_ID.value}: '{t.value}' exceeds max length of 255 at line {t.lineno} column {t.index + 1}")
             t.type = LexerError.INVALID_ID.value
 
@@ -131,7 +124,7 @@ class Lexer(sly.Lexer):
     @_(r'"((\\[abefnrtv0\'"\\]|\\x[0-9a-fA-F]{2}|[\x20-\x21\x23-\x5B\x5D-\x7E])*)"')
     def STRING_LITERAL(self, t):
         if (len(t.value) - 2 > 255):  # no count ""
-            print_error(
+            lexer_logger.error(
                 f"{LexerError.MALFORMED_STRING.value}: '{t.value}' exceeds max length of 255 at line {t.lineno} column {t.index + 1}")
             t.type = LexerError.MALFORMED_STRING.value
 
@@ -188,10 +181,10 @@ class Lexer(sly.Lexer):
             error_type = LexerError.ILLEGAL_CHARACTER
 
         if len(value) == 1:
-            print_error(
+            lexer_logger.error(
                 f"{error_type.value}: '{char}' at line {t.lineno} column {t.index + 1}")
         else:
-            print_error(
+            lexer_logger.error(
                 f"{error_type.value}: '{char}' in '{value.strip()}' at line {t.lineno} column {t.index + 1}")
 
         t.type = error_type.value
