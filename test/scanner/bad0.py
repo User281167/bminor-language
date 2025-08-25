@@ -32,3 +32,10 @@ class TestComments(unittest.TestCase):
         test_input = "*/"
         tokens = list(self.lexer.tokenize(test_input))
         self.assertGreater(len(tokens), 0)
+
+    # def test_valid_nested_comments(self):
+    #     test_input = """
+    #     /* This is a comment with /* nested multi-line comment */ still in comment \n\n*/
+    #     """
+    #     tokens = list(self.lexer.tokenize(test_input))
+    #     self.assertEqual(len(tokens), 0)

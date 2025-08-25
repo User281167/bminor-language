@@ -87,6 +87,18 @@ class Lexer(sly.Lexer):
     literals = {lit.value for lit in LiteralType}
     ignore = ' \t\r'
 
+    @_(r'\n+')
+    def ignored_newline(self, t):
+        self.lineno += t.value.count('\n')
+
+    @_(r'//.*')
+    def ignored_cpp_comment(self, t):
+        pass
+
+    @_(r'/\*(?:[^*]|\*(?!/))*\*/')
+    def ignore_comment(self, t):
+        self.lineno += t.value.count('\n')
+
     # Keywords
     ID['array'] = ARRAY
     ID['auto'] = AUTO
@@ -115,10 +127,33 @@ class Lexer(sly.Lexer):
 
         return t
 
-    # ascii printable characters from space (32) to tilde (126)
-    # tabulate escape sequences
-    # avoid utf-8
-    CHAR_LITERAL = r"'(\\[abefnrtv0'\"\\]|\\x[0-9a-fA-F]{2}|[\x20-\x21\x23-\x5B\x5D-\x7E])'"
+    @_(r"'(\\[abefnrtv0'\"\\]|\\x[0-9a-fA-F]{2}|[\x20-\x7E])'")
+    def CHAR_LITERAL(self, t):
+        content = t.value[1:-1]  # remove single quotes
+
+        # Validación adicional para \x
+        if len(content) == 4 and content.startswith('\\x'):
+            try:
+                hex_val = int(content[2:4], 16)
+                # allow ASCII printable (32-126)
+                if not (32 <= hex_val <= 126):
+                    lexer_logger.error(
+                        f"{LexerError.MALFORMED_CHAR.value}: hex value out of ASCII range {t.value} at line {t.lineno} column {t.index + 1}"
+                    )
+                    t.type = LexerError.MALFORMED_CHAR.value
+            except ValueError:
+                lexer_logger.error(
+                    f"{LexerError.MALFORMED_CHAR.value}: invalid hex escape {t.value} at line {t.lineno} column {t.index + 1}"
+                )
+                t.type = LexerError.MALFORMED_CHAR.value
+
+        if len(content) == 1 and content[0] == '\\':
+            lexer_logger.error(
+                f"{LexerError.MALFORMED_CHAR.value}: incomplete escape sequence {t.value} at line {t.lineno} column {t.index + 1}"
+            )
+            t.type = LexerError.MALFORMED_CHAR.value
+
+        return t
 
     # exclude single \ and single "
     @_(r'"((\\[abefnrtv0\'"\\]|\\x[0-9a-fA-F]{2}|[\x20-\x21\x23-\x5B\x5D-\x7E])*)"')
@@ -142,18 +177,6 @@ class Lexer(sly.Lexer):
     LAND = r'&&'
     LOR = r'\`'
 
-    @_(r'\n+')
-    def ignored_newline(self, t):
-        self.lineno += t.value.count('\n')
-
-    @_(r'//.*')
-    def ignored_cpp_comment(self, t):
-        self.lineno += 1
-
-    @_(r'/\*(.|\n)*\*/')
-    def ignore_comment(self, t):
-        self.lineno += t.value.count('\n')
-
     @_(r'\d+\.\d*([eE][+-]?\d+)?',     # e.g., 3.14, 2.0e10
        r'\.\d+([eE][+-]?\d+)?',        # e.g., .42, .42e1
        r'\d+[eE][+-]?\d+')             # e.g., 2e10
@@ -174,7 +197,7 @@ class Lexer(sly.Lexer):
         line_start = self.text.rfind('\n', 0, t.index) + 1
         column = t.index - line_start + 1
 
-        # Determinar tipo de error
+        # determine error type
         if char in [lit.value for lit in LiteralType] or char == '.':
             error_type = LexerError.UNEXPECTED_TOKEN
         elif char == '\'':

@@ -188,5 +188,6 @@ class TestBadCharLiterals(unittest.TestCase):
         for s in ["'🚀'", "'ñ'", "'é'"]:
             with self.subTest(utf8_char=s):
                 tokens = list(self.lexer.tokenize(s))
+                print(f"\n>>>>>>>>>>Testing illegal UTF-8: {tokens}")
                 self.assertTrue(
                     any(t.type == LexerError.ILLEGAL_CHARACTER.value for t in tokens))

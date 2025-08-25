@@ -116,6 +116,7 @@ class TestCharLiterals(unittest.TestCase):
     def test_mixed_char_literals_in_expression(self):
         # Test multiple char literals in a single tokenization
         tokens = list(self.lexer.tokenize("'a' + '\\n' + '\\x41'"))
+        print(f"\n>>>>>>>>>>Testing mixed char literals: {tokens}")
         char_tokens = [t for t in tokens if t.type ==
                        TokenType.CHAR_LITERAL.value]
         self.assertEqual(len(char_tokens), 3)
