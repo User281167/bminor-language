@@ -152,7 +152,7 @@ class Lexer(sly.Lexer):
 
     @_(r'/\*(.|\n)*\*/')
     def ignore_comment(self, t):
-        self.lineno = t.value.count('\n')
+        self.lineno += t.value.count('\n')
 
     @_(r'\d+\.\d*([eE][+-]?\d+)?',     # e.g., 3.14, 2.0e10
        r'\.\d+([eE][+-]?\d+)?',        # e.g., .42, .42e1
@@ -170,22 +170,23 @@ class Lexer(sly.Lexer):
         char = t.value[0]
         value = t.value
 
-        # Determine error type
+        # get column error position
+        line_start = self.text.rfind('\n', 0, t.index) + 1
+        column = t.index - line_start + 1
+
+        # Determinar tipo de error
         if char in [lit.value for lit in LiteralType] or char == '.':
             error_type = LexerError.UNEXPECTED_TOKEN
-        elif char == '\'':  # for malformed char literal as 'aa' or 'a
+        elif char == '\'':
             error_type = LexerError.MALFORMED_CHAR
-        elif char == '"':  # for malformed string literal
+        elif char == '"':
             error_type = LexerError.MALFORMED_STRING
         else:
             error_type = LexerError.ILLEGAL_CHARACTER
 
-        if len(value) == 1:
-            lexer_logger.error(
-                f"{error_type.value}: '{char}' at line {t.lineno} column {t.index + 1}")
-        else:
-            lexer_logger.error(
-                f"{error_type.value}: '{char}' in '{value.strip()}' at line {t.lineno} column {t.index + 1}")
+        lexer_logger.error(
+            f"{error_type.value}: '{char}' at line {t.lineno} column {column}"
+        )
 
         t.type = error_type.value
         t.value = t.value[0]
