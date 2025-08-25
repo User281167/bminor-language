@@ -58,7 +58,6 @@ class TestBadKeywords(unittest.TestCase):
 
         for kw in test_cases:
             tokens = list(self.lexer.tokenize(kw))
-            print(tokens)
             self.assertEqual(len(tokens), len(expected[test_cases.index(kw)]))
 
             for i in range(len(tokens)):
