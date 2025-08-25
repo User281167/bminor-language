@@ -1,0 +1,14 @@
+{
+  "iconDefinitions": {
+    "bminor-icon": {
+      "iconPath": "./../icons/bminor-icon.png"
+    }
+  },
+  "fileExtensions": {
+    "bminor": "bminor-icon"
+  },
+  "folder": {},
+  "folderExpanded": {},
+  "rootFolder": {},
+  "rootFolderExpanded": {}
+}

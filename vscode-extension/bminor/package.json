@@ -1,0 +1,41 @@
+{
+  "name": "bminor",
+  "displayName": "bminor-support",
+  "description": "B-Minor Language Support",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.103.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "bminor",
+        "aliases": [
+          "b-minor",
+          "bminor"
+        ],
+        "extensions": [
+          ".bminor"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "bminor",
+        "scopeName": "source.bminor",
+        "path": "./syntaxes/bminor.tmLanguage.json"
+      }
+    ],
+    "iconThemes": [
+      {
+        "id": "bminor-icons",
+        "label": "Bminor File Icons",
+        "path": "./file-icons/bminor-icon-theme.json"
+      }
+    ]
+  }
+}
