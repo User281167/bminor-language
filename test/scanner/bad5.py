@@ -1,5 +1,5 @@
 import unittest
-from scanner import Lexer, LexerError, lexer_logger, TokenType, OperatorType
+from scanner import Lexer, LexerError, TokenType, OperatorType
 import logging
 from io import StringIO
 
