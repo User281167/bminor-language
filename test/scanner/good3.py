@@ -51,8 +51,8 @@ class TestOperators(unittest.TestCase):
         test_input = "++ --"
         tokens = list(self.lexer.tokenize(test_input))
         expected_types = [
-            OperatorType.INCREMENT.value,
-            OperatorType.DECREMENT.value
+            OperatorType.INC.value,
+            OperatorType.DEC.value
         ]
         self.assertEqual([t.type for t in tokens], expected_types)
 
@@ -61,8 +61,8 @@ class TestOperators(unittest.TestCase):
         tokens = list(self.lexer.tokenize(test_input))
         expected = [
             (TokenType.ID.value, 'a'),
-            (OperatorType.INCREMENT.value, '++'),
+            (OperatorType.INC.value, '++'),
             (TokenType.ID.value, 'b'),
-            (OperatorType.DECREMENT.value, '--')
+            (OperatorType.DEC.value, '--')
         ]
         self.assertEqual([(t.type, t.value) for t in tokens], expected)

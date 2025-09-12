@@ -118,7 +118,7 @@ class TestBadNumbers(unittest.TestCase):
 
         expected = [
             (TokenType.INTEGER_LITERAL.value, 42),
-            (OperatorType.INCREMENT.value, '++'),
+            (OperatorType.INC.value, '++'),
             ('-', '-'),
             (TokenType.INTEGER_LITERAL.value, 2)
         ]
@@ -134,7 +134,7 @@ class TestBadNumbers(unittest.TestCase):
 
         expected = [
             (TokenType.INTEGER_LITERAL.value, 42),
-            (OperatorType.DECREMENT.value, '--'),
+            (OperatorType.DEC.value, '--'),
             ('-', '-'),
             (TokenType.INTEGER_LITERAL.value, 2)
         ]

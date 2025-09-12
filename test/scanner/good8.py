@@ -33,7 +33,7 @@ class TestArrayAndLoopTokens(unittest.TestCase):
         expected_types = [
             TokenType.FOR.value, '(', TokenType.ID.value, '=', TokenType.INTEGER_LITERAL.value,
             ';', TokenType.ID.value, OperatorType.LT.value, TokenType.INTEGER_LITERAL.value, ';',
-            TokenType.ID.value, OperatorType.INCREMENT.value, ')', '{', TokenType.PRINT.value, TokenType.ID.value,
+            TokenType.ID.value, OperatorType.INC.value, ')', '{', TokenType.PRINT.value, TokenType.ID.value,
             ';', '}',
         ]
         self.assertEqual([t.type for t in tokens], expected_types)

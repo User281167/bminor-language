@@ -113,7 +113,7 @@ class TestValidFunctionTokens(unittest.TestCase):
             TokenType.INTEGER_LITERAL.value,  # 10
             LiteralType.SEMICOLON.value,  # ;
             TokenType.ID.value,         # i
-            OperatorType.INCREMENT.value,  # ++
+            OperatorType.INC.value,  # ++
             LiteralType.RPAREN.value,  # )
             LiteralType.LBRACE.value,  # {
             TokenType.ID.value,         # sum
@@ -220,7 +220,7 @@ class TestValidFunctionTokens(unittest.TestCase):
             TokenType.ID.value,         # n
             LiteralType.SEMICOLON.value,  # ;
             TokenType.ID.value,         # i
-            OperatorType.INCREMENT.value,  # ++
+            OperatorType.INC.value,  # ++
             LiteralType.RPAREN.value,  # )
             LiteralType.LBRACE.value,  # {
             TokenType.PRINT.value,      # print
@@ -232,7 +232,7 @@ class TestValidFunctionTokens(unittest.TestCase):
         self.assertEqual([t.type for t in tokens], expected_types)
 
     def test_function_with_no_space_after_colon(self):
-            # Missing space after colon (should still work, testing for robustness)
+        # Missing space after colon (should still work, testing for robustness)
         tokens = list(self.lexer.tokenize('func:function void () = { }'))
         # Should tokenize correctly despite missing space
         expected_types = [

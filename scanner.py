@@ -65,8 +65,8 @@ class OperatorType(Enum):
     NE = 'NE'
     LAND = 'LAND'
     LOR = 'LOR'
-    INCREMENT = 'INCREMENT'
-    DECREMENT = 'DECREMENT'
+    INC = 'INC'
+    DEC = 'DEC'
 
 
 class LiteralType(Enum):
@@ -169,8 +169,8 @@ class Lexer(sly.Lexer):
             return self.log_error(LexerError.MALFORMED_STRING, t, f"exceeds max length of {MAX_ID_LENGTH}")
         return t
 
-    INCREMENT = r'\+\+'
-    DECREMENT = r'--'
+    INC = r'\+\+'
+    DEC = r'--'
     LE = r'<='
     LT = r'<'
     GE = r'>='
