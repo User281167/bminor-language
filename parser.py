@@ -1,4 +1,5 @@
 # grammar.py
+from model import VarLoc
 import logging
 import sly
 from rich import print
@@ -82,19 +83,19 @@ class Parser(sly.Parser):
 
     @_("stmt_list")
     def opt_stmt_list(self, p):
-        ...
+        return p.stmt_list
 
     @_("empty")
     def opt_stmt_list(self, p):
-        ...
+        return []
 
     @_("stmt stmt_list")
     def stmt_list(self, p):
-        ...
+        return [p.stmt] + p.stmt_list
 
     @_("stmt")
     def stmt_list(self, p):
-        ...
+        return [p.stmt]
 
     @_("open_stmt")
     @_("closed_stmt")
@@ -114,11 +115,11 @@ class Parser(sly.Parser):
 
     @_("IF '(' opt_expr ')'")
     def if_cond(self, p):
-        ...
+        return p.opt_expr
 
     @_("if_cond closed_stmt ELSE closed_stmt")
     def if_stmt_closed(self, p):
-        ...
+        return IfStmt(condition=p.if_cond, then_branch=[p.closed_stmt0], else_branch=[p.closed_stmt1])
 
     @_("if_cond stmt")
     def if_stmt_open(self, p):
@@ -130,7 +131,7 @@ class Parser(sly.Parser):
 
     @_("FOR '(' opt_expr ';' opt_expr ';' opt_expr ')'")
     def for_header(self, p):
-        ...
+        return (p.opt_expr0, p.opt_expr1, p.opt_expr2)
 
     @_("for_header open_stmt")
     def for_stmt_open(self, p):
@@ -138,7 +139,20 @@ class Parser(sly.Parser):
 
     @_("for_header closed_stmt")
     def for_stmt_closed(self, p):
-        ...
+        init, cond, update = p.for_header
+        return ForStmt(init=None if init is None else init,
+                       condition=cond,
+                       update=None if update is None else update,
+                       body=[p.closed_stmt]
+                       )
+
+    @_("WHILE '(' opt_expr ')' closed_stmt")
+    def closed_stmt(self, p):
+        return WhileStmt(condition=p.opt_expr, body=[p.closed_stmt])
+
+    @_("DO closed_stmt WHILE '(' opt_expr ')' ';'")
+    def closed_stmt(self, p):
+        return DoWhileStmt(body=[p.closed_stmt], condition=p.opt_expr)
 
     # Simple statements are not recursive
 
@@ -148,19 +162,19 @@ class Parser(sly.Parser):
     @_("decl")
     @_("expr ';'")
     def simple_stmt(self, p):
-        ...
+        return p[0]
 
     @_("PRINT opt_expr_list ';'")
     def print_stmt(self, p):
-        ...
+        return PrintStmt(p.opt_expr_list)
 
     @_("RETURN opt_expr ';'")
     def return_stmt(self, p):
-        ...
+        return ReturnStmt(p.opt_expr)
 
     @_("'{' stmt_list '}'")
     def block_stmt(self, p):
-        ...
+        return p.stmt_list  # ya que stmt_list devuelve una lista de Statement
 
     # Expressions
 
@@ -183,11 +197,11 @@ class Parser(sly.Parser):
     # TODO
     @_("empty")
     def opt_expr(self, p):
-        ...
+        return None
 
     @_("expr")
     def opt_expr(self, p):
-        ...
+        return p.expr
 
     @_("expr1")
     def expr(self, p):
@@ -196,6 +210,11 @@ class Parser(sly.Parser):
     @_("lval '=' expr1")
     def expr1(self, p):
         return BinOper("=", p.lval, p.expr1)
+
+    @_("lval '=' expr ';'")
+    # puede ser una sentencia
+    def simple_stmt(self, p):
+        return Assignment(location=p.lval, value=p.expr)
 
     @_("expr2")
     def expr1(self, p):
@@ -276,11 +295,11 @@ class Parser(sly.Parser):
 
     @_("expr9 INC")
     def expr9(self, p):
-        return UnaryOper("INC", p.expr9)
+        return Increment(location=p.expr9, postfix=True)
 
     @_("expr9 DEC")
     def expr9(self, p):
-        return UnaryOper("DEC", p.expr9)
+        return Decrement(location=p.expr9, postfix=True)
 
     @_("group")
     def expr9(self, p):
@@ -308,7 +327,7 @@ class Parser(sly.Parser):
 
     @_("ID")
     def factor(self, p):
-        ...
+        return VarLoc(p.ID)
 
     @_("INTEGER_LITERAL")
     def factor(self, p):
@@ -428,7 +447,7 @@ class Parser(sly.Parser):
 
     @_("")
     def empty(self, p):
-        ...
+        return None
 
     def error(self, p):
         lineno = p.lineno if p else 'EOF'

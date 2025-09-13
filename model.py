@@ -73,15 +73,6 @@ class VarDecl(Declaration):
 
 '''
 Statement
-  |
-  +-- Declaration (abstract)
-  | |
-  | +-- VarDecl: Guardar la información de una declaración de variable
-  | |
-  | +-- ArrayDecl: Declaración de Arreglos (multi-dimencioanles)
-  | |
-  | +-- FuncDecl: Para guardar información sobre las funciones declaradas
-
     -- VarParm
     -- ArrayParm
 
@@ -97,6 +88,65 @@ Statement
   +-- DoWhileStmt
   |
   +-- Assignment
+'''
+
+
+@dataclass
+class ReturnStmt(Statement):
+    expr: Optional[Expression] = None  # puede ser return; o return expr;
+
+
+@dataclass
+class IfStmt(Statement):
+    condition: Expression
+    then_branch: List[Statement]
+    else_branch: Optional[List[Statement]] = None
+
+
+@dataclass
+class WhileStmt(Statement):
+    condition: Expression
+    body: List[Statement]
+
+
+@dataclass
+class DoWhileStmt(Statement):
+    body: List[Statement]
+    condition: Expression
+
+
+@dataclass
+class ForStmt(Statement):
+    init: Optional[Statement]
+    condition: Optional[Expression]
+    update: Optional[Statement]
+    body: List[Statement]
+
+
+@dataclass
+class Location(Expression):
+    pass
+
+
+@dataclass
+class Assignment(Statement):
+    location: Location
+    value: Expression
+
+
+@dataclass
+class PrintStmt(Statement):
+    expr: Expression
+
+
+'''
+  +-- Declaration (abstract)
+  | |
+  | +-- VarDecl: Guardar la información de una declaración de variable
+  | |
+  | +-- ArrayDecl: Declaración de Arreglos (multi-dimencioanles)
+  | |
+  | +-- FuncDecl: Para guardar información sobre las funciones declaradas
 '''
 
 
@@ -196,9 +246,61 @@ class Boolean(Literal):
   - Increment (pre/post fijo)
   - Decrement
   - FuncCall
+'''
 
+
+@dataclass
+class FuncCall(Expression):
+    name: str
+    args: List[Expression] = field(default_factory=list)
+
+
+@dataclass
+class Char(Literal):
+    value: str
+
+    def __post_init__(self):
+        assert isinstance(self.value, str) and len(
+            self.value) == 1, "Debe ser un solo carácter"
+        self.type = 'char'
+
+
+@dataclass
+class String(Literal):
+    value: str
+
+    def __post_init__(self):
+        assert isinstance(self.value, str), "Debe ser una cadena de texto"
+        self.type = 'string'
+
+
+'''
   +-- Location ('load'/'store')
     -- VarLoc
     -- ArrayLoc
 
 '''
+
+
+@dataclass
+class VarLoc(Location):
+    name: str  # nombre de la variable
+
+
+@dataclass
+class ArrayLoc(Location):
+    array: Expression  # VarLoc u otra expresión que evalúe a un arreglo
+    index: Expression  # expresión que representa el índice
+
+
+@dataclass
+class Increment(Expression):
+    location: Location
+    # True si es postfijo (x++), False si es prefijo (++x)
+    postfix: bool = False
+
+
+@dataclass
+class Decrement(Expression):
+    location: Location
+    postfix: bool = False

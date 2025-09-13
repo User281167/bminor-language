@@ -54,6 +54,7 @@ class TokenType(Enum):
     TRUE = 'TRUE'
     VOID = 'VOID'
     WHILE = 'WHILE'
+    DO = 'DO'
 
 
 class OperatorType(Enum):
