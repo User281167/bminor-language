@@ -102,8 +102,13 @@ class Lexer(sly.Lexer):
         self.logger = logging.getLogger('lexer')
 
     def log_error(self, error_type, token, message=None):
+        value = token.value[0:5]
+
+        if '\n' in value:
+            value = value[:value.index('\n')]
+
         column = token.index - self.text.rfind('\n', 0, token.index) + 1
-        msg = f"{error_type.value}: '{token.value}' {message or ''} at line {token.lineno} column {column}"
+        msg = f"{error_type.value}: {value} {message or ''} at line {token.lineno} column {column}"
         self.logger.error(msg)
         token.type = error_type.value
         token.value = token.value[0]
@@ -139,6 +144,7 @@ class Lexer(sly.Lexer):
     ID['true'] = TRUE
     ID['void'] = VOID
     ID['while'] = WHILE
+    ID['do'] = DO
 
     @_(r'[a-zA-Z_][a-zA-Z0-9_]*')
     def ID(self, t):
@@ -199,6 +205,8 @@ class Lexer(sly.Lexer):
         if char in [lit.value for lit in LiteralType] or char == '.':
             error_type = LexerError.UNEXPECTED_TOKEN
         elif char == '\'':
+            error_type = LexerError.MALFORMED_CHAR
+        elif char == '\\':
             error_type = LexerError.MALFORMED_CHAR
         elif char == '"':
             error_type = LexerError.MALFORMED_STRING

@@ -60,7 +60,7 @@ class TestBadCharLiterals(unittest.TestCase):
         log, tokens = self.capture_lexer_log("'\\")
         self.assertIn(LexerError.MALFORMED_CHAR.value, log)
         expected_types = [LexerError.MALFORMED_CHAR.value,
-                          LexerError.ILLEGAL_CHARACTER.value]
+                          LexerError.MALFORMED_CHAR.value]
         self.assertEqual([t.type for t in tokens], expected_types)
 
     def test_invalid_escape_sequence(self):
