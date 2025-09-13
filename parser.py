@@ -37,7 +37,7 @@ class Parser(sly.Parser):
 
     @_("ID ':' type_simple ';'")
     def decl(self, p):
-        ...
+        return _L(VarDecl(name=p.ID, type=p.type_simple), p.lineno)
 
     @_("ID ':' type_array_sized ';'")
     def decl(self, p):
@@ -100,18 +100,18 @@ class Parser(sly.Parser):
     @_("open_stmt")
     @_("closed_stmt")
     def stmt(self, p):
-        ...
+        return p[0]
 
     @_("if_stmt_closed")
     @_("for_stmt_closed")
     @_("simple_stmt")
     def closed_stmt(self, p):
-        ...
+        return p[0]
 
     @_("if_stmt_open",
        "for_stmt_open")
     def open_stmt(self, p):
-        ...
+        return p[0]
 
     @_("IF '(' opt_expr ')'")
     def if_cond(self, p):
@@ -123,11 +123,11 @@ class Parser(sly.Parser):
 
     @_("if_cond stmt")
     def if_stmt_open(self, p):
-        ...
+        return IfStmt(condition=p.if_cond, then_branch=[p.stmt])
 
     @_("if_cond closed_stmt ELSE if_stmt_open")
     def if_stmt_open(self, p):
-        ...
+        return IfStmt(condition=p.if_cond, then_branch=[p.closed_stmt], else_branch=[p.if_stmt_open])
 
     @_("FOR '(' opt_expr ';' opt_expr ';' opt_expr ')'")
     def for_header(self, p):
@@ -135,7 +135,8 @@ class Parser(sly.Parser):
 
     @_("for_header open_stmt")
     def for_stmt_open(self, p):
-        ...
+        init, cond, update = p.for_header
+        return ForStmt(init=init, condition=cond, update=update, body=[p.open_stmt])
 
     @_("for_header closed_stmt")
     def for_stmt_closed(self, p):
@@ -348,7 +349,7 @@ class Parser(sly.Parser):
     @_("TRUE")
     @_("FALSE")
     def factor(self, p):
-        return _L(Boolean(p[0] == 'true'), p.lieno)
+        return _L(Boolean(p[0] == 'true'), p.lineno)
 
     # Types
     @_("INTEGER")

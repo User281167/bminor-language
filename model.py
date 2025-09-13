@@ -260,6 +260,9 @@ class Char(Literal):
     value: str
 
     def __post_init__(self):
+        # remove "''"
+        self.value = self.value[1:-1]
+
         assert isinstance(self.value, str) and len(
             self.value) == 1, "Debe ser un solo carácter"
         self.type = 'char'
@@ -270,6 +273,9 @@ class String(Literal):
     value: str
 
     def __post_init__(self):
+        # remove "''"
+        self.value = self.value[1:-1]
+
         assert isinstance(self.value, str), "Debe ser una cadena de texto"
         self.type = 'string'
 
