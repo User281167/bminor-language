@@ -26,8 +26,6 @@ class TestDeclarations(unittest.TestCase):
     def test_array_decl(self):
         code = "arr : array [3] integer = { 1, 2, 3 };"
         ast = self.parse(code)
-        print("==================AST=================")
-        print(ast)
         decl = ast.body[0]
         self.assertIsInstance(decl, ArrayDecl)
         self.assertEqual(decl.name, "arr")
@@ -38,11 +36,12 @@ class TestDeclarations(unittest.TestCase):
 
     # def test_func_decl(self):
     #     code = """
-    #     sum : FUNCTION INTEGER (a: INTEGER, b: INTEGER) = {
-    #         RETURN a + b;
+    #     sum : function integer (a: integer, b: integer) = {
+    #         return a + b;
     #     }
     #     """
     #     ast = self.parse(code)
+    #     print("\n#####################AST####################\n", ast)
     #     decl = ast.body[0]
     #     self.assertIsInstance(decl, FuncDecl)
     #     self.assertEqual(decl.name, "sum")

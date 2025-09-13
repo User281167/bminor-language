@@ -40,41 +40,43 @@ class Parser(sly.Parser):
 
     @_("ID ':' type_array_sized ';'")
     def decl(self, p):
-        ...
+        return _L(ArrayDecl(name=p.ID, type=p.type_array_sized, size=p.type_array_sized.size), p.lineno)
 
     @_("ID ':' type_func ';'")
     def decl(self, p):
-        ...
+        return _L(FuncDecl(
+            name=p.ID,
+            return_type=p.type_func.return_type,
+            params=p.type_func.param_types,
+            body=[]
+        ), p.lineno)
 
-    # @_("decl_init")
-    # def decl(self, p):
-    #     ...
     @_("decl_init")
     def decl(self, p):
         return p.decl_init
 
-    # @_("ID ':' type_simple '=' expr ';'")
-    # def decl_init(self, p):
-    #     ...
     @_("ID ':' type_simple '=' expr ';'")
     def decl_init(self, p):
         return _L(VarDecl(name=p.ID, type=p.type_simple, value=p.expr), p.lineno)
 
-    # @_("ID ':' type_array_sized '=' '{' opt_expr_list '}' ';'")
-    # def decl_init(self, p):
-    #     ...
-
     @_("ID ':' type_array_sized '=' '{' opt_expr_list '}' ';'")
     def decl_init(self, p):
         # type_array_sized.size ya contiene la expresión del índice en el modelo ArrayType
-        return _L(ArrayDecl(name=p.ID, type=p.type_array_sized, size=p.type_array_sized.size, value=p.opt_expr_list), p.lineno)
+        return _L(ArrayDecl(
+            name=p.ID,
+            type=p.type_array_sized,
+            size=p.type_array_sized.size,
+            value=p.opt_expr_list
+        ), p.lineno)
 
-    # @_("ID ':' type_func '=' '{' opt_stmt_list '}'")
-    # def decl_init(self, p):
-    #     ...
     @_("ID ':' type_func '=' '{' opt_stmt_list '}'")
     def decl_init(self, p):
-        return _L(FuncDecl(name=p.ID, return_type=p.type_func.return_type, params=p.type_func.param_types, body=p.opt_stmt_list), p.lineno)
+        return _L(FuncDecl(
+            name=p.ID,
+            return_type=p.type_func.return_type,
+            params=p.type_func.param_types,
+            body=p.opt_stmt_list
+        ), p.lineno)
 
     # Statements
 
@@ -164,19 +166,19 @@ class Parser(sly.Parser):
 
     @_("empty")
     def opt_expr_list(self, p):
-        ...
+        return []
 
     @_("expr_list")
     def opt_expr_list(self, p):
-        ...
+        return p.expr_list
 
     @_("expr ',' expr_list")
     def expr_list(self, p):
-        ...
+        return [p.expr] + p.expr_list
 
     @_("expr")
     def expr_list(self, p):
-        ...
+        return [p.expr]
 
     # TODO
     @_("empty")
@@ -187,65 +189,38 @@ class Parser(sly.Parser):
     def opt_expr(self, p):
         ...
 
-    # @_("expr1")
-    # def expr(self, p):
-    #     ...
     @_("expr1")
     def expr(self, p):
         return p.expr1
 
-    # @_("lval '=' expr1")
-    # def expr1(self, p):
-    #     ...
     @_("lval '=' expr1")
     def expr1(self, p):
         return BinOper("=", p.lval, p.expr1)
 
-    # @_("expr2")
-    # def expr1(self, p):
-    #     ...
     @_("expr2")
     def expr1(self, p):
         return p.expr2
 
-    # @_("ID")
-    # def lval(self, p):
-    #     ...
     @_("ID")
     def lval(self, p):
         return VarLoc(p.ID)
 
-    # @_("ID index")
-    # def lval(self, p):
-    #     ...
-    @_("ID index")
+    @_("ID subscript")
     def lval(self, p):
-        return ArrayLoc(name=p.ID, index=p.index)
+        return ArrayLoc(name=p.ID, index=p.subscript)
 
-    # @_("expr2 LOR expr3")
-    # def expr2(self, p):
-    #     ...
     @_("expr2 LOR expr3")
     def expr2(self, p):
         return BinOper("LOR", p.expr2, p.expr3)
 
-    # @_("expr3")
-    # def expr2(self, p):
-    #     ...
     @_("expr3")
     def expr2(self, p):
         return p.expr3
 
-    # @_("expr3 LAND expr4")
-    # def expr3(self, p):
-    #     ...
     @_("expr3 LAND expr4")
     def expr3(self, p):
         return BinOper("LAND", p.expr3, p.expr4)
 
-    # @_("expr4")
-    # def expr3(self, p):
-    #     ...
     @_("expr4")
     def expr3(self, p):
         return p.expr4
@@ -259,9 +234,6 @@ class Parser(sly.Parser):
     def expr4(self, p):
         return BinOper(p[1], p.expr4, p.expr5)
 
-    # @_("expr5")
-    # def expr4(self, p):
-    #     ...
     @_("expr5")
     def expr4(self, p):
         return p.expr5
@@ -271,9 +243,6 @@ class Parser(sly.Parser):
     def expr5(self, p):
         return BinOper(p[1], p.expr5, p.expr6)
 
-    # @_("expr6")
-    # def expr5(self, p):
-    #     ...
     @_("expr6")
     def expr5(self, p):
         return p.expr6
@@ -284,9 +253,6 @@ class Parser(sly.Parser):
     def expr6(self, p):
         return BinOper(p[1], p.expr6, p.expr7)
 
-    # @_("expr7")
-    # def expr6(self, p):
-    #     ...
     @_("expr7")
     def expr6(self, p):
         return p.expr7
@@ -295,9 +261,6 @@ class Parser(sly.Parser):
     def expr7(self, p):
         return BinOper(p[1], p.expr7, p.expr8)
 
-    # @_("expr8")
-    # def expr7(self, p):
-    #     ...
     @_("expr8")
     def expr7(self, p):
         return p.expr8
@@ -307,67 +270,40 @@ class Parser(sly.Parser):
     def expr8(self, p):
         return UnaryOper(p[0], p.expr8)
 
-    # @_("expr9")
-    # def expr8(self, p):
-    #     ...
     @_("expr9")
     def expr8(self, p):
         return p.expr9
 
-    # @_("expr9 INC")
-    # def expr9(self, p):
-    #     ...
     @_("expr9 INC")
     def expr9(self, p):
         return UnaryOper("INC", p.expr9)
 
-    # @_("expr9 DEC")
-    # def expr9(self, p):
-    #     ...
     @_("expr9 DEC")
     def expr9(self, p):
         return UnaryOper("DEC", p.expr9)
 
-    # @_("group")
-    # def expr9(self, p):
-    #     ...
     @_("group")
     def expr9(self, p):
         return p.group
 
-    # @_("'(' expr ')'")
-    # def group(self, p):
-    #     ...
     @_("'(' expr ')'")
     def group(self, p):
         return p.expr
 
-    # @_("ID '(' opt_expr_list ')'")
-    # def group(self, p):
-    #     ...
     @_("ID '(' opt_expr_list ')'")
     def group(self, p):
         return FuncCall(name=p.ID, args=p.opt_expr_list)
 
-    # @_("ID index")
-    # def group(self, p):
-    #     ...
-    @_("ID index")
+    @_("ID subscript")
     def group(self, p):
-        return ArrayLoc(name=p.ID, index=p.index)
+        return ArrayLoc(name=p.ID, index=p.subscript)
 
-    # @_("factor")
-    # def group(self, p):
-    #     ...
     @_("factor")
     def group(self, p):
         return p.factor
 
-    # @_("'[' expr ']'")
-    # def index(self, p):
-    #     ...
     @_("'[' expr ']'")
-    def index(self, p):
+    def subscript(self, p):
         return p.expr
 
     @_("ID")
@@ -434,13 +370,13 @@ class Parser(sly.Parser):
     # def type_array(self, p):
     #     ...
 
-    @_("ARRAY index type_simple")
+    @_("ARRAY subscript type_simple")
     def type_array_sized(self, p):
-        return ArrayType(base=p.type_simple, size=p.index)
+        return ArrayType(base=p.type_simple, size=p.subscript)
 
-    @_("ARRAY index type_array_sized")
+    @_("ARRAY subscript type_array_sized")
     def type_array_sized(self, p):
-        return ArrayType(base=p.type_array_sized, size=p.index)
+        return ArrayType(base=p.type_array_sized, size=p.subscript)
 
     @_("ARRAY '[' ']' type_simple")
     def type_array(self, p):
@@ -462,22 +398,6 @@ class Parser(sly.Parser):
     def type_func(self, p):
         return FuncType(return_type=p.type_array_sized, param_types=p.opt_param_list)
 
-    # @_("empty")
-    # def opt_param_list(self, p):
-    #     ...
-
-    # @_("param_list")
-    # def opt_param_list(self, p):
-    #     ...
-
-    # @_("param_list ',' param")
-    # def param_list(self, p):
-    #     ...
-
-    # @_("param")
-    # def param_list(self, p):
-    #     ...
-
     @_("empty")
     def opt_param_list(self, p):
         return []
@@ -494,17 +414,6 @@ class Parser(sly.Parser):
     def param_list(self, p):
         return [p.param]
 
-    # @_("ID ':' type_simple")
-    # def param(self, p):
-    #     ...
-
-    # @_("ID ':' type_array")
-    # def param(self, p):
-    #     ...
-
-    # @_("ID ':' type_array_sized")
-    # def param(self, p):
-    #     ...
     @_("ID ':' type_simple")
     def param(self, p):
         return Param(name=p.ID, type=p.type_simple)

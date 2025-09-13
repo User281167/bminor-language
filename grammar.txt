@@ -46,7 +46,7 @@ Rule 42    opt_expr -> empty
 Rule 43    expr -> expr1
 Rule 44    expr1 -> expr2
 Rule 45    expr1 -> lval = expr1
-Rule 46    lval -> ID index
+Rule 46    lval -> ID subscript
 Rule 47    lval -> ID
 Rule 48    expr2 -> expr3
 Rule 49    expr2 -> expr2 LOR expr3
@@ -75,10 +75,10 @@ Rule 71    expr9 -> group
 Rule 72    expr9 -> expr9 DEC
 Rule 73    expr9 -> expr9 INC
 Rule 74    group -> factor
-Rule 75    group -> ID index
+Rule 75    group -> ID subscript
 Rule 76    group -> ID ( opt_expr_list )
 Rule 77    group -> ( expr )
-Rule 78    index -> [ expr ]
+Rule 78    subscript -> [ expr ]
 Rule 79    factor -> FALSE
 Rule 80    factor -> TRUE
 Rule 81    factor -> STRING_LITERAL
@@ -92,8 +92,8 @@ Rule 88    type_simple -> CHAR
 Rule 89    type_simple -> BOOLEAN
 Rule 90    type_simple -> FLOAT
 Rule 91    type_simple -> INTEGER
-Rule 92    type_array_sized -> ARRAY index type_array_sized
-Rule 93    type_array_sized -> ARRAY index type_simple
+Rule 92    type_array_sized -> ARRAY subscript type_array_sized
+Rule 93    type_array_sized -> ARRAY subscript type_simple
 Rule 94    type_array -> ARRAY [ ] type_array
 Rule 95    type_array -> ARRAY [ ] type_simple
 Rule 96    type_func -> FUNCTION type_array_sized ( opt_param_list )
@@ -109,8 +109,8 @@ Rule 105   empty -> <empty>
 
 Unused terminals:
 
-    AUTO
     WHILE
+    AUTO
 
 Terminals, with rules where they appear:
 
@@ -192,7 +192,6 @@ group                : 71
 if_cond              : 23 24 25
 if_stmt_closed       : 19
 if_stmt_open         : 21 24
-index                : 46 75 92 93
 lval                 : 45
 open_stmt            : 16 27
 opt_expr             : 22 26 26 26 35
@@ -207,6 +206,7 @@ return_stmt          : 32
 simple_stmt          : 17
 stmt                 : 13 14 25
 stmt_list            : 12 14 36
+subscript            : 46 75 92 93
 type_array           : 94 103
 type_array_sized     : 6 9 92 96 102
 type_func            : 5 8
@@ -324,8 +324,8 @@ state 8
     (10) decl_init -> ID : . type_simple = expr ;
     (96) type_func -> . FUNCTION type_array_sized ( opt_param_list )
     (97) type_func -> . FUNCTION type_simple ( opt_param_list )
-    (92) type_array_sized -> . ARRAY index type_array_sized
-    (93) type_array_sized -> . ARRAY index type_simple
+    (92) type_array_sized -> . ARRAY subscript type_array_sized
+    (93) type_array_sized -> . ARRAY subscript type_simple
     (86) type_simple -> . VOID
     (87) type_simple -> . STRING
     (88) type_simple -> . CHAR
@@ -373,8 +373,8 @@ state 12
 
     (96) type_func -> FUNCTION . type_array_sized ( opt_param_list )
     (97) type_func -> FUNCTION . type_simple ( opt_param_list )
-    (92) type_array_sized -> . ARRAY index type_array_sized
-    (93) type_array_sized -> . ARRAY index type_simple
+    (92) type_array_sized -> . ARRAY subscript type_array_sized
+    (93) type_array_sized -> . ARRAY subscript type_simple
     (86) type_simple -> . VOID
     (87) type_simple -> . STRING
     (88) type_simple -> . CHAR
@@ -394,12 +394,12 @@ state 12
 
 state 13
 
-    (92) type_array_sized -> ARRAY . index type_array_sized
-    (93) type_array_sized -> ARRAY . index type_simple
-    (78) index -> . [ expr ]
+    (92) type_array_sized -> ARRAY . subscript type_array_sized
+    (93) type_array_sized -> ARRAY . subscript type_simple
+    (78) subscript -> . [ expr ]
     [               shift and go to state 29
 
-    index                          shift and go to state 28
+    subscript                      shift and go to state 28
 
 state 14
 
@@ -550,7 +550,7 @@ state 25
     (45) expr1 -> . lval = expr1
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -577,7 +577,7 @@ state 25
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -626,10 +626,10 @@ state 27
 
 state 28
 
-    (92) type_array_sized -> ARRAY index . type_array_sized
-    (93) type_array_sized -> ARRAY index . type_simple
-    (92) type_array_sized -> . ARRAY index type_array_sized
-    (93) type_array_sized -> . ARRAY index type_simple
+    (92) type_array_sized -> ARRAY subscript . type_array_sized
+    (93) type_array_sized -> ARRAY subscript . type_simple
+    (92) type_array_sized -> . ARRAY subscript type_array_sized
+    (93) type_array_sized -> . ARRAY subscript type_simple
     (86) type_simple -> . VOID
     (87) type_simple -> . STRING
     (88) type_simple -> . CHAR
@@ -649,13 +649,13 @@ state 28
 
 state 29
 
-    (78) index -> [ . expr ]
+    (78) subscript -> [ . expr ]
     (43) expr -> . expr1
     (44) expr1 -> . expr2
     (45) expr1 -> . lval = expr1
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -682,7 +682,7 @@ state 29
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -759,7 +759,7 @@ state 30
     (10) decl_init -> . ID : type_simple = expr ;
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -786,7 +786,7 @@ state 30
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -858,7 +858,7 @@ state 31
     (45) expr1 -> . lval = expr1
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -885,7 +885,7 @@ state 31
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -926,12 +926,12 @@ state 31
 
 state 32
 
-    (46) lval -> ID . index
+    (46) lval -> ID . subscript
     (47) lval -> ID .
-    (75) group -> ID . index
+    (75) group -> ID . subscript
     (76) group -> ID . ( opt_expr_list )
     (85) factor -> ID .
-    (78) index -> . [ expr ]
+    (78) subscript -> . [ expr ]
     =               reduce using rule 47 (lval -> ID .)
     (               shift and go to state 89
     DEC             reduce using rule 85 (factor -> ID .)
@@ -957,7 +957,7 @@ state 32
     )               reduce using rule 85 (factor -> ID .)
     [               shift and go to state 29
 
-    index                          shift and go to state 88
+    subscript                      shift and go to state 88
 
 state 33
 
@@ -1088,7 +1088,7 @@ state 41
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -1201,7 +1201,7 @@ state 45
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -1287,7 +1287,7 @@ state 48
     (45) expr1 -> . lval = expr1
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -1314,7 +1314,7 @@ state 48
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -1545,27 +1545,27 @@ state 56
 
 state 57
 
-    (92) type_array_sized -> ARRAY index type_array_sized .
-    ;               reduce using rule 92 (type_array_sized -> ARRAY index type_array_sized .)
-    =               reduce using rule 92 (type_array_sized -> ARRAY index type_array_sized .)
-    (               reduce using rule 92 (type_array_sized -> ARRAY index type_array_sized .)
-    ,               reduce using rule 92 (type_array_sized -> ARRAY index type_array_sized .)
-    )               reduce using rule 92 (type_array_sized -> ARRAY index type_array_sized .)
+    (92) type_array_sized -> ARRAY subscript type_array_sized .
+    ;               reduce using rule 92 (type_array_sized -> ARRAY subscript type_array_sized .)
+    =               reduce using rule 92 (type_array_sized -> ARRAY subscript type_array_sized .)
+    (               reduce using rule 92 (type_array_sized -> ARRAY subscript type_array_sized .)
+    ,               reduce using rule 92 (type_array_sized -> ARRAY subscript type_array_sized .)
+    )               reduce using rule 92 (type_array_sized -> ARRAY subscript type_array_sized .)
 
 
 state 58
 
-    (93) type_array_sized -> ARRAY index type_simple .
-    ;               reduce using rule 93 (type_array_sized -> ARRAY index type_simple .)
-    =               reduce using rule 93 (type_array_sized -> ARRAY index type_simple .)
-    (               reduce using rule 93 (type_array_sized -> ARRAY index type_simple .)
-    ,               reduce using rule 93 (type_array_sized -> ARRAY index type_simple .)
-    )               reduce using rule 93 (type_array_sized -> ARRAY index type_simple .)
+    (93) type_array_sized -> ARRAY subscript type_simple .
+    ;               reduce using rule 93 (type_array_sized -> ARRAY subscript type_simple .)
+    =               reduce using rule 93 (type_array_sized -> ARRAY subscript type_simple .)
+    (               reduce using rule 93 (type_array_sized -> ARRAY subscript type_simple .)
+    ,               reduce using rule 93 (type_array_sized -> ARRAY subscript type_simple .)
+    )               reduce using rule 93 (type_array_sized -> ARRAY subscript type_simple .)
 
 
 state 59
 
-    (78) index -> [ expr . ]
+    (78) subscript -> [ expr . ]
     ]               shift and go to state 118
 
 
@@ -1577,12 +1577,12 @@ state 60
     (8) decl_init -> ID . : type_func = { opt_stmt_list }
     (9) decl_init -> ID . : type_array_sized = { opt_expr_list } ;
     (10) decl_init -> ID . : type_simple = expr ;
-    (46) lval -> ID . index
+    (46) lval -> ID . subscript
     (47) lval -> ID .
-    (75) group -> ID . index
+    (75) group -> ID . subscript
     (76) group -> ID . ( opt_expr_list )
     (85) factor -> ID .
-    (78) index -> . [ expr ]
+    (78) subscript -> . [ expr ]
     :               shift and go to state 8
     =               reduce using rule 47 (lval -> ID .)
     (               shift and go to state 89
@@ -1605,7 +1605,7 @@ state 60
     ;               reduce using rule 85 (factor -> ID .)
     [               shift and go to state 29
 
-    index                          shift and go to state 88
+    subscript                      shift and go to state 88
 
 state 61
 
@@ -1646,7 +1646,7 @@ state 61
     (10) decl_init -> . ID : type_simple = expr ;
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -1673,7 +1673,7 @@ state 61
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -1787,7 +1787,7 @@ state 65
     (10) decl_init -> . ID : type_simple = expr ;
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -1814,7 +1814,7 @@ state 65
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -2151,7 +2151,7 @@ state 78
     (10) decl_init -> . ID : type_simple = expr ;
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -2178,7 +2178,7 @@ state 78
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -2271,7 +2271,7 @@ state 79
     (10) decl_init -> . ID : type_simple = expr ;
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -2298,7 +2298,7 @@ state 79
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -2364,7 +2364,7 @@ state 80
     (45) expr1 -> . lval = expr1
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -2391,7 +2391,7 @@ state 80
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -2442,7 +2442,7 @@ state 81
     (45) expr1 -> . lval = expr1
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -2469,7 +2469,7 @@ state 81
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -2554,30 +2554,30 @@ state 87
 
 state 88
 
-    (46) lval -> ID index .
-    (75) group -> ID index .
-    =               reduce using rule 46 (lval -> ID index .)
-    DEC             reduce using rule 75 (group -> ID index .)
-    INC             reduce using rule 75 (group -> ID index .)
-    ^               reduce using rule 75 (group -> ID index .)
-    %               reduce using rule 75 (group -> ID index .)
-    /               reduce using rule 75 (group -> ID index .)
-    *               reduce using rule 75 (group -> ID index .)
-    -               reduce using rule 75 (group -> ID index .)
-    +               reduce using rule 75 (group -> ID index .)
-    GE              reduce using rule 75 (group -> ID index .)
-    GT              reduce using rule 75 (group -> ID index .)
-    LE              reduce using rule 75 (group -> ID index .)
-    LT              reduce using rule 75 (group -> ID index .)
-    NE              reduce using rule 75 (group -> ID index .)
-    EQ              reduce using rule 75 (group -> ID index .)
-    LAND            reduce using rule 75 (group -> ID index .)
-    LOR             reduce using rule 75 (group -> ID index .)
-    ;               reduce using rule 75 (group -> ID index .)
-    ]               reduce using rule 75 (group -> ID index .)
-    ,               reduce using rule 75 (group -> ID index .)
-    }               reduce using rule 75 (group -> ID index .)
-    )               reduce using rule 75 (group -> ID index .)
+    (46) lval -> ID subscript .
+    (75) group -> ID subscript .
+    =               reduce using rule 46 (lval -> ID subscript .)
+    DEC             reduce using rule 75 (group -> ID subscript .)
+    INC             reduce using rule 75 (group -> ID subscript .)
+    ^               reduce using rule 75 (group -> ID subscript .)
+    %               reduce using rule 75 (group -> ID subscript .)
+    /               reduce using rule 75 (group -> ID subscript .)
+    *               reduce using rule 75 (group -> ID subscript .)
+    -               reduce using rule 75 (group -> ID subscript .)
+    +               reduce using rule 75 (group -> ID subscript .)
+    GE              reduce using rule 75 (group -> ID subscript .)
+    GT              reduce using rule 75 (group -> ID subscript .)
+    LE              reduce using rule 75 (group -> ID subscript .)
+    LT              reduce using rule 75 (group -> ID subscript .)
+    NE              reduce using rule 75 (group -> ID subscript .)
+    EQ              reduce using rule 75 (group -> ID subscript .)
+    LAND            reduce using rule 75 (group -> ID subscript .)
+    LOR             reduce using rule 75 (group -> ID subscript .)
+    ;               reduce using rule 75 (group -> ID subscript .)
+    ]               reduce using rule 75 (group -> ID subscript .)
+    ,               reduce using rule 75 (group -> ID subscript .)
+    }               reduce using rule 75 (group -> ID subscript .)
+    )               reduce using rule 75 (group -> ID subscript .)
 
 
 state 89
@@ -2593,7 +2593,7 @@ state 89
     (45) expr1 -> . lval = expr1
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -2620,7 +2620,7 @@ state 89
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -2710,7 +2710,7 @@ state 91
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -2748,7 +2748,7 @@ state 92
     (45) expr1 -> . lval = expr1
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -2775,7 +2775,7 @@ state 92
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -2835,7 +2835,7 @@ state 93
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -2884,7 +2884,7 @@ state 94
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -2932,7 +2932,7 @@ state 95
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -2980,7 +2980,7 @@ state 96
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -3028,7 +3028,7 @@ state 97
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -3076,7 +3076,7 @@ state 98
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -3124,7 +3124,7 @@ state 99
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -3169,7 +3169,7 @@ state 100
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -3213,7 +3213,7 @@ state 101
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -3253,7 +3253,7 @@ state 102
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -3292,7 +3292,7 @@ state 103
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -3331,7 +3331,7 @@ state 104
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -3384,10 +3384,10 @@ state 105
 
 state 106
 
-    (75) group -> ID . index
+    (75) group -> ID . subscript
     (76) group -> ID . ( opt_expr_list )
     (85) factor -> ID .
-    (78) index -> . [ expr ]
+    (78) subscript -> . [ expr ]
     (               shift and go to state 89
     DEC             reduce using rule 85 (factor -> ID .)
     INC             reduce using rule 85 (factor -> ID .)
@@ -3412,7 +3412,7 @@ state 106
     )               reduce using rule 85 (factor -> ID .)
     [               shift and go to state 29
 
-    index                          shift and go to state 150
+    subscript                      shift and go to state 150
 
 state 107
 
@@ -3424,7 +3424,7 @@ state 107
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -3575,36 +3575,36 @@ state 117
 
 state 118
 
-    (78) index -> [ expr ] .
-    ARRAY           reduce using rule 78 (index -> [ expr ] .)
-    VOID            reduce using rule 78 (index -> [ expr ] .)
-    STRING          reduce using rule 78 (index -> [ expr ] .)
-    CHAR            reduce using rule 78 (index -> [ expr ] .)
-    BOOLEAN         reduce using rule 78 (index -> [ expr ] .)
-    FLOAT           reduce using rule 78 (index -> [ expr ] .)
-    INTEGER         reduce using rule 78 (index -> [ expr ] .)
-    =               reduce using rule 78 (index -> [ expr ] .)
-    DEC             reduce using rule 78 (index -> [ expr ] .)
-    INC             reduce using rule 78 (index -> [ expr ] .)
-    ^               reduce using rule 78 (index -> [ expr ] .)
-    %               reduce using rule 78 (index -> [ expr ] .)
-    /               reduce using rule 78 (index -> [ expr ] .)
-    *               reduce using rule 78 (index -> [ expr ] .)
-    -               reduce using rule 78 (index -> [ expr ] .)
-    +               reduce using rule 78 (index -> [ expr ] .)
-    GE              reduce using rule 78 (index -> [ expr ] .)
-    GT              reduce using rule 78 (index -> [ expr ] .)
-    LE              reduce using rule 78 (index -> [ expr ] .)
-    LT              reduce using rule 78 (index -> [ expr ] .)
-    NE              reduce using rule 78 (index -> [ expr ] .)
-    EQ              reduce using rule 78 (index -> [ expr ] .)
-    LAND            reduce using rule 78 (index -> [ expr ] .)
-    LOR             reduce using rule 78 (index -> [ expr ] .)
-    ;               reduce using rule 78 (index -> [ expr ] .)
-    ]               reduce using rule 78 (index -> [ expr ] .)
-    ,               reduce using rule 78 (index -> [ expr ] .)
-    }               reduce using rule 78 (index -> [ expr ] .)
-    )               reduce using rule 78 (index -> [ expr ] .)
+    (78) subscript -> [ expr ] .
+    ARRAY           reduce using rule 78 (subscript -> [ expr ] .)
+    VOID            reduce using rule 78 (subscript -> [ expr ] .)
+    STRING          reduce using rule 78 (subscript -> [ expr ] .)
+    CHAR            reduce using rule 78 (subscript -> [ expr ] .)
+    BOOLEAN         reduce using rule 78 (subscript -> [ expr ] .)
+    FLOAT           reduce using rule 78 (subscript -> [ expr ] .)
+    INTEGER         reduce using rule 78 (subscript -> [ expr ] .)
+    =               reduce using rule 78 (subscript -> [ expr ] .)
+    DEC             reduce using rule 78 (subscript -> [ expr ] .)
+    INC             reduce using rule 78 (subscript -> [ expr ] .)
+    ^               reduce using rule 78 (subscript -> [ expr ] .)
+    %               reduce using rule 78 (subscript -> [ expr ] .)
+    /               reduce using rule 78 (subscript -> [ expr ] .)
+    *               reduce using rule 78 (subscript -> [ expr ] .)
+    -               reduce using rule 78 (subscript -> [ expr ] .)
+    +               reduce using rule 78 (subscript -> [ expr ] .)
+    GE              reduce using rule 78 (subscript -> [ expr ] .)
+    GT              reduce using rule 78 (subscript -> [ expr ] .)
+    LE              reduce using rule 78 (subscript -> [ expr ] .)
+    LT              reduce using rule 78 (subscript -> [ expr ] .)
+    NE              reduce using rule 78 (subscript -> [ expr ] .)
+    EQ              reduce using rule 78 (subscript -> [ expr ] .)
+    LAND            reduce using rule 78 (subscript -> [ expr ] .)
+    LOR             reduce using rule 78 (subscript -> [ expr ] .)
+    ;               reduce using rule 78 (subscript -> [ expr ] .)
+    ]               reduce using rule 78 (subscript -> [ expr ] .)
+    ,               reduce using rule 78 (subscript -> [ expr ] .)
+    }               reduce using rule 78 (subscript -> [ expr ] .)
+    )               reduce using rule 78 (subscript -> [ expr ] .)
 
 
 state 119
@@ -3789,7 +3789,7 @@ state 131
     (45) expr1 -> . lval = expr1
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -3816,7 +3816,7 @@ state 131
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -3865,7 +3865,7 @@ state 132
     (45) expr1 -> . lval = expr1
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -3892,7 +3892,7 @@ state 132
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -3946,7 +3946,7 @@ state 134
     (45) expr1 -> . lval = expr1
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -3973,7 +3973,7 @@ state 134
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -4323,28 +4323,28 @@ state 149
 
 state 150
 
-    (75) group -> ID index .
-    DEC             reduce using rule 75 (group -> ID index .)
-    INC             reduce using rule 75 (group -> ID index .)
-    ^               reduce using rule 75 (group -> ID index .)
-    %               reduce using rule 75 (group -> ID index .)
-    /               reduce using rule 75 (group -> ID index .)
-    *               reduce using rule 75 (group -> ID index .)
-    -               reduce using rule 75 (group -> ID index .)
-    +               reduce using rule 75 (group -> ID index .)
-    GE              reduce using rule 75 (group -> ID index .)
-    GT              reduce using rule 75 (group -> ID index .)
-    LE              reduce using rule 75 (group -> ID index .)
-    LT              reduce using rule 75 (group -> ID index .)
-    NE              reduce using rule 75 (group -> ID index .)
-    EQ              reduce using rule 75 (group -> ID index .)
-    LAND            reduce using rule 75 (group -> ID index .)
-    LOR             reduce using rule 75 (group -> ID index .)
-    ;               reduce using rule 75 (group -> ID index .)
-    ]               reduce using rule 75 (group -> ID index .)
-    ,               reduce using rule 75 (group -> ID index .)
-    }               reduce using rule 75 (group -> ID index .)
-    )               reduce using rule 75 (group -> ID index .)
+    (75) group -> ID subscript .
+    DEC             reduce using rule 75 (group -> ID subscript .)
+    INC             reduce using rule 75 (group -> ID subscript .)
+    ^               reduce using rule 75 (group -> ID subscript .)
+    %               reduce using rule 75 (group -> ID subscript .)
+    /               reduce using rule 75 (group -> ID subscript .)
+    *               reduce using rule 75 (group -> ID subscript .)
+    -               reduce using rule 75 (group -> ID subscript .)
+    +               reduce using rule 75 (group -> ID subscript .)
+    GE              reduce using rule 75 (group -> ID subscript .)
+    GT              reduce using rule 75 (group -> ID subscript .)
+    LE              reduce using rule 75 (group -> ID subscript .)
+    LT              reduce using rule 75 (group -> ID subscript .)
+    NE              reduce using rule 75 (group -> ID subscript .)
+    EQ              reduce using rule 75 (group -> ID subscript .)
+    LAND            reduce using rule 75 (group -> ID subscript .)
+    LOR             reduce using rule 75 (group -> ID subscript .)
+    ;               reduce using rule 75 (group -> ID subscript .)
+    ]               reduce using rule 75 (group -> ID subscript .)
+    ,               reduce using rule 75 (group -> ID subscript .)
+    }               reduce using rule 75 (group -> ID subscript .)
+    )               reduce using rule 75 (group -> ID subscript .)
 
 
 state 151
@@ -4419,8 +4419,8 @@ state 155
     (102) param -> ID : . type_array_sized
     (103) param -> ID : . type_array
     (104) param -> ID : . type_simple
-    (92) type_array_sized -> . ARRAY index type_array_sized
-    (93) type_array_sized -> . ARRAY index type_simple
+    (92) type_array_sized -> . ARRAY subscript type_array_sized
+    (93) type_array_sized -> . ARRAY subscript type_simple
     (94) type_array -> . ARRAY [ ] type_array
     (95) type_array -> . ARRAY [ ] type_simple
     (86) type_simple -> . VOID
@@ -4503,7 +4503,7 @@ state 158
     (10) decl_init -> . ID : type_simple = expr ;
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -4530,7 +4530,7 @@ state 158
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -4725,14 +4725,14 @@ state 169
 
 state 170
 
-    (92) type_array_sized -> ARRAY . index type_array_sized
-    (93) type_array_sized -> ARRAY . index type_simple
+    (92) type_array_sized -> ARRAY . subscript type_array_sized
+    (93) type_array_sized -> ARRAY . subscript type_simple
     (94) type_array -> ARRAY . [ ] type_array
     (95) type_array -> ARRAY . [ ] type_simple
-    (78) index -> . [ expr ]
+    (78) subscript -> . [ expr ]
     [               shift and go to state 177
 
-    index                          shift and go to state 28
+    subscript                      shift and go to state 28
 
 state 171
 
@@ -4773,7 +4773,7 @@ state 171
     (10) decl_init -> . ID : type_simple = expr ;
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -4800,7 +4800,7 @@ state 171
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -4928,7 +4928,7 @@ state 174
     (10) decl_init -> . ID : type_simple = expr ;
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -4955,7 +4955,7 @@ state 174
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -5017,7 +5017,7 @@ state 175
     (45) expr1 -> . lval = expr1
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -5044,7 +5044,7 @@ state 175
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -5106,13 +5106,13 @@ state 177
 
     (94) type_array -> ARRAY [ . ] type_array
     (95) type_array -> ARRAY [ . ] type_simple
-    (78) index -> [ . expr ]
+    (78) subscript -> [ . expr ]
     (43) expr -> . expr1
     (44) expr1 -> . expr2
     (45) expr1 -> . lval = expr1
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -5139,7 +5139,7 @@ state 177
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -5229,7 +5229,7 @@ state 179
     (10) decl_init -> . ID : type_simple = expr ;
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -5256,7 +5256,7 @@ state 179
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -5369,7 +5369,7 @@ state 182
     (10) decl_init -> . ID : type_simple = expr ;
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -5396,7 +5396,7 @@ state 182
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -5465,7 +5465,7 @@ state 184
     (45) expr1 -> . lval = expr1
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -5492,7 +5492,7 @@ state 184
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
@@ -5581,7 +5581,7 @@ state 188
     (10) decl_init -> . ID : type_simple = expr ;
     (48) expr2 -> . expr3
     (49) expr2 -> . expr2 LOR expr3
-    (46) lval -> . ID index
+    (46) lval -> . ID subscript
     (47) lval -> . ID
     (50) expr3 -> . expr4
     (51) expr3 -> . expr3 LAND expr4
@@ -5608,7 +5608,7 @@ state 188
     (72) expr9 -> . expr9 DEC
     (73) expr9 -> . expr9 INC
     (74) group -> . factor
-    (75) group -> . ID index
+    (75) group -> . ID subscript
     (76) group -> . ID ( opt_expr_list )
     (77) group -> . ( expr )
     (79) factor -> . FALSE
