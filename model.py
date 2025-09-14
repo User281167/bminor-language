@@ -16,6 +16,30 @@ class Node:
     def accept(self, v: Visitor, *args, **kwargs):
         return v.visit(self, *args, **kwargs)
 
+    def pretty(self, indent=0):
+        pad = '  ' * indent
+        result = f"{pad}{self.__class__.__name__}("
+
+        for field_name, value in self.__dict__.items():
+            if isinstance(value, Node):
+                result += f"\n{pad}  {field_name}:\n{value.pretty(indent + 2)}"
+            elif isinstance(value, list):
+                result += f"\n{pad}  {field_name}: ["
+
+                for item in value:
+                    if isinstance(item, Node):
+                        result += f"\n{item.pretty(indent + 2)}"
+                    else:
+                        result += f"\n{pad}    {item}"
+
+                result += f"\n{pad}  ]"
+            else:
+                result += f"\n{pad}  {field_name}: {value}"
+
+        result += f"\n{pad})"
+
+        return result
+
 
 @dataclass
 class Statement(Node):

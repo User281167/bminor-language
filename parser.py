@@ -1,4 +1,5 @@
 # grammar.py
+from enum import Enum
 from model import VarLoc
 import logging
 import sly
@@ -11,6 +12,17 @@ from model import *
 def _L(node, lineno):
     node.lineno = lineno
     return node
+
+
+class ParserError(Enum):
+    SYNTAX_ERROR = "Syntax error"
+    INVALID_OPERATION = "Invalid operation"
+    INVALID_ASSIGNMENT = "Invalid assignment"
+    UNEXPECTED_TOKEN = "Unexpected token"
+    MISSING_EXPRESSION = "Missing expression"
+    MALFORMED_STATEMENT = "Malformed statement"
+    MALFORMED_EXPRESSION = "Malformed expression"
+    MALFORMED_TYPE = "Malformed type"
 
 
 class Parser(sly.Parser):
@@ -147,9 +159,12 @@ class Parser(sly.Parser):
                        body=[p.closed_stmt]
                        )
 
-    @_("WHILE '(' opt_expr ')' closed_stmt")
+    @_("WHILE '(' opt_expr ')' stmt",
+       "WHILE '(' opt_expr ')' block_stmt")
     def closed_stmt(self, p):
-        return WhileStmt(condition=p.opt_expr, body=[p.closed_stmt])
+        body = getattr(p, "stmt", None) or getattr(
+            p, "block_stmt", None) or getattr(p, "closed_stmt", None)
+        return WhileStmt(condition=p.opt_expr, body=[body] if not isinstance(body, list) else body)
 
     @_("DO closed_stmt WHILE '(' opt_expr ')' ';'")
     def closed_stmt(self, p):
@@ -410,6 +425,7 @@ class Parser(sly.Parser):
     # @_("FUNCTION type_array_sized '(' opt_param_list ')'")
     # def type_func(self, p):
     #     ...
+
     @_("FUNCTION type_simple '(' opt_param_list ')'")
     def type_func(self, p):
         return FuncType(return_type=p.type_simple, param_types=p.opt_param_list)
@@ -453,11 +469,34 @@ class Parser(sly.Parser):
     def error(self, p):
         lineno = p.lineno if p else 'EOF'
         value = repr(p.value) if p else 'EOF'
-        error(f'Syntax error at {value}', lineno)
+
+        if p and not isinstance(p.value, str):
+            error_type = ParserError.UNEXPECTED_TOKEN
+            message = f"{error_type.value} near {value}"
+            error(message, lineno)
+            return
+
+        # Clasificación de errores
+        if p and p.value in "+-*/%&|<>":
+            error_type = ParserError.INVALID_OPERATION
+            message = f"{error_type.value} near {value}"
+        elif p and p.value == "=":
+            error_type = ParserError.INVALID_ASSIGNMENT
+            message = f"{error_type.value} near {value}"
+        elif p and p.value in "({[":
+            error_type = ParserError.MISSING_EXPRESSION
+            message = f"{error_type.value}: unexpected closing token {value}"
+        else:
+            error_type = ParserError.SYNTAX_ERROR
+            message = f"{error_type.value} at {value}"
+
+        message = "Syntax error: " + message
+
+        error(message, lineno)
 
 
-# Convertir el AST a una representación JSON para mejor visualización
 def ast_to_dict(node):
+    # Convertir el AST a una representación JSON para mejor visualización
     if isinstance(node, list):
         return [ast_to_dict(item) for item in node]
     elif hasattr(node, "__dict__"):
