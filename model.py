@@ -178,7 +178,6 @@ class PrintStmt(Statement):
 class ArrayDecl(Declaration):
     name: str
     type: ArrayType  # tipo de arreglo multi-dimensional
-    size: Expression  # tamaño de arreglo evaluado
     value: List[Expression] = field(default_factory=list)  # valores iniciales
 
 

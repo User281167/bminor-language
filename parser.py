@@ -9,8 +9,8 @@ from errors import error, errors_detected
 from model import *
 
 
-def _L(node, lineno):
-    node.lineno = lineno
+def _L(node, p):
+    node.lineno = p.lineno
     return node
 
 
@@ -49,11 +49,11 @@ class Parser(sly.Parser):
 
     @_("ID ':' type_simple ';'")
     def decl(self, p):
-        return _L(VarDecl(name=p.ID, type=p.type_simple), p.lineno)
+        return _L(VarDecl(name=p.ID, type=p.type_simple), p)
 
     @_("ID ':' type_array_sized ';'")
     def decl(self, p):
-        return _L(ArrayDecl(name=p.ID, type=p.type_array_sized, size=p.type_array_sized.size), p.lineno)
+        return _L(ArrayDecl(name=p.ID, type=p.type_array_sized), p)
 
     @_("ID ':' type_func ';'")
     def decl(self, p):
@@ -62,7 +62,7 @@ class Parser(sly.Parser):
             return_type=p.type_func.return_type,
             params=p.type_func.param_types,
             body=[]
-        ), p.lineno)
+        ), p)
 
     @_("decl_init")
     def decl(self, p):
@@ -70,7 +70,7 @@ class Parser(sly.Parser):
 
     @_("ID ':' type_simple '=' expr ';'")
     def decl_init(self, p):
-        return _L(VarDecl(name=p.ID, type=p.type_simple, value=p.expr), p.lineno)
+        return _L(VarDecl(name=p.ID, type=p.type_simple, value=p.expr), p)
 
     @_("ID ':' type_array_sized '=' '{' opt_expr_list '}' ';'")
     def decl_init(self, p):
@@ -78,9 +78,8 @@ class Parser(sly.Parser):
         return _L(ArrayDecl(
             name=p.ID,
             type=p.type_array_sized,
-            size=p.type_array_sized.size,
             value=p.opt_expr_list
-        ), p.lineno)
+        ), p)
 
     @_("ID ':' type_func '=' '{' opt_stmt_list '}'")
     def decl_init(self, p):
@@ -89,7 +88,7 @@ class Parser(sly.Parser):
             return_type=p.type_func.return_type,
             params=p.type_func.param_types,
             body=p.opt_stmt_list
-        ), p.lineno)
+        ), p)
 
     # Statements
 
@@ -131,15 +130,23 @@ class Parser(sly.Parser):
 
     @_("if_cond closed_stmt ELSE closed_stmt")
     def if_stmt_closed(self, p):
-        return IfStmt(condition=p.if_cond, then_branch=[p.closed_stmt0], else_branch=[p.closed_stmt1])
+        return _L(
+            IfStmt(condition=p.if_cond, then_branch=[
+                   p.closed_stmt0], else_branch=[p.closed_stmt1]), p
+        )
 
     @_("if_cond stmt")
     def if_stmt_open(self, p):
-        return IfStmt(condition=p.if_cond, then_branch=[p.stmt])
+        return _L(
+            IfStmt(condition=p.if_cond, then_branch=[p.stmt]), p
+        )
 
     @_("if_cond closed_stmt ELSE if_stmt_open")
     def if_stmt_open(self, p):
-        return IfStmt(condition=p.if_cond, then_branch=[p.closed_stmt], else_branch=[p.if_stmt_open])
+        return _L(
+            IfStmt(condition=p.if_cond, then_branch=[
+                   p.closed_stmt], else_branch=[p.if_stmt_open]), p
+        )
 
     @_("FOR '(' opt_expr ';' opt_expr ';' opt_expr ')'")
     def for_header(self, p):
@@ -148,27 +155,33 @@ class Parser(sly.Parser):
     @_("for_header open_stmt")
     def for_stmt_open(self, p):
         init, cond, update = p.for_header
-        return ForStmt(init=init, condition=cond, update=update, body=[p.open_stmt])
+        return _L(ForStmt(init=init, condition=cond, update=update, body=[p.open_stmt]), p)
 
     @_("for_header closed_stmt")
     def for_stmt_closed(self, p):
         init, cond, update = p.for_header
-        return ForStmt(init=None if init is None else init,
-                       condition=cond,
-                       update=None if update is None else update,
-                       body=[p.closed_stmt]
-                       )
+        return _L(ForStmt(init=None if init is None else init,
+                          condition=cond,
+                          update=None if update is None else update,
+                          body=[p.closed_stmt]
+                          ), p)
 
     @_("WHILE '(' opt_expr ')' stmt",
        "WHILE '(' opt_expr ')' block_stmt")
     def closed_stmt(self, p):
         body = getattr(p, "stmt", None) or getattr(
             p, "block_stmt", None) or getattr(p, "closed_stmt", None)
-        return WhileStmt(condition=p.opt_expr, body=[body] if not isinstance(body, list) else body)
+        return _L(
+            WhileStmt(condition=p.opt_expr, body=[
+                      body] if not isinstance(body, list) else body),
+            p.lineno
+        )
 
     @_("DO closed_stmt WHILE '(' opt_expr ')' ';'")
     def closed_stmt(self, p):
-        return DoWhileStmt(body=[p.closed_stmt], condition=p.opt_expr)
+        return _L(
+            DoWhileStmt(body=[p.closed_stmt], condition=p.opt_expr), p
+        )
 
     # Simple statements are not recursive
 
@@ -182,11 +195,11 @@ class Parser(sly.Parser):
 
     @_("PRINT opt_expr_list ';'")
     def print_stmt(self, p):
-        return PrintStmt(p.opt_expr_list)
+        return _L(PrintStmt(p.opt_expr_list), p)
 
     @_("RETURN opt_expr ';'")
     def return_stmt(self, p):
-        return ReturnStmt(p.opt_expr)
+        return _L(ReturnStmt(p.opt_expr), p)
 
     @_("'{' stmt_list '}'")
     def block_stmt(self, p):
@@ -225,12 +238,12 @@ class Parser(sly.Parser):
 
     @_("lval '=' expr1")
     def expr1(self, p):
-        return BinOper("=", p.lval, p.expr1)
+        return _L(BinOper("=", p.lval, p.expr1), p)
 
     @_("lval '=' expr ';'")
     # puede ser una sentencia
     def simple_stmt(self, p):
-        return Assignment(location=p.lval, value=p.expr)
+        return _L(Assignment(location=p.lval, value=p.expr), p)
 
     @_("expr2")
     def expr1(self, p):
@@ -238,15 +251,15 @@ class Parser(sly.Parser):
 
     @_("ID")
     def lval(self, p):
-        return VarLoc(p.ID)
+        return _L(VarLoc(p.ID), p)
 
-    @_("ID subscript")
+    @_("ID index")
     def lval(self, p):
-        return ArrayLoc(name=p.ID, index=p.subscript)
+        return _L(ArrayLoc(array=VarLoc(p.ID), index=p[1]), p)
 
     @_("expr2 LOR expr3")
     def expr2(self, p):
-        return BinOper("LOR", p.expr2, p.expr3)
+        return _L(BinOper("LOR", p.expr2, p.expr3), p)
 
     @_("expr3")
     def expr2(self, p):
@@ -254,7 +267,7 @@ class Parser(sly.Parser):
 
     @_("expr3 LAND expr4")
     def expr3(self, p):
-        return BinOper("LAND", p.expr3, p.expr4)
+        return _
 
     @_("expr4")
     def expr3(self, p):
@@ -267,7 +280,7 @@ class Parser(sly.Parser):
     @_("expr4 GT expr5")
     @_("expr4 GE expr5")
     def expr4(self, p):
-        return BinOper(p[1], p.expr4, p.expr5)
+        return _L(BinOper(p[1], p.expr4, p.expr5), p)
 
     @_("expr5")
     def expr4(self, p):
@@ -276,7 +289,7 @@ class Parser(sly.Parser):
     @_("expr5 '+' expr6")
     @_("expr5 '-' expr6")
     def expr5(self, p):
-        return BinOper(p[1], p.expr5, p.expr6)
+        return _L(BinOper(p[1], p.expr5, p.expr6), p)
 
     @_("expr6")
     def expr5(self, p):
@@ -286,7 +299,7 @@ class Parser(sly.Parser):
     @_("expr6 '/' expr7")
     @_("expr6 '%' expr7")
     def expr6(self, p):
-        return BinOper(p[1], p.expr6, p.expr7)
+        return _L(BinOper(p[1], p.expr6, p.expr7), p)
 
     @_("expr7")
     def expr6(self, p):
@@ -294,7 +307,7 @@ class Parser(sly.Parser):
 
     @_("expr7 '^' expr8")
     def expr7(self, p):
-        return BinOper(p[1], p.expr7, p.expr8)
+        return _L(BinOper(p[1], p.expr7, p.expr8), p)
 
     @_("expr8")
     def expr7(self, p):
@@ -303,7 +316,7 @@ class Parser(sly.Parser):
     @_("'-' expr8")
     @_("'!' expr8")
     def expr8(self, p):
-        return UnaryOper(p[0], p.expr8)
+        return _L(UnaryOper(p[0], p.expr8), p)
 
     @_("expr9")
     def expr8(self, p):
@@ -311,11 +324,19 @@ class Parser(sly.Parser):
 
     @_("expr9 INC")
     def expr9(self, p):
-        return Increment(location=p.expr9, postfix=True)
+        return _L(Increment(location=p.expr9, postfix=True), p)
+
+    @_("INC expr9")
+    def expr9(self, p):
+        return _L(Increment(location=p.expr9, postfix=False), p)
 
     @_("expr9 DEC")
     def expr9(self, p):
-        return Decrement(location=p.expr9, postfix=True)
+        return _L(Decrement(location=p.expr9, postfix=True), p)
+
+    @_("DEC expr9")
+    def expr9(self, p):
+        return _L(Decrement(location=p.expr9, postfix=False), p)
 
     @_("group")
     def expr9(self, p):
@@ -327,69 +348,69 @@ class Parser(sly.Parser):
 
     @_("ID '(' opt_expr_list ')'")
     def group(self, p):
-        return FuncCall(name=p.ID, args=p.opt_expr_list)
+        return _L(FuncCall(name=p.ID, args=p.opt_expr_list), p)
 
-    @_("ID subscript")
+    @_("ID index")
     def group(self, p):
-        return ArrayLoc(name=p.ID, index=p.subscript)
+        return _L(ArrayLoc(array=VarLoc(p.ID), index=p[1]), p)
 
     @_("factor")
     def group(self, p):
         return p.factor
 
     @_("'[' expr ']'")
-    def subscript(self, p):
+    def index(self, p):
         return p.expr
 
     @_("ID")
     def factor(self, p):
-        return VarLoc(p.ID)
+        return _L(VarLoc(p.ID), p)
 
     @_("INTEGER_LITERAL")
     def factor(self, p):
-        return _L(Integer(p.INTEGER_LITERAL), p.lineno)
+        return _L(Integer(p.INTEGER_LITERAL), p)
 
     @_("FLOAT_LITERAL")
     def factor(self, p):
-        return _L(Float(p.FLOAT_LITERAL), p.lineno)
+        return _L(Float(p.FLOAT_LITERAL), p)
 
     @_("CHAR_LITERAL")
     def factor(self, p):
-        return _L(Char(p.CHAR_LITERAL), p.lineno)
+        return _L(Char(p.CHAR_LITERAL), p)
 
     @_("STRING_LITERAL")
     def factor(self, p):
-        return _L(String(p.STRING_LITERAL), p.lineno)
+        return _L(String(p.STRING_LITERAL), p)
 
     @_("TRUE")
     @_("FALSE")
     def factor(self, p):
-        return _L(Boolean(p[0] == 'true'), p.lineno)
+        return _L(Boolean(p[0] == 'true'), p)
 
     # Types
     @_("INTEGER")
     def type_simple(self, p):
-        return SimpleType("integer")
+        return _L(SimpleType("integer"), p)
 
     @_("FLOAT")
     def type_simple(self, p):
-        return SimpleType("float")
+        return _L(SimpleType("float"), p)
 
     @_("BOOLEAN")
     def type_simple(self, p):
-        return SimpleType("boolean")
+        return _L(SimpleType("boolean"), p)
 
     @_("CHAR")
     def type_simple(self, p):
-        return SimpleType("char")
+        return _L(SimpleType("char"), p)
 
     @_("STRING")
     def type_simple(self, p):
-        return SimpleType("string")
+        return _L(SimpleType("string"), p)
 
     @_("VOID")
     def type_simple(self, p):
-        return SimpleType("void")
+        return _L(SimpleType("void"), p)
 
     # @_("INTEGER")
     # @_("FLOAT")
@@ -405,34 +426,27 @@ class Parser(sly.Parser):
     # def type_array(self, p):
     #     ...
 
-    @_("ARRAY subscript type_simple")
+    @_("ARRAY index type_simple")
     def type_array_sized(self, p):
-        return ArrayType(base=p.type_simple, size=p.subscript)
+        return _L(ArrayType(base=p.type_simple, size=p[1]), p)
 
-    @_("ARRAY subscript type_array_sized")
+    @_("ARRAY index type_array_sized")
     def type_array_sized(self, p):
-        return ArrayType(base=p.type_array_sized, size=p.subscript)
+        return _L(ArrayType(base=p.type_array_sized, size=p[1]), p)
 
     @_("ARRAY '[' ']' type_simple")
     def type_array(self, p):
-        return ArrayType(base=p.type_simple)
+        return _L(ArrayType(base=p.type_simple), p)
 
     @_("ARRAY '[' ']' type_array")
     def type_array(self, p):
-        return ArrayType(base=p.type_array)
-
-    # @_("FUNCTION type_simple '(' opt_param_list ')'")
-    # @_("FUNCTION type_array_sized '(' opt_param_list ')'")
-    # def type_func(self, p):
-    #     ...
+        return _L(ArrayType(base=p.type_array), p)
 
     @_("FUNCTION type_simple '(' opt_param_list ')'")
-    def type_func(self, p):
-        return FuncType(return_type=p.type_simple, param_types=p.opt_param_list)
-
+    @_("FUNCTION type_array '(' opt_param_list ')'")
     @_("FUNCTION type_array_sized '(' opt_param_list ')'")
     def type_func(self, p):
-        return FuncType(return_type=p.type_array_sized, param_types=p.opt_param_list)
+        return _L(FuncType(return_type=p[1], param_types=p.opt_param_list), p)
 
     @_("empty")
     def opt_param_list(self, p):
@@ -452,15 +466,15 @@ class Parser(sly.Parser):
 
     @_("ID ':' type_simple")
     def param(self, p):
-        return Param(name=p.ID, type=p.type_simple)
+        return _L(Param(name=p.ID, type=p.type_simple), p)
 
     @_("ID ':' type_array")
     def param(self, p):
-        return Param(name=p.ID, type=p.type_array)
+        return _L(Param(name=p.ID, type=p.type_array), p)
 
     @_("ID ':' type_array_sized")
     def param(self, p):
-        return Param(name=p.ID, type=p.type_array_sized)
+        return _L(Param(name=p.ID, type=p.type_array_sized), p)
 
     @_("")
     def empty(self, p):
@@ -486,11 +500,15 @@ class Parser(sly.Parser):
         elif p and p.value in "({[":
             error_type = ParserError.MISSING_EXPRESSION
             message = f"{error_type.value}: unexpected closing token {value}"
+        elif p and p.value in [t.lower() for t in Lexer.tokens]:
+            error_type = ParserError.UNEXPECTED_TOKEN
+            message = f"{error_type.value} near {value}"
         else:
             error_type = ParserError.SYNTAX_ERROR
-            message = f"{error_type.value} at {value}"
+            message = f"at {value}"
 
-        message = "Syntax error: " + message
+        message = "Syntax error: " + message + " at line " + \
+            str(lineno) + f" column {p.index}" if p and p.index else ''
 
         error(message, lineno)
 
