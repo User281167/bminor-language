@@ -25,8 +25,8 @@ class TestAssignmentArray(unittest.TestCase):
         self.assertEqual(decl.name, "a")
         self.assertIsInstance(decl.type, ArrayType)
         self.assertEqual(decl.type.base.name, "integer")
-        self.assertIsInstance(decl.size, Integer)
-        self.assertEqual(decl.size.value, 3)
+        self.assertIsInstance(decl.type.size, Integer)
+        self.assertEqual(decl.type.size.value, 3)
         self.assertEqual(len(decl.value), 3)
         for i, val in enumerate(decl.value):
             self.assertIsInstance(val, Integer)
@@ -39,7 +39,7 @@ class TestAssignmentArray(unittest.TestCase):
         self.assertIsInstance(decl, ArrayDecl)
         self.assertEqual(decl.name, "f")
         self.assertEqual(decl.type.base.name, "float")
-        self.assertEqual(decl.size.value, 2)
+        self.assertEqual(decl.type.size.value, 2)
         self.assertEqual(len(decl.value), 2)
         self.assertIsInstance(decl.value[0], Float)
         self.assertAlmostEqual(decl.value[0].value, 3.14, places=7)
@@ -52,7 +52,7 @@ class TestAssignmentArray(unittest.TestCase):
         self.assertIsInstance(decl, ArrayDecl)
         self.assertEqual(decl.name, "c")
         self.assertEqual(decl.type.base.name, "char")
-        self.assertEqual(decl.size.value, 4)
+        self.assertEqual(decl.type.size.value, 4)
         self.assertEqual(len(decl.value), 4)
         expected_chars = ['a', 'b', 'c', 'd']
         for i, val in enumerate(decl.value):
@@ -66,7 +66,7 @@ class TestAssignmentArray(unittest.TestCase):
         self.assertIsInstance(decl, ArrayDecl)
         self.assertEqual(decl.name, "s")
         self.assertEqual(decl.type.base.name, "string")
-        self.assertEqual(decl.size.value, 2)
+        self.assertEqual(decl.type.size.value, 2)
         self.assertEqual(len(decl.value), 2)
         expected_strings = ["hello", "world"]
         for i, val in enumerate(decl.value):
@@ -80,8 +80,8 @@ class TestAssignmentArray(unittest.TestCase):
         self.assertIsInstance(decl, ArrayDecl)
         self.assertEqual(decl.name, "b")
         self.assertEqual(decl.type.base.name, "boolean")
-        self.assertEqual(decl.size.value, 3)
-        self.assertEqual(decl.size.value, decl.type.size.value)
+        self.assertEqual(decl.type.size.value, 3)
+        self.assertEqual(decl.type.size.value, decl.type.size.value)
         self.assertEqual(len(decl.value), 3)
         expected_bools = [True, False, True]
         for i, val in enumerate(decl.value):
@@ -97,8 +97,8 @@ class TestAssignmentArray(unittest.TestCase):
         self.assertIsInstance(decl, ArrayDecl)
         self.assertEqual(decl.name, "a")
         self.assertEqual(decl.type.base.name, "integer")
-        self.assertEqual(decl.size.value, 5)
-        self.assertEqual(decl.size.value, decl.type.size.value)
+        self.assertEqual(decl.type.size.value, 5)
+        self.assertEqual(decl.type.size.value, decl.type.size.value)
         self.assertEqual(len(decl.value), 0)  # Empty array
 
     def test_empty_float_array(self):
@@ -108,8 +108,8 @@ class TestAssignmentArray(unittest.TestCase):
         self.assertIsInstance(decl, ArrayDecl)
         self.assertEqual(decl.name, "f")
         self.assertEqual(decl.type.base.name, "float")
-        self.assertEqual(decl.size.value, 3)
-        self.assertEqual(decl.size.value, decl.type.size.value)
+        self.assertEqual(decl.type.size.value, 3)
+        self.assertEqual(decl.type.size.value, decl.type.size.value)
         self.assertEqual(len(decl.value), 0)
 
     def test_empty_char_array(self):
@@ -119,8 +119,8 @@ class TestAssignmentArray(unittest.TestCase):
         self.assertIsInstance(decl, ArrayDecl)
         self.assertEqual(decl.name, "c")
         self.assertEqual(decl.type.base.name, "char")
-        self.assertEqual(decl.size.value, 10)
-        self.assertEqual(decl.size.value, decl.type.size.value)
+        self.assertEqual(decl.type.size.value, 10)
+        self.assertEqual(decl.type.size.value, decl.type.size.value)
         self.assertEqual(len(decl.value), 0)
 
     def test_empty_string_array(self):
@@ -130,8 +130,8 @@ class TestAssignmentArray(unittest.TestCase):
         self.assertIsInstance(decl, ArrayDecl)
         self.assertEqual(decl.name, "s")
         self.assertEqual(decl.type.base.name, "string")
-        self.assertEqual(decl.size.value, 2)
-        self.assertEqual(decl.size.value, decl.type.size.value)
+        self.assertEqual(decl.type.size.value, 2)
+        self.assertEqual(decl.type.size.value, decl.type.size.value)
         self.assertEqual(len(decl.value), 0)
 
     def test_empty_boolean_array(self):
@@ -141,8 +141,8 @@ class TestAssignmentArray(unittest.TestCase):
         self.assertIsInstance(decl, ArrayDecl)
         self.assertEqual(decl.name, "b")
         self.assertEqual(decl.type.base.name, "boolean")
-        self.assertEqual(decl.size.value, 1)
-        self.assertEqual(decl.size.value, decl.type.size.value)
+        self.assertEqual(decl.type.size.value, 1)
+        self.assertEqual(decl.type.size.value, decl.type.size.value)
         self.assertEqual(len(decl.value), 0)
 
     def test_none_array(self):
@@ -152,9 +152,8 @@ class TestAssignmentArray(unittest.TestCase):
         self.assertIsInstance(decl, ArrayDecl)
         self.assertEqual(decl.name, "b")
         self.assertEqual(decl.type.base.name, "boolean")
-        self.assertEqual(decl.size.value, 1)
-        self.assertEqual(decl.size.value, decl.type.size.value)
-        self.assertEqual(decl.type.size, decl.size)
+        self.assertEqual(decl.type.size.value, 1)
+        self.assertEqual(decl.type.size.value, decl.type.size.value)
         self.assertEqual(len(decl.value), 0)
 
     def test_negative_size_array(self):
@@ -164,10 +163,10 @@ class TestAssignmentArray(unittest.TestCase):
         self.assertIsInstance(decl, ArrayDecl)
         self.assertEqual(decl.name, "b")
         self.assertEqual(decl.type.base.name, "boolean")
-        self.assertIsInstance(decl.size, UnaryOper)
-        self.assertEqual(decl.size.expr.value, 1)
-        self.assertEqual(decl.size.oper, '-')
-        self.assertEqual(decl.type.size, decl.size)
+        self.assertIsInstance(decl.type.size, UnaryOper)
+        self.assertEqual(decl.type.size.expr.value, 1)
+        self.assertEqual(decl.type.size.oper, '-')
+        self.assertEqual(len(decl.value), 0)
 
     # ========== FILLED ARRAY ASSIGNMENTS WITH VARIOUS SIZES ==========
 
@@ -176,7 +175,7 @@ class TestAssignmentArray(unittest.TestCase):
         ast = self.parse(code)
         decl = ast.body[0]
         self.assertIsInstance(decl, ArrayDecl)
-        self.assertEqual(decl.size.value, 1)
+        self.assertEqual(decl.type.size.value, 1)
         self.assertEqual(len(decl.value), 1)
         self.assertEqual(decl.value[0].value, 42)
 
@@ -185,7 +184,7 @@ class TestAssignmentArray(unittest.TestCase):
         ast = self.parse(code)
         decl = ast.body[0]
         self.assertIsInstance(decl, ArrayDecl)
-        self.assertEqual(decl.size.value, 0)
+        self.assertEqual(decl.type.size.value, 0)
         # se define como 0 pero se le asigna 10 elementos
         self.assertEqual(len(decl.value), 10)
         for i, val in enumerate(decl.value):
@@ -196,7 +195,7 @@ class TestAssignmentArray(unittest.TestCase):
         ast = self.parse(code)
         decl = ast.body[0]
         self.assertIsInstance(decl, ArrayDecl)
-        self.assertEqual(decl.size.value, 4)
+        self.assertEqual(decl.type.size.value, 4)
         self.assertEqual(len(decl.value), 5)
         expected_values = [1.0, 2.5, 3.14e2, 0.0e2, 0.5]
         for i, val in enumerate(decl.value):
@@ -207,7 +206,7 @@ class TestAssignmentArray(unittest.TestCase):
         ast = self.parse(code)
         decl = ast.body[0]
         self.assertIsInstance(decl, ArrayDecl)
-        self.assertEqual(decl.size.value, 3)
+        self.assertEqual(decl.type.size.value, 3)
         self.assertEqual(len(decl.value), 3)
         expected_strings = ["hello\\n", "world\\t", "test\\\\"]
         for i, val in enumerate(decl.value):
@@ -222,5 +221,5 @@ class TestAssignmentArray(unittest.TestCase):
         self.assertIsInstance(decl, ArrayDecl)
         self.assertEqual(decl.name, "a")
         self.assertEqual(decl.type.base.name, "integer")
-        self.assertEqual(decl.size.value, 5)
+        self.assertEqual(decl.type.size.value, 5)
         self.assertEqual(len(decl.value), 0)  # No initialization

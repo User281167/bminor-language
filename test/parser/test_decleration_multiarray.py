@@ -26,7 +26,7 @@ class TestAssignmentMultiDimensionalArray(unittest.TestCase):
         self.assertIsInstance(decl.type, ArrayType)
         self.assertIsInstance(decl.type.base, ArrayType)
         self.assertEqual(decl.type.base.base.name, "integer")
-        self.assertEqual(decl.size.value, 2)
+        self.assertEqual(decl.type.size.value, 2)
 
     def test_2d_integer_array(self):
         code = "a: array [2] array [3] integer = {{1, 2, 3}, {4, 5, 6}};"

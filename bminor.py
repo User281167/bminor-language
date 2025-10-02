@@ -1,3 +1,27 @@
+
+def save_json(ast, code=""):
+    import json
+
+    with open("ast.json", "w") as f:
+        def ast_to_dict(node):
+            if isinstance(node, list):
+                return [ast_to_dict(item) for item in node]
+            elif hasattr(node, "__dict__"):
+                result = {
+                    "_type": node.__class__.__name__  # ← Aquí agregas el nombre de clase
+                }
+                for key, value in node.__dict__.items():
+                    result[key] = ast_to_dict(value)
+                return result
+            else:
+                return node
+
+        f.write(json.dumps({
+            'code': code,
+            'ast': ast_to_dict(ast)
+        }, indent=2))
+
+
 if __name__ == "__main__":
     import sys
     import importlib.util
@@ -48,8 +72,10 @@ if __name__ == "__main__":
         if filename.endswith(".bminor"):
             try:
                 parser = Parser()
-                ast = parser.parse(open(filename).read())
-                # print(ast)
+                code = open(filename).read()
+                tokens = Lexer().tokenize(code)
+                ast = parser.parse(tokens)
+                save_json(ast)
             except Exception as e:
                 print(e)
                 sys.exit(1)

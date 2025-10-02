@@ -267,7 +267,7 @@ class Parser(sly.Parser):
 
     @_("expr3 LAND expr4")
     def expr3(self, p):
-        return _
+        return _L(BinOper("LAND", p.expr3, p.expr4), p)
 
     @_("expr4")
     def expr3(self, p):
