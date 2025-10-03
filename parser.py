@@ -484,9 +484,7 @@ class Parser(sly.Parser):
             error_type = ParserError.SYNTAX_ERROR
             message = f"at {value}"
 
-        message = "Syntax error: " + message + " at line " + \
-            str(lineno) + f" column {p.index}" if p and p.index else ''
-
+        message = f"Syntax error: {message} at line {lineno} column {p.index}"
         error(message, lineno)
 
 
