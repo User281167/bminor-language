@@ -233,7 +233,8 @@ class UnaryOper(Expression):
 @dataclass
 class Literal(Expression):
     value: Union[int, float, str, bool]
-    type: str = None
+    # type: str = None
+    type: SimpleType = field(init=False)
 
 
 @dataclass
@@ -242,7 +243,7 @@ class Integer(Literal):
 
     def __post_init__(self):
         assert isinstance(self.value, int), "Value debe ser un 'integer'"
-        self.type = 'integer'
+        self.type = SimpleType('integer')
 
 
 @dataclass
@@ -251,7 +252,7 @@ class Float(Literal):
 
     def __post_init__(self):
         assert isinstance(self.value, float), "Value debe ser un 'float'"
-        self.type = 'float'
+        self.type = SimpleType('float')
 
 
 @dataclass
@@ -260,7 +261,7 @@ class Boolean(Literal):
 
     def __post_init__(self):
         assert isinstance(self.value, bool), "Value debe ser un 'boolean'"
-        self.type = 'boolean'
+        self.type = SimpleType('boolean')
 
 
 '''
@@ -288,7 +289,7 @@ class Char(Literal):
 
         assert isinstance(self.value, str) and len(
             self.value) == 1, "Debe ser un solo carácter"
-        self.type = 'char'
+        self.type = SimpleType('char')
 
 
 @dataclass
@@ -300,7 +301,7 @@ class String(Literal):
         self.value = self.value[1:-1]
 
         assert isinstance(self.value, str), "Debe ser una cadena de texto"
-        self.type = 'string'
+        self.type = SimpleType('string')
 
 
 '''

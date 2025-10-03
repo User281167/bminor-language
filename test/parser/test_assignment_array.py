@@ -19,9 +19,9 @@ class TestArrayAssignment(unittest.TestCase):
         main_dcl = ast.body[0]
         decl = main_dcl.body[0]
         self.assertIsInstance(decl, Assignment)
-        self.assertEqual(decl.value.type, "integer")
+        self.assertEqual(decl.value.type.name, "integer")
         self.assertEqual(decl.location.array.name, "x")
-        self.assertEqual(decl.location.index.type, "integer")
+        self.assertEqual(decl.location.index.type.name, "integer")
         self.assertEqual(decl.location.index.value, 0)
 
     def test_array_assignment_boolean(self):
@@ -30,10 +30,10 @@ class TestArrayAssignment(unittest.TestCase):
         main_dcl = ast.body[0]
         decl = main_dcl.body[0]
         self.assertIsInstance(decl, Assignment)
-        self.assertEqual(decl.value.type, "boolean")
+        self.assertEqual(decl.value.type.name, "boolean")
         self.assertEqual(decl.value.value, True)
         self.assertEqual(decl.location.array.name, "flags")
-        self.assertEqual(decl.location.index.type, "integer")
+        self.assertEqual(decl.location.index.type.name, "integer")
         self.assertEqual(decl.location.index.value, 1)
 
     def test_array_assignment_index_expr(self):
@@ -81,7 +81,7 @@ class TestArrayAssignment(unittest.TestCase):
         ast = self.parse(code)
         decl = ast.body[0].body[0]
         self.assertIsInstance(decl, Assignment)
-        self.assertEqual(decl.value.type, "float")
+        self.assertEqual(decl.value.type.name, "float")
         self.assertEqual(decl.value.value, 36.5)
         self.assertEqual(decl.location.array.name, "temps")
         self.assertEqual(decl.location.index.value, 2)
@@ -125,7 +125,7 @@ class TestArrayAssignment(unittest.TestCase):
         ast = self.parse(code)
         decl = ast.body[0].body[0]
         self.assertIsInstance(decl.location.index, Literal)
-        self.assertEqual(decl.location.index.type, "string")
+        self.assertEqual(decl.location.index.type.name, "string")
         self.assertEqual(decl.location.index.value, "key")
         self.assertEqual(decl.value.value, 1)
 
@@ -134,7 +134,7 @@ class TestArrayAssignment(unittest.TestCase):
         ast = self.parse(code)
         decl = ast.body[0].body[0]
         self.assertIsInstance(decl.location.index, Literal)
-        self.assertEqual(decl.location.index.type, "char")
+        self.assertEqual(decl.location.index.type.name, "char")
         self.assertEqual(decl.location.index.value, 'a')
         self.assertEqual(decl.value.value, 2)
 
@@ -144,7 +144,7 @@ class TestArrayAssignment(unittest.TestCase):
         decl = ast.body[0].body[0]
         self.assertEqual(decl.location.array.name, "names")
         self.assertEqual(decl.location.index.value, 0)
-        self.assertEqual(decl.value.type, "string")
+        self.assertEqual(decl.value.type.name, "string")
         self.assertEqual(decl.value.value, "Alice")
 
     def test_array_assignment_value_char(self):
@@ -153,14 +153,14 @@ class TestArrayAssignment(unittest.TestCase):
         decl = ast.body[0].body[0]
         self.assertEqual(decl.location.array.name, "letters")
         self.assertEqual(decl.location.index.value, 1)
-        self.assertEqual(decl.value.type, "char")
+        self.assertEqual(decl.value.type.name, "char")
         self.assertEqual(decl.value.value, 'z')
 
     def test_array_assignment_index_boolean(self):
         code = "main: function integer() = {x[true] = 5;}"
         ast = self.parse(code)
         decl = ast.body[0].body[0]
-        self.assertEqual(decl.location.index.type, "boolean")
+        self.assertEqual(decl.location.index.type.name, "boolean")
         self.assertEqual(decl.location.index.value, True)
         self.assertEqual(decl.value.value, 5)
 

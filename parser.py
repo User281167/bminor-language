@@ -389,37 +389,14 @@ class Parser(sly.Parser):
 
     # Types
     @_("INTEGER")
-    def type_simple(self, p):
-        return _L(SimpleType("integer"), p)
-
     @_("FLOAT")
-    def type_simple(self, p):
-        return _L(SimpleType("float"), p)
-
     @_("BOOLEAN")
-    def type_simple(self, p):
-        return _L(SimpleType("boolean"), p)
-
     @_("CHAR")
-    def type_simple(self, p):
-        return _L(SimpleType("char"), p)
-
     @_("STRING")
-    def type_simple(self, p):
-        return _L(SimpleType("string"), p)
-
     @_("VOID")
     def type_simple(self, p):
-        return _L(SimpleType("void"), p)
-
-    # @_("INTEGER")
-    # @_("FLOAT")
-    # @_("BOOLEAN")
-    # @_("CHAR")
-    # @_("STRING")
-    # @_("VOID")
-    # def type_simple(self, p):
-    #     return p[0]
+        # return p[0]
+        return _L(SimpleType(p[0].lower()), p)
 
     # @_("ARRAY '[' ']' type_simple")
     # @_("ARRAY '[' ']' type_array")
