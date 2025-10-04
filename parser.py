@@ -17,6 +17,7 @@ def _L(node, p):
 class ParserError(Enum):
     SYNTAX_ERROR = "Syntax error"
     INVALID_OPERATION = "Invalid operation"
+    UNSUPPORTED_OPERATION = "Unsupported operation"
     INVALID_ASSIGNMENT = "Invalid assignment"
     UNEXPECTED_TOKEN = "Unexpected token"
     MISSING_EXPRESSION = "Missing expression"
@@ -24,6 +25,10 @@ class ParserError(Enum):
     MALFORMED_EXPRESSION = "Malformed expression"
     MALFORMED_TYPE = "Malformed type"
     INVALID_INC_DEC = "Invalid increment/decrement usage"
+    UNSUPPORTED_OPERATOR = "Unsupported operator"
+    MISSING_STATEMENT = "Missing statement"
+    MISSING_FUNCTION_BODY = "Missing function body"
+    INVALID_NOT = "Invalid not usage"
 
 
 class Parser(sly.Parser):
@@ -467,28 +472,44 @@ class Parser(sly.Parser):
             message = f"{error_type.value} near {value}"
             error(message, lineno, error_type)
             return
+        elif not p or p is None:
+            error_type = ParserError.SYNTAX_ERROR
+            message = f"at {value}"
+            error(message, lineno, error_type)
+            return
+
+        from scanner import TokenType, Lexer
 
         # Clasificación de errores
-        if p and p.value in "+-*/%&|<>":
-            error_type = ParserError.INVALID_OPERATION
+        if p.value in "&|~":
+            error_type = ParserError.UNSUPPORTED_OPERATOR
             message = f"{error_type.value} near {value}"
-        elif p and repr(p.value) in ("'++'", "'--'"):
+        elif p.value in ["&&", "`", "+", "-", "*", "/", "%", "<", ">"]:
+            error_type = ParserError.MISSING_EXPRESSION
+            message = f"{error_type.value} near {value}"
+        elif repr(p.value) in ("'++'", "'--'"):
             error_type = ParserError.INVALID_INC_DEC
             message = f"{error_type.value} near {value}"
-        elif p and p.value == "=":
+        elif p.value == "=":
             error_type = ParserError.INVALID_ASSIGNMENT
             message = f"{error_type.value} near {value}"
-        elif p and p.value in "({[":
+        elif p.value == "!":
+            error_type = ParserError.INVALID_NOT
+            message = f"{error_type.value} near {value}"
+        elif p.value in "({[":
             error_type = ParserError.MISSING_EXPRESSION
             message = f"{error_type.value}: unexpected closing token {value}"
-        elif p and p.value in [t.lower() for t in Lexer.tokens]:
+        elif p.value == ';':
+            error_type = ParserError.MISSING_STATEMENT
+            message = f"{error_type.value} near {value}"
+        elif p.value in [t.lower() for t in Lexer.tokens]:
             error_type = ParserError.UNEXPECTED_TOKEN
             message = f"{error_type.value} near {value}"
         else:
             error_type = ParserError.SYNTAX_ERROR
             message = f"at {value}"
 
-        message = f"Syntax error: {message} at line {lineno} column {p.index}"
+        message = f"Syntax error: {message} at line {lineno}"
         error(message, lineno, error_type)
 
 

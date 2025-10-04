@@ -164,3 +164,16 @@ class TestLogicalExpressions(unittest.TestCase):
         self.assertEqual(decl.value.expr.right.expr.oper, "<")
         self.assertEqual(decl.value.expr.right.expr.left.value, 2)
         self.assertEqual(decl.value.expr.right.expr.right.value, 4)
+
+    def test_no_support_bitwise_xor_is_pow(self):
+        code = "x: boolean = a ^ b;"
+        ast = self.parse(code)
+        decl = ast.body[0]
+        self.assertIsInstance(decl, VarDecl)
+        self.assertEqual(decl.name, "x")
+        self.assertIsInstance(decl.value, BinOper)
+        self.assertEqual(decl.value.oper, "^")
+        self.assertIsInstance(decl.value.left, VarLoc)
+        self.assertEqual(decl.value.left.name, "a")
+        self.assertIsInstance(decl.value.right, VarLoc)
+        self.assertEqual(decl.value.right.name, "b")
