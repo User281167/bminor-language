@@ -156,3 +156,18 @@ class TestForLoop(unittest.TestCase):
         self.assertIsInstance(stmt, ForStmt)
         self.assertEqual(len(stmt.body), 1)
         self.assertIsInstance(stmt.body[0], PrintStmt)
+
+    def test_for_body_without_inc(self):
+        code = """
+        main: function void () = {
+            for (i = 0; i < 10; i = i++) print i;
+        }
+        """
+        self.parse(code)
+        ast = self.parse(code)
+        stmt = ast.body[0].body[0]
+        self.assertIsInstance(stmt, ForStmt)
+        self.assertIsInstance(stmt.update, Assignment)
+        self.assertIsInstance(stmt.update.value, Increment)
+        self.assertEqual(len(stmt.body), 1)
+        self.assertIsInstance(stmt.body[0], PrintStmt)

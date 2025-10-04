@@ -254,9 +254,11 @@ stmt ::= open_stmt
 closed_stmt ::= if_stmt_closed
     | for_stmt_closed
     | simple_stmt
+    | while_stmt_closed
 
 open_stmt ::= if_stmt_open
     | for_stmt_open
+    | while_stmt_open
 
 if_cond ::= 'IF' '(' opt_expr ')'
 

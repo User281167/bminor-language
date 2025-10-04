@@ -20,6 +20,7 @@ class ParserError(Enum):
     UNSUPPORTED_OPERATION = "Unsupported operation"
     INVALID_ASSIGNMENT = "Invalid assignment"
     UNEXPECTED_TOKEN = "Unexpected token"
+    UNEXPECTED_IDENTIFIER = "Unexpected identifier"
     UNEXPECTED_EOF = "Unexpected end of file, expected close expression or statement"
     MISSING_EXPRESSION = "Missing expression"
     MALFORMED_STATEMENT = "Malformed statement"
@@ -185,16 +186,29 @@ class Parser(sly.Parser):
         return _L(ForStmt(init=init, condition=cond, update=update,
                           body=[p.closed_stmt] if not isinstance(p.closed_stmt, list) else p.closed_stmt), p)
 
-    @_("WHILE '(' opt_expr ')' stmt",
-       "WHILE '(' opt_expr ')' block_stmt")
-    def closed_stmt(self, p):
-        body = getattr(p, "stmt", None) or getattr(
-            p, "block_stmt", None) or getattr(p, "closed_stmt", None)
+    @_("WHILE '(' opt_expr ')' open_stmt")
+    def while_stmt_open(self, p):
         return _L(
-            WhileStmt(condition=p.opt_expr, body=[
-                      body] if not isinstance(body, list) else body),
-            p.lineno
+            WhileStmt(condition=p.opt_expr,
+                      body=[p.open_stmt] if not isinstance(p.open_stmt, list) else p.open_stmt),
+            p
         )
+
+    @_("WHILE '(' opt_expr ')' closed_stmt")
+    def while_stmt_closed(self, p):
+        return _L(
+            WhileStmt(condition=p.opt_expr,
+                      body=[p.closed_stmt] if not isinstance(p.closed_stmt, list) else p.closed_stmt),
+            p
+        )
+
+    @_("while_stmt_open")
+    def open_stmt(self, p):
+        return p.while_stmt_open
+
+    @_("while_stmt_closed")
+    def closed_stmt(self, p):
+        return p.while_stmt_closed
 
     @_("DO closed_stmt WHILE '(' opt_expr ')' ';'")
     def closed_stmt(self, p):
@@ -547,6 +561,9 @@ class Parser(sly.Parser):
             message = f"{error_type.value} near {value}"
         elif p.value in [t.lower() for t in Lexer.tokens]:
             error_type = ParserError.UNEXPECTED_TOKEN
+            message = f"{error_type.value} near {value}"
+        elif p.type == "ID":
+            error_type = ParserError.UNEXPECTED_IDENTIFIER
             message = f"{error_type.value} near {value}"
         else:
             error_type = ParserError.SYNTAX_ERROR
