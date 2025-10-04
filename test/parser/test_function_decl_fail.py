@@ -61,4 +61,4 @@ class TestFunctionDeclError(unittest.TestCase):
         code = "main: function int () = { }"
         self.parse(code)
         self.assertEqual(errors_detected(), 1)
-        self.assertTrue(has_error(ParserError.SYNTAX_ERROR))
+        self.assertTrue(has_error(ParserError.UNEXPECTED_IDENTIFIER))

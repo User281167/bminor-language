@@ -21,7 +21,7 @@ class TestLogicalExpressionsErrors(unittest.TestCase):
         code = "x: boolean = true or 1"
         ast = self.parse(code)
         self.assertTrue(errors_detected())
-        self.assertTrue(has_error(ParserError.SYNTAX_ERROR))
+        self.assertTrue(has_error(ParserError.UNEXPECTED_IDENTIFIER))
 
     def test_lor_bad_operands(self):
         code = "x: boolean = ` 1"

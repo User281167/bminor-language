@@ -73,4 +73,4 @@ class TestForLoopError(unittest.TestCase):
         }
         """
         self.parse(code)
-        self.assertTrue(has_error(ParserError.SYNTAX_ERROR))
+        self.assertTrue(has_error(ParserError.UNEXPECTED_IDENTIFIER))

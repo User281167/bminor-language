@@ -66,7 +66,7 @@ class TestExpressionErrors(unittest.TestCase):
         self.parse(code)
         self.assertNotEqual(
             errors_detected(), 0, "Se esperaba error por notación científica inválida")
-        self.assertTrue(has_error(ParserError.SYNTAX_ERROR))
+        self.assertTrue(has_error(ParserError.UNEXPECTED_IDENTIFIER))
 
     def test_plus_unary_negation_with_expression(self):
         code = "x: float = pi - +(3 + 2);"

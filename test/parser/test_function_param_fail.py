@@ -33,7 +33,7 @@ class TestFunctionParamsError(unittest.TestCase):
     def test_fun_missing_param_comma(self):
         code = "main: function integer (a: integer b: integer) = { return 0; }"
         self.parse(code)
-        self.assertTrue(has_error(ParserError.SYNTAX_ERROR))
+        self.assertTrue(has_error(ParserError.UNEXPECTED_IDENTIFIER))
 
     def test_fun_missing_param_closing_paren(self):
         code = "main: function integer (a: integer, b: integer = { return 0; }"
