@@ -20,6 +20,7 @@ class ParserError(Enum):
     UNSUPPORTED_OPERATION = "Unsupported operation"
     INVALID_ASSIGNMENT = "Invalid assignment"
     UNEXPECTED_TOKEN = "Unexpected token"
+    UNEXPECTED_EOF = "Unexpected end of file, expected close expression or statement"
     MISSING_EXPRESSION = "Missing expression"
     MALFORMED_STATEMENT = "Malformed statement"
     MALFORMED_EXPRESSION = "Malformed expression"
@@ -29,6 +30,8 @@ class ParserError(Enum):
     MISSING_STATEMENT = "Missing statement"
     MISSING_FUNCTION_BODY = "Missing function body"
     INVALID_NOT = "Invalid not usage"
+    MALFORMED_STRING = "Malformed string"
+    MALFORMED_CHAR = "Malformed character literal"
 
 
 class Parser(sly.Parser):
@@ -469,12 +472,18 @@ class Parser(sly.Parser):
 
         if p and not isinstance(p.value, str):
             error_type = ParserError.UNEXPECTED_TOKEN
-            message = f"{error_type.value} near {value}"
+            message = f"Syntax error: {error_type.value} near {value}"
             error(message, lineno, error_type)
             return
         elif not p or p is None:
+            if lineno == 'EOF':
+                error_type = ParserError.UNEXPECTED_EOF
+                message = f"Syntax error: {error_type.value}"
+                error(message, lineno, error_type)
+                return
+
             error_type = ParserError.SYNTAX_ERROR
-            message = f"at {value}"
+            message = f"Syntax error: {error_type.value} at {value}"
             error(message, lineno, error_type)
             return
 
@@ -484,7 +493,7 @@ class Parser(sly.Parser):
         if p.value in "&|~":
             error_type = ParserError.UNSUPPORTED_OPERATOR
             message = f"{error_type.value} near {value}"
-        elif p.value in ["&&", "`", "+", "-", "*", "/", "%", "<", ">"]:
+        elif p.value in ["&&", "==", "!=", "<=", ">=", "<", ">", "`", "+", "-", "*", "/", "%"]:
             error_type = ParserError.MISSING_EXPRESSION
             message = f"{error_type.value} near {value}"
         elif repr(p.value) in ("'++'", "'--'"):
@@ -495,6 +504,12 @@ class Parser(sly.Parser):
             message = f"{error_type.value} near {value}"
         elif p.value == "!":
             error_type = ParserError.INVALID_NOT
+            message = f"{error_type.value} near {value}"
+        elif p.value == "'":
+            error_type = ParserError.MALFORMED_CHAR
+            message = f"{error_type.value} near {value}"
+        elif p.value == "\"":
+            error_type = ParserError.MALFORMED_STRING
             message = f"{error_type.value} near {value}"
         elif p.value in "({[":
             error_type = ParserError.MISSING_EXPRESSION
