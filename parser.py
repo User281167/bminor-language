@@ -32,7 +32,7 @@ class ParserError(Enum):
     INVALID_NOT = "Invalid not usage"
     MALFORMED_STRING = "Malformed string"
     MALFORMED_CHAR = "Malformed character literal"
-    MISSING_COLON = "Missing colon expected identifier or type"
+    UNEXPECTED_COLON = "Unexpected colon expected identifier or type"
     MISSING_SEMICOLON = "Missing semicolon"
     MISSING_COMMA = "Missing comma"
     MISSING_LEFT_BRACKET = "Missing left bracket"
@@ -524,7 +524,7 @@ class Parser(sly.Parser):
             error_type = ParserError.MALFORMED_STRING
             message = f"{error_type.value} near {value}"
         elif p.value == ":":
-            error_type = ParserError.MISSING_COLON
+            error_type = ParserError.UNEXPECTED_COLON
             message = f"{error_type.value} near {value}"
         elif p.value == "[":
             error_type = ParserError.INVALID_ARRAY_SYNTAX
@@ -540,7 +540,7 @@ class Parser(sly.Parser):
             message = f"{error_type.value} unexpected '(' or expected list of parameters after {value}"
         elif p.value == ")":
             error_type = ParserError.MISSING_EXPRESSION
-            message = f"{error_type.value}, unexpected ')'"
+            message = f"{error_type.value}, unexpected ')' or expected list of parameters after {value}"
         elif p.value == ';':
             error_type = ParserError.MISSING_STATEMENT
             message = f"{error_type.value} near {value}"

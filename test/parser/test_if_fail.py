@@ -91,4 +91,4 @@ class TestInvalidIfStmt(unittest.TestCase):
         }
         """
         self.parse(code)
-        self.assertTrue(has_error(ParserError.MISSING_COLON))
+        self.assertTrue(has_error(ParserError.UNEXPECTED_COLON))

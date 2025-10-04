@@ -31,7 +31,7 @@ class TestAssignmentError(unittest.TestCase):
         code = ": integer = 42;"
         self.parse(code)
         self.assertEqual(errors_detected(), 1)
-        self.assertTrue(has_error(ParserError.MISSING_COLON))
+        self.assertTrue(has_error(ParserError.UNEXPECTED_COLON))
 
     def test_assign_float_no_value(self):
         code = "f: float = ;"
