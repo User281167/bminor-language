@@ -176,16 +176,14 @@ class Parser(sly.Parser):
     @_("for_header open_stmt")
     def for_stmt_open(self, p):
         init, cond, update = p.for_header
-        return _L(ForStmt(init=init, condition=cond, update=update, body=[p.open_stmt]), p)
+        return _L(ForStmt(init=init, condition=cond, update=update,
+                          body=[p.open_stmt] if not isinstance(p.open_stmt, list) else p.open_stmt), p)
 
     @_("for_header closed_stmt")
     def for_stmt_closed(self, p):
         init, cond, update = p.for_header
-        return _L(ForStmt(init=None if init is None else init,
-                          condition=cond,
-                          update=None if update is None else update,
-                          body=[p.closed_stmt]
-                          ), p)
+        return _L(ForStmt(init=init, condition=cond, update=update,
+                          body=[p.closed_stmt] if not isinstance(p.closed_stmt, list) else p.closed_stmt), p)
 
     @_("WHILE '(' opt_expr ')' stmt",
        "WHILE '(' opt_expr ')' block_stmt")
@@ -259,7 +257,7 @@ class Parser(sly.Parser):
 
     @_("lval '=' expr1")
     def expr1(self, p):
-        return _L(BinOper("=", p.lval, p.expr1), p)
+        return _L(Assignment(p.lval, p.expr1), p)
 
     @_("lval '=' expr ';'")
     # puede ser una sentencia
@@ -533,6 +531,9 @@ class Parser(sly.Parser):
             error_type = ParserError.INVALID_ARRAY_SYNTAX
             message = f"{error_type.value} unexpected ']' near {value}"
         elif p.value == "{":
+            error_type = ParserError.INVALID_STATEMENT
+            message = f"{error_type.value} unexpected {value}"
+        elif p.value == "}":
             error_type = ParserError.INVALID_STATEMENT
             message = f"{error_type.value} unexpected {value}"
         elif p.value == "(":
