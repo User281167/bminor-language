@@ -250,6 +250,7 @@ stmt_list ::= stmt
 
 stmt ::= open_stmt
     | closed_stmt
+    | DO block_stmt WHILE '(' expr ')' ';'
 
 closed_stmt ::= if_stmt_closed
     | for_stmt_closed

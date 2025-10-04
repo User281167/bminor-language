@@ -210,11 +210,20 @@ class Parser(sly.Parser):
     def closed_stmt(self, p):
         return p.while_stmt_closed
 
-    @_("DO closed_stmt WHILE '(' opt_expr ')' ';'")
-    def closed_stmt(self, p):
+    @_("DO closed_stmt WHILE '(' expr ')' ';'")
+    def do_while_stmt(self, p):
         return _L(
-            DoWhileStmt(body=[p.closed_stmt], condition=p.opt_expr), p
+            DoWhileStmt(
+                body=[p.closed_stmt] if not isinstance(
+                    p.closed_stmt, list) else p.closed_stmt,
+                condition=p.expr
+            ),
+            p
         )
+
+    @_("do_while_stmt")
+    def closed_stmt(self, p):
+        return p.do_while_stmt
 
     # Simple statements are not recursive
 
