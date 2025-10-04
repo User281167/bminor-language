@@ -13,12 +13,16 @@ consultar esto posteriormente para decidir si debe detenerse.
 '''
 from rich import print
 
+
 _errors_detected = 0
+_errors = []
 
 
-def error(message, lineno=None):
-    global _errors_detected
+def error(message, lineno=None, error_type=None):
+    global _errors_detected, _errors
 
+    if error_type:
+        _errors.append(error_type)
     if lineno:
         print(f'{lineno}: [red]{message}[/red]')
     else:
@@ -27,10 +31,19 @@ def error(message, lineno=None):
     _errors_detected += 1
 
 
-def errors_detected():
+def errors_detected() -> int:
     return _errors_detected
 
 
-def clear_errors():
-    global _errors_detected
+def clear_errors() -> None:
+    global _errors, _errors_detected
+    _errors = []
     _errors_detected = 0
+
+
+def get_errors() -> list:
+    return _errors.copy()
+
+
+def has_error(error_type) -> bool:
+    return any([e == error_type for e in _errors])

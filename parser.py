@@ -23,6 +23,7 @@ class ParserError(Enum):
     MALFORMED_STATEMENT = "Malformed statement"
     MALFORMED_EXPRESSION = "Malformed expression"
     MALFORMED_TYPE = "Malformed type"
+    INVALID_INC_DEC = "Invalid increment/decrement usage"
 
 
 class Parser(sly.Parser):
@@ -464,12 +465,15 @@ class Parser(sly.Parser):
         if p and not isinstance(p.value, str):
             error_type = ParserError.UNEXPECTED_TOKEN
             message = f"{error_type.value} near {value}"
-            error(message, lineno)
+            error(message, lineno, error_type)
             return
 
         # Clasificación de errores
         if p and p.value in "+-*/%&|<>":
             error_type = ParserError.INVALID_OPERATION
+            message = f"{error_type.value} near {value}"
+        elif p and repr(p.value) in ("'++'", "'--'"):
+            error_type = ParserError.INVALID_INC_DEC
             message = f"{error_type.value} near {value}"
         elif p and p.value == "=":
             error_type = ParserError.INVALID_ASSIGNMENT
@@ -485,7 +489,7 @@ class Parser(sly.Parser):
             message = f"at {value}"
 
         message = f"Syntax error: {message} at line {lineno} column {p.index}"
-        error(message, lineno)
+        error(message, lineno, error_type)
 
 
 def ast_to_dict(node):

@@ -1,8 +1,8 @@
 import unittest
-from parser import Parser
+from parser import Parser, ParserError
 from scanner import Lexer
 from model import *
-from errors import errors_detected, clear_errors
+from errors import errors_detected, clear_errors, has_error, get_errors
 
 
 class TestIncDecErrors(unittest.TestCase):
@@ -18,47 +18,59 @@ class TestIncDecErrors(unittest.TestCase):
     def test_inc_dec_error(self):
         self.parse("++[]")
         self.assertTrue(errors_detected())
+        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
 
     def test_inc_dec_error2(self):
         self.parse("{}++")
         self.assertTrue(errors_detected())
+        self.assertTrue(has_error(ParserError.MISSING_EXPRESSION))
 
     def test_inc_dec_error3(self):
         self.parse("++&&")
         self.assertTrue(errors_detected())
+        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
 
     def test_dec_on_operator(self):
         self.parse("--`")
         self.assertTrue(errors_detected())
+        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
 
     def test_inc_on_unfinished_expression(self):
         self.parse("++(")
         self.assertTrue(errors_detected())
+        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
 
     def test_dec_on_unfinished_expression(self):
-        self.parse("--(")
+        self.parse("--()")
         self.assertTrue(errors_detected())
+        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
 
     def test_inc_on_missing_expression(self):
-        self.parse("++")
+        self.parse("++(2+1)")
         self.assertTrue(errors_detected())
+        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
 
     def test_dec_on_missing_expression(self):
         self.parse("--")
         self.assertTrue(errors_detected())
+        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
 
     def test_inc_on_comma(self):
         self.parse("++,,")
         self.assertTrue(errors_detected())
+        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
 
     def test_dec_on_semicolon(self):
         self.parse("--;")
         self.assertTrue(errors_detected())
+        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
 
     def test_inc_on_array_missing_index(self):
         self.parse("arr[]++;")
         self.assertTrue(errors_detected())
+        self.assertTrue(has_error(ParserError.MISSING_EXPRESSION))
 
     def test_dec_on_array_missing_index(self):
         self.parse("--arr[];")
         self.assertTrue(errors_detected())
+        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
