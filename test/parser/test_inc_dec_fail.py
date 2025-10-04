@@ -23,7 +23,7 @@ class TestIncDecErrors(unittest.TestCase):
     def test_inc_dec_error2(self):
         self.parse("{}++")
         self.assertTrue(errors_detected())
-        self.assertTrue(has_error(ParserError.INVALID_ARRAY_SYNTAX))
+        self.assertTrue(has_error(ParserError.INVALID_STATEMENT))
 
     def test_inc_dec_error3(self):
         self.parse("++&&")

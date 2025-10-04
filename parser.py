@@ -41,6 +41,7 @@ class ParserError(Enum):
     INVALID_INDEX_EXPRESSION = "Invalid index expression"
     INVALID_ASSIGNMENT_OPERATOR = "Invalid assignment operator"
     INCOMPLETE_FUNCTION_DECLARATION = "Incomplete function declaration"
+    INVALID_STATEMENT = "Invalid statement"
 
 
 class Parser(sly.Parser):
@@ -142,28 +143,30 @@ class Parser(sly.Parser):
     def open_stmt(self, p):
         return p[0]
 
-    @_("IF '(' opt_expr ')'")
+    # @_("IF '(' opt_expr ')'")
+    @_("IF '(' expr ')'")
     def if_cond(self, p):
-        return p.opt_expr
+        # return p.opt_expr
+        return p.expr
 
     @_("if_cond closed_stmt ELSE closed_stmt")
     def if_stmt_closed(self, p):
         return _L(
-            IfStmt(condition=p.if_cond, then_branch=[
-                   p.closed_stmt0], else_branch=[p.closed_stmt1]), p
+            IfStmt(condition=p.if_cond, then_branch=p.closed_stmt0,
+                   else_branch=p.closed_stmt1), p
         )
 
     @_("if_cond stmt")
     def if_stmt_open(self, p):
         return _L(
-            IfStmt(condition=p.if_cond, then_branch=[p.stmt]), p
+            IfStmt(condition=p.if_cond, then_branch=p.stmt), p
         )
 
     @_("if_cond closed_stmt ELSE if_stmt_open")
     def if_stmt_open(self, p):
         return _L(
-            IfStmt(condition=p.if_cond, then_branch=[
-                   p.closed_stmt], else_branch=[p.if_stmt_open]), p
+            IfStmt(condition=p.if_cond, then_branch=p.closed_stmt,
+                   else_branch=p.if_stmt_open), p
         )
 
     @_("FOR '(' opt_expr ';' opt_expr ';' opt_expr ')'")
@@ -525,16 +528,19 @@ class Parser(sly.Parser):
             message = f"{error_type.value} near {value}"
         elif p.value == "[":
             error_type = ParserError.INVALID_ARRAY_SYNTAX
-            message = f"{error_type.value}: unexpected '[' near {value}"
+            message = f"{error_type.value} unexpected '[' near {value}"
         elif p.value == "]":
             error_type = ParserError.INVALID_ARRAY_SYNTAX
-            message = f"{error_type.value}: unexpected ']' near {value}"
+            message = f"{error_type.value} unexpected ']' near {value}"
         elif p.value == "{":
-            error_type = ParserError.INVALID_ARRAY_SYNTAX
-            message = f"{error_type.value}: '{{' used instead of '[' near {value}"
+            error_type = ParserError.INVALID_STATEMENT
+            message = f"{error_type.value} unexpected {value}"
         elif p.value == "(":
             error_type = ParserError.INCOMPLETE_FUNCTION_DECLARATION
-            message = f"{error_type.value}: unexpected '(' or expected list of parameters after {value}"
+            message = f"{error_type.value} unexpected '(' or expected list of parameters after {value}"
+        elif p.value == ")":
+            error_type = ParserError.MISSING_EXPRESSION
+            message = f"{error_type.value}, unexpected ')'"
         elif p.value == ';':
             error_type = ParserError.MISSING_STATEMENT
             message = f"{error_type.value} near {value}"

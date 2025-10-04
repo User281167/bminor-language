@@ -67,7 +67,7 @@ class TestArrayAssignmentError(unittest.TestCase):
         code = "x{0} = 2;"
         self.parse(code)
         self.assertEqual(errors_detected(), 1)
-        self.assertTrue(has_error(ParserError.INVALID_ARRAY_SYNTAX))
+        self.assertTrue(has_error(ParserError.INVALID_STATEMENT))
 
     def test_assign_double_brackets(self):
         code = "x[[0]] = 2;"
