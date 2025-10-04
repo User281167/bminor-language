@@ -32,6 +32,15 @@ class ParserError(Enum):
     INVALID_NOT = "Invalid not usage"
     MALFORMED_STRING = "Malformed string"
     MALFORMED_CHAR = "Malformed character literal"
+    MISSING_COLON = "Missing colon expected identifier or type"
+    MISSING_SEMICOLON = "Missing semicolon"
+    MISSING_COMMA = "Missing comma"
+    MISSING_LEFT_BRACKET = "Missing left bracket"
+    MISSING_RIGHT_BRACKET = "Missing right bracket"
+    INVALID_ARRAY_SYNTAX = "Invalid array access syntax"
+    INVALID_INDEX_EXPRESSION = "Invalid index expression"
+    INVALID_ASSIGNMENT_OPERATOR = "Invalid assignment operator"
+    INCOMPLETE_FUNCTION_DECLARATION = "Incomplete function declaration"
 
 
 class Parser(sly.Parser):
@@ -511,9 +520,21 @@ class Parser(sly.Parser):
         elif p.value == "\"":
             error_type = ParserError.MALFORMED_STRING
             message = f"{error_type.value} near {value}"
-        elif p.value in "({[":
-            error_type = ParserError.MISSING_EXPRESSION
-            message = f"{error_type.value}: unexpected closing token {value}"
+        elif p.value == ":":
+            error_type = ParserError.MISSING_COLON
+            message = f"{error_type.value} near {value}"
+        elif p.value == "[":
+            error_type = ParserError.INVALID_ARRAY_SYNTAX
+            message = f"{error_type.value}: unexpected '[' near {value}"
+        elif p.value == "]":
+            error_type = ParserError.INVALID_ARRAY_SYNTAX
+            message = f"{error_type.value}: unexpected ']' near {value}"
+        elif p.value == "{":
+            error_type = ParserError.INVALID_ARRAY_SYNTAX
+            message = f"{error_type.value}: '{{' used instead of '[' near {value}"
+        elif p.value == "(":
+            error_type = ParserError.INCOMPLETE_FUNCTION_DECLARATION
+            message = f"{error_type.value}: unexpected '(' or expected list of parameters after {value}"
         elif p.value == ';':
             error_type = ParserError.MISSING_STATEMENT
             message = f"{error_type.value} near {value}"

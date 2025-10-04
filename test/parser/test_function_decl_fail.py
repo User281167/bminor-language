@@ -43,13 +43,13 @@ class TestFunctionDeclError(unittest.TestCase):
         code = "main: function integer ()"
         self.parse(code)
         self.assertEqual(errors_detected(), 1)
-        self.assertTrue(has_error(ParserError.SYNTAX_ERROR))
+        self.assertTrue(has_error(ParserError.UNEXPECTED_EOF))
 
     def test_fun_invalid_function_without_return_type(self):
         code = "main: function () = { }"
         self.parse(code)
         self.assertEqual(errors_detected(), 1)
-        self.assertTrue(has_error(ParserError.MISSING_EXPRESSION))
+        self.assertTrue(has_error(ParserError.INCOMPLETE_FUNCTION_DECLARATION))
 
     def test_fun_no_two_dots(self):
         code = "main function integer () = { }"

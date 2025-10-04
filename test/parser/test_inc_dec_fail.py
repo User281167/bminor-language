@@ -23,7 +23,7 @@ class TestIncDecErrors(unittest.TestCase):
     def test_inc_dec_error2(self):
         self.parse("{}++")
         self.assertTrue(errors_detected())
-        self.assertTrue(has_error(ParserError.MISSING_EXPRESSION))
+        self.assertTrue(has_error(ParserError.INVALID_ARRAY_SYNTAX))
 
     def test_inc_dec_error3(self):
         self.parse("++&&")
@@ -68,7 +68,7 @@ class TestIncDecErrors(unittest.TestCase):
     def test_inc_on_array_missing_index(self):
         self.parse("arr[]++;")
         self.assertTrue(errors_detected())
-        self.assertTrue(has_error(ParserError.MISSING_EXPRESSION))
+        self.assertTrue(has_error(ParserError.INVALID_ARRAY_SYNTAX))
 
     def test_dec_on_array_missing_index(self):
         self.parse("--arr[];")
