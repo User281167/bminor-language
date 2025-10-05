@@ -1,6 +1,11 @@
 from dataclasses import dataclass, field
 from multimethod import multimeta, multimethod
 from typing import List, Union, Optional
+from rich.console import Console
+from rich.tree import Tree
+from rich.text import Text
+
+console = Console()
 
 # =====================================================================
 # Clases Abstractas
@@ -16,7 +21,38 @@ class Node:
     def accept(self, v: Visitor, *args, **kwargs):
         return v.visit(self, *args, **kwargs)
 
-    def pretty(self, indent=0, show_lineo=False):
+    def pretty(self, show_lineno=False):
+        tree = self._build_tree(show_lineno)
+        console.print(tree)
+
+    def _build_tree(self, show_lineno=False, indent=0):
+        label = Text(f"{self.__class__.__name__}", style="bold magenta")
+        tree = Tree(label)
+
+        for field_name, value in self.__dict__.items():
+            if field_name == 'lineno' and not show_lineno:
+                continue
+
+            field_label = Text(f"{field_name}:", style="bold cyan")
+
+            if isinstance(value, Node):
+                subtree = value._build_tree(show_lineno, indent + 1)
+                tree.add(Tree(field_label).add(subtree))
+            elif isinstance(value, list):
+                list_tree = Tree(field_label)
+                for item in value:
+                    if isinstance(item, Node):
+                        list_tree.add(item._build_tree(
+                            show_lineno, indent + 1))
+                    else:
+                        list_tree.add(Text(str(item), style="green"))
+                tree.add(list_tree)
+            else:
+                tree.add(Text(f"{field_name}: {value}", style="green"))
+
+        return tree
+
+    def to_string(self, indent=0, show_lineo=False):
         pad = '  ' * indent
         result = f"{pad}{self.__class__.__name__}("
 
@@ -25,13 +61,13 @@ class Node:
                 continue
 
             if isinstance(value, Node):
-                result += f"\n{pad}  {field_name}:\n{value.pretty(indent + 2)}"
+                result += f"\n{pad}  {field_name}:\n{value.to_string(indent + 2)}"
             elif isinstance(value, list):
                 result += f"\n{pad}  {field_name}: ["
 
                 for item in value:
                     if isinstance(item, Node):
-                        result += f"\n{item.pretty(indent + 2)}"
+                        result += f"\n{item.to_string(indent + 2)}"
                     else:
                         result += f"\n{pad}    {item}"
 
@@ -42,6 +78,12 @@ class Node:
         result += f"\n{pad})"
 
         return result
+
+    def __str__(self):
+        return self.to_string()
+
+    def __repr__(self):
+        return self.to_string()
 
 
 @dataclass
