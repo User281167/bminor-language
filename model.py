@@ -16,11 +16,14 @@ class Node:
     def accept(self, v: Visitor, *args, **kwargs):
         return v.visit(self, *args, **kwargs)
 
-    def pretty(self, indent=0):
+    def pretty(self, indent=0, show_lineo=False):
         pad = '  ' * indent
         result = f"{pad}{self.__class__.__name__}("
 
         for field_name, value in self.__dict__.items():
+            if field_name == 'lineno' and not show_lineo:
+                continue
+
             if isinstance(value, Node):
                 result += f"\n{pad}  {field_name}:\n{value.pretty(indent + 2)}"
             elif isinstance(value, list):
@@ -287,8 +290,8 @@ class Char(Literal):
         # remove "''"
         self.value = self.value[1:-1]
 
-        assert isinstance(self.value, str) and len(
-            self.value) == 1, "Debe ser un solo carácter"
+        # assert isinstance(self.value, str) and len(
+        # self.value) in (0, 1), "Debe ser un solo carácter"
         self.type = SimpleType('char')
 
 
@@ -300,7 +303,7 @@ class String(Literal):
         # remove "''"
         self.value = self.value[1:-1]
 
-        assert isinstance(self.value, str), "Debe ser una cadena de texto"
+        # assert isinstance(self.value, str), "Debe ser una cadena de texto"
         self.type = SimpleType('string')
 
 

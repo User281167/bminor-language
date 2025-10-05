@@ -1,26 +1,4 @@
-
-def save_json(ast, code=""):
-    import json
-
-    with open("ast.json", "w") as f:
-        def ast_to_dict(node):
-            if isinstance(node, list):
-                return [ast_to_dict(item) for item in node]
-            elif hasattr(node, "__dict__"):
-                result = {
-                    "_type": node.__class__.__name__  # ← Aquí agregas el nombre de clase
-                }
-                for key, value in node.__dict__.items():
-                    result[key] = ast_to_dict(value)
-                return result
-            else:
-                return node
-
-        f.write(json.dumps({
-            'code': code,
-            'ast': ast_to_dict(ast)
-        }, indent=2))
-
+from utils import save_ast_to_json
 
 if __name__ == "__main__":
     import sys
@@ -75,7 +53,11 @@ if __name__ == "__main__":
                 code = open(filename).read()
                 tokens = Lexer().tokenize(code)
                 ast = parser.parse(tokens)
-                save_json(ast)
+
+                if "json" in sys.argv:
+                    save_ast_to_json(ast)
+                if "print" in sys.argv:
+                    print(ast.pretty())
             except Exception as e:
                 print(e)
                 sys.exit(1)
@@ -99,6 +81,8 @@ if __name__ == "__main__":
     if len(sys.argv) < 3:
         print(
             "Usage: bminor.py --scan|--parser [test | filename.bminor | test/.../*.py]")
+        print("Example: bminor.py --scan test/scanner/good1.bminor")
+        print("parser flags: --print | --json")
         sys.exit(1)
 
     mode = sys.argv[1]
