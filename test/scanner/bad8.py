@@ -105,7 +105,7 @@ class TestInvalidArrayAndLoopTokens(unittest.TestCase):
             any(t.type == LexerError.ILLEGAL_CHARACTER.value for t in tokens))
 
     def test_for_loop_with_float(self):
-        tokens = list(self.lexer.tokenize('for(123.) { print 1; }'))
+        tokens = list(self.lexer.tokenize('for(123.0) { print 1; }'))
         # Should tokenize FOR, (, FLOAT_LITERAL, ), {, PRINT, INTEGER_LITERAL, ;, }
         expected_types = [
             TokenType.FOR.value, '(', TokenType.FLOAT_LITERAL.value, ')', '{', TokenType.PRINT.value, TokenType.INTEGER_LITERAL.value, ';', '}'

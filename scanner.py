@@ -187,9 +187,9 @@ class Lexer(sly.Lexer):
     LAND = r'&&'
     LOR = r'\`'
 
-    @_(r'\d+\.\d*([eE][+-]?\d+)?',     # e.g., 3.14, 2.0e10
-        r'\.\d+([eE][+-]?\d+)?',       # e.g., .42, .42e1
-        r'\d+[eE][+-]?\d+')            # e.g., 2e10
+    @_(r'\d+\.\d+([eE][+-]?\d+)?',     # 3.14, 2.71e10
+        r'\.\d+([eE][+-]?\d+)?',       # .42, .42e1
+        r'\d+[eE][+-]?\d+')            # 2e10
     def FLOAT_LITERAL(self, t):
         t.value = float(t.value)
         return t
