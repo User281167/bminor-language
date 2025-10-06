@@ -13,6 +13,9 @@ console = Console()
 
 
 class Visitor(metaclass=multimeta):
+    # multimeta para hacer double dispatch
+    # Double dispatch (envío doble)
+    # vinculación dinámica junto a métodos sobrecargados.
     pass
 
 
