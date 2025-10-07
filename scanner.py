@@ -185,7 +185,7 @@ class Lexer(sly.Lexer):
     EQ = r'=='
     NE = r'!='
     LAND = r'&&'
-    LOR = r'\`'
+    LOR = r'\|\|'
 
     @_(r'\d+\.\d+([eE][+-]?\d+)?',     # 3.14, 2.71e10
         r'\.\d+([eE][+-]?\d+)?',       # .42, .42e1

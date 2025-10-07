@@ -30,7 +30,7 @@ class TestLogicalExpressions(unittest.TestCase):
         self.assertEqual(decl.value.right.value, False)
 
     def test_logical_or(self):
-        code = "b: boolean = true ` false;"
+        code = "b: boolean = true || false;"
         ast = self.parse(code)
         decl = ast.body[0]
 
@@ -88,7 +88,7 @@ class TestLogicalExpressions(unittest.TestCase):
         self.assertEqual(decl.value.right.oper, "<=")
 
     def test_nested_logical_expression(self):
-        code = "b: boolean = (5 > 3) && ((2 + 1) == 3) ` false;"
+        code = "b: boolean = (5 > 3) && ((2 + 1) == 3) || false;"
         ast = self.parse(code)
 
         decl = ast.body[0]

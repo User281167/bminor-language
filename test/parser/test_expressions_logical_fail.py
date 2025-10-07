@@ -24,7 +24,7 @@ class TestLogicalExpressionsErrors(unittest.TestCase):
         self.assertTrue(has_error(ParserError.UNEXPECTED_IDENTIFIER))
 
     def test_lor_bad_operands(self):
-        code = "x: boolean = ` 1"
+        code = "x: boolean = || 1"
         ast = self.parse(code)
         self.assertTrue(errors_detected())
         self.assertTrue(has_error(ParserError.MISSING_EXPRESSION))
@@ -36,7 +36,7 @@ class TestLogicalExpressionsErrors(unittest.TestCase):
         self.assertTrue(has_error(ParserError.MISSING_STATEMENT))
 
     def test_lor_no_operands(self):
-        code = "x: boolean = `;"
+        code = "x: boolean = ||;"
         ast = self.parse(code)
         self.assertTrue(errors_detected())
         self.assertTrue(has_error(ParserError.MISSING_EXPRESSION))
@@ -48,13 +48,13 @@ class TestLogicalExpressionsErrors(unittest.TestCase):
         self.assertTrue(has_error(ParserError.MISSING_EXPRESSION))
 
     def test_bad_ope(self):
-        code = "x: boolean = true || && false;"
+        code = "x: boolean = true ~ && false;"
         ast = self.parse(code)
         self.assertTrue(errors_detected())
         self.assertTrue(has_error(ParserError.UNSUPPORTED_OPERATOR))
 
     def test_bad_grouping(self):
-        code = "x: boolean = (true || && false);"
+        code = "x: boolean = (true ~ && false);"
         ast = self.parse(code)
         self.assertTrue(errors_detected())
         self.assertTrue(has_error(ParserError.UNSUPPORTED_OPERATOR))

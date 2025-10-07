@@ -20,7 +20,7 @@ class TestOperators(unittest.TestCase):
         self.assertEqual([t.type for t in tokens], expected_types)
 
     def test_logical_operators(self):
-        test_input = "&& `"
+        test_input = "&& ||"
         tokens = list(self.lexer.tokenize(test_input))
         expected_types = [
             OperatorType.LAND.value,

@@ -165,7 +165,7 @@ class TestArrayAssignment(unittest.TestCase):
         self.assertEqual(decl.value.value, 5)
 
     def test_array_assignment_value_boolean_expr(self):
-        code = "main: function boolean() = {flags[0] = a ` b;}"
+        code = "main: function boolean() = {flags[0] = a || b;}"
         ast = self.parse(code)
         decl = ast.body[0].body[0]
         self.assertIsInstance(decl.value, BinOper)

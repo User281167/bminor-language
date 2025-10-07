@@ -51,7 +51,7 @@ main: function void () = {
         x = x - 1;
     } while (x > 0);
 
-    result: boolean = (flag && true) ` (x < 5);
+    result: boolean = (flag && true) || (x < 5);
     value: float = -y + 2.5 * (arrFloat[1] ^ 2.0);
 
     counter: integer = 0;

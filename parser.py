@@ -514,7 +514,7 @@ class Parser(sly.Parser):
         if p.value in "&|~":
             error_type = ParserError.UNSUPPORTED_OPERATOR
             message = f"{error_type.value} near {value}"
-        elif p.value in ["&&", "==", "!=", "<=", ">=", "<", ">", "`", "+", "-", "*", "/", "%"]:
+        elif p.value in ["&&", "==", "!=", "<=", ">=", "<", ">", "||", "+", "-", "*", "/", "%"]:
             error_type = ParserError.MISSING_EXPRESSION
             message = f"{error_type.value} near {value}"
         elif repr(p.value) in ("'++'", "'--'"):

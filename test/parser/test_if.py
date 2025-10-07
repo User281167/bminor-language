@@ -121,7 +121,7 @@ class TestIfElseStmt(unittest.TestCase):
     def test_if_with_logical_or(self):
         code = """
         main: function void () = {
-            if (false ` true) {
+            if (false || true) {
                 print "always";
             }
         }
