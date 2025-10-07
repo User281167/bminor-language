@@ -344,6 +344,7 @@ class Parser(sly.Parser):
         return p.expr8
 
     @_("'-' expr8")
+    @_("'+' expr8")
     @_("'!' expr8")
     def expr8(self, p):
         return _L(UnaryOper(p[0], p.expr8), p)

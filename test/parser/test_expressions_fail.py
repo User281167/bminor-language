@@ -40,13 +40,6 @@ class TestExpressionErrors(unittest.TestCase):
         # por paréntesis sin cerrar
         self.assertTrue(has_error(ParserError.MISSING_STATEMENT))
 
-    def test_invalid_operator_sequence(self):
-        code = "x: integer = 5 + + 3;"
-        self.parse(code)
-        self.assertNotEqual(
-            errors_detected(), 0, "Se esperaba error por secuencia de operadores inválida")
-        self.assertTrue(has_error(ParserError.MISSING_EXPRESSION))
-
     def test_missing_semicolon_in_expression(self):
         code = "x: integer = 5 + 3"
         self.parse(code)
@@ -67,11 +60,3 @@ class TestExpressionErrors(unittest.TestCase):
         self.assertNotEqual(
             errors_detected(), 0, "Se esperaba error por notación científica inválida")
         self.assertTrue(has_error(ParserError.UNEXPECTED_IDENTIFIER))
-
-    def test_plus_unary_negation_with_expression(self):
-        code = "x: float = pi - +(3 + 2);"
-        self.parse(code)
-
-        # invalid syntax for unary negation
-        self.assertGreater(errors_detected(), 0)
-        self.assertTrue(has_error(ParserError.MISSING_EXPRESSION))

@@ -329,3 +329,36 @@ class TestExpressions(unittest.TestCase):
         self.assertEqual(decl.value.oper, "+")
         self.assertEqual(decl.value.left.value, 5)
         self.assertEqual(decl.value.right.value, 3)
+
+    def test_plus_unary_negation_with_expression(self):
+        code = "x: float = pi - +(3 + 2);"
+        self.parse(code)
+        ast = self.parse(code)
+        decl = ast.body[0]
+        expr = decl.value
+        self.assertIsInstance(expr, BinOper)
+        self.assertEqual(expr.oper, "-")
+        # Left side: pi
+        self.assertIsInstance(expr.left, VarLoc)
+        self.assertEqual(expr.left.name, "pi")
+        # Right side: +(3 + 2)
+        self.assertIsInstance(expr.right, UnaryOper)
+        self.assertEqual(expr.right.oper, "+")
+        self.assertIsInstance(expr.right.expr, BinOper)
+        self.assertEqual(expr.right.expr.oper, "+")
+        self.assertEqual(expr.right.expr.left.value, 3)
+        self.assertEqual(expr.right.expr.right.value, 2)
+
+    def test_invalid_operator_sequence(self):
+        code = "x: integer = 5 + + 3;"
+        ast = self.parse(code)
+        decl = ast.body[0]
+        self.assertIsInstance(decl, VarDecl)
+        self.assertEqual(decl.name, "x")
+        self.assertIsInstance(decl.value, BinOper)
+        self.assertEqual(decl.value.oper, "+")
+        self.assertIsInstance(decl.value.left, Integer)
+        self.assertEqual(decl.value.left.value, 5)
+        self.assertIsInstance(decl.value.right, UnaryOper)
+        self.assertEqual(decl.value.right.oper, "+")
+        self.assertIsInstance(decl.value.right.expr, Integer)
