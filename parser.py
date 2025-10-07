@@ -142,7 +142,7 @@ class Parser(sly.Parser):
     def if_stmt_closed(self, p):
         return _L(
             IfStmt(condition=p.if_cond, then_branch=p.closed_stmt0,
-                   else_branch=p.closed_stmt1), p
+                   else_branch=[p.closed_stmt1] if not isinstance(p.closed_stmt1, list) else p.closed_stmt1), p
         )
 
     @_("if_cond stmt")
