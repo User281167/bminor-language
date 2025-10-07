@@ -1,0 +1,62 @@
+// Declaraciones globales válidas
+x: integer;
+y: float = 3.14;
+flag: boolean = true;
+letter: char = 'A';
+message: string = "Hello\nWorld";
+
+// Arrays globales
+arrInt: array [3] integer = {1, 2, 3};
+arrBool: array [2] boolean = {true, false};
+arrFloat: array [4] float = {1.1, 2.2, 3.3, 4.4};
+
+// Función sin parámetros
+print_hello: function void () = {
+    print "Hello from function!";
+}
+
+// Función con parámetros y retorno
+sum: function integer (a: integer, b: integer) = {
+    result: integer = a + b;
+    return result;
+}
+
+// Función con array como parámetro
+invert_bool_array: function void (barr: array [] boolean) = {
+    i: integer = 0;
+    while (i < 2) {
+        barr[i] = !barr[i];
+        i = i + 1;
+    }
+}
+
+// Función principal para testeo
+main: function void () = {
+    total: integer = sum(5, 7);
+
+    if (x > total) {
+        print "x is greater";
+    } else {
+        print "total is greater or equal";
+    }
+
+    i: integer = 0;
+
+    for (i = 0; i < 3; i = i + 1) {
+        print arrInt[i];
+    }
+
+    do {
+        print "Looping...";
+        x = x - 1;
+    } while (x > 0);
+
+    result: boolean = (flag && true) ` (x < 5);
+    value: float = -y + 2.5 * (arrFloat[1] ^ 2.0);
+
+    counter: integer = 0;
+    counter++;
+    --counter;
+
+    print_hello();
+}
