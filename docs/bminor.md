@@ -338,7 +338,9 @@ expr8 ::= '-' expr8
     | expr9
 
 expr9 ::= expr9 'INC'
+    | 'INC' expr9
     | expr9 'DEC'
+    | 'DEC' expr9
     | group
 
 group ::= '(' expr ')'

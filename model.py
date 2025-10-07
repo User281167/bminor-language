@@ -172,7 +172,7 @@ class ReturnStmt(Statement):
 class IfStmt(Statement):
     condition: Expression
     then_branch: List[Statement]
-    else_branch: Optional[List[Statement]] = None
+    else_branch: List[Statement] = None
 
 
 @dataclass
