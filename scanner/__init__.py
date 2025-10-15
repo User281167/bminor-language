@@ -1,1 +1,3 @@
-from .scanner import Lexer, TokenType, OperatorType, LiteralType, LexerError
+from .scanner import Lexer
+from .lexer_errors import LexerError
+from .lexer_type import TokenType, OperatorType, LiteralType

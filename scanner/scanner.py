@@ -16,78 +16,11 @@ Convenciones:
 
 import sly
 import logging
-from enum import Enum
+
+from .lexer_errors import LexerError
+from .lexer_type import TokenType, OperatorType, LiteralType
 
 MAX_ID_LENGTH = 255
-
-
-class LexerError(Enum):
-    ILLEGAL_CHARACTER = 'Illegal character'
-    UNEXPECTED_TOKEN = 'Unexpected token'
-    MALFORMED_INTEGER = 'Malformed integer'
-    MALFORMED_FLOAT = 'Malformed real number'
-    MALFORMED_STRING = 'Malformed string'
-    MALFORMED_CHAR = 'Malformed character literal'
-    INVALID_ID = 'Invalid identifier'
-
-
-class TokenType(Enum):
-    ID = 'ID'
-    INTEGER_LITERAL = 'INTEGER_LITERAL'
-    FLOAT_LITERAL = 'FLOAT_LITERAL'
-    STRING_LITERAL = 'STRING_LITERAL'
-    CHAR_LITERAL = 'CHAR_LITERAL'
-    ARRAY = 'ARRAY'
-    AUTO = 'AUTO'
-    BOOLEAN = 'BOOLEAN'
-    CHAR = 'CHAR'
-    ELSE = 'ELSE'
-    FALSE = 'FALSE'
-    FLOAT = 'FLOAT'
-    FOR = 'FOR'
-    FUNCTION = 'FUNCTION'
-    IF = 'IF'
-    INTEGER = 'INTEGER'
-    PRINT = 'PRINT'
-    RETURN = 'RETURN'
-    STRING = 'STRING'
-    TRUE = 'TRUE'
-    VOID = 'VOID'
-    WHILE = 'WHILE'
-    DO = 'DO'
-
-
-class OperatorType(Enum):
-    LT = 'LT'
-    LE = 'LE'
-    GT = 'GT'
-    GE = 'GE'
-    EQ = 'EQ'
-    NE = 'NE'
-    LAND = 'LAND'
-    LOR = 'LOR'
-    INC = 'INC'
-    DEC = 'DEC'
-
-
-class LiteralType(Enum):
-    PLUS = '+'
-    MINUS = '-'
-    STAR = '*'
-    SLASH = '/'
-    PERCENT = '%'
-    CARET = '^'
-    EQUAL = '='
-    LPAREN = '('
-    RPAREN = ')'
-    LBRACKET = '['
-    RBRACKET = ']'
-    LBRACE = '{'
-    RBRACE = '}'
-    COLON = ':'
-    COMMA = ','
-    SEMICOLON = ';'
-    BANG = '!'
 
 
 class Lexer(sly.Lexer):
