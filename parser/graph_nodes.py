@@ -1,5 +1,5 @@
 from astprint import ASTPrinter
-from model import *
+from parser.model import *
 from scanner import Lexer
 from parser import Parser
 

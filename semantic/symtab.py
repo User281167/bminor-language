@@ -3,7 +3,7 @@ from rich.table import Table
 from rich.console import Console
 from rich import print
 
-from model import Node
+from parser.model import Node
 
 
 class Symtab:

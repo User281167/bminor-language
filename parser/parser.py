@@ -1,12 +1,12 @@
 # grammar.py
 from enum import Enum
-from model import VarLoc
+from .model import VarLoc
 import logging
 import sly
 from rich import print
 from scanner import Lexer
-from errors import error, errors_detected
-from model import *
+from utils import error, errors_detected
+from .model import *
 
 
 def _L(node, p):

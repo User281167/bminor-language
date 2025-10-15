@@ -2,7 +2,7 @@ from scanner import OperatorType
 import unittest
 from parser import Parser
 from scanner import Lexer
-from model import *
+from parser.model import *
 
 
 class TestLogicalExpressions(unittest.TestCase):

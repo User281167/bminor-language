@@ -5,6 +5,7 @@ import re
 import os
 from scanner import Lexer
 from parser import Parser
+from semantic import Check
 from utils import save_ast_to_json, print_json
 import rich
 from rich.table import Table
@@ -88,12 +89,42 @@ def run_parser(filename):
         sys.exit(1)
 
 
+def run_semantic(filename):
+    if filename.endswith(".bminor"):
+        try:
+            parser = Parser()
+            code = open(filename).read()
+
+            tokens = Lexer().tokenize(code)
+            ast = parser.parse(tokens)
+            check = Check.checker(ast)
+        except Exception as e:
+            print(e)
+            sys.exit(1)
+    elif filename.endswith(".py"):
+        path = os.path.abspath(filename)
+        spec = importlib.util.spec_from_file_location("dynamic_test", path)
+        test_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(test_module)
+
+        unittest.TextTestRunner(verbosity=2).run(
+            unittest.TestLoader().loadTestsFromModule(test_module))
+    elif filename == "test":
+        test_dir = os.path.join(
+            os.path.dirname(__file__), 'test', 'semantic')
+        suite = unittest.TestLoader().discover(test_dir, pattern='*.py')
+        unittest.TextTestRunner(verbosity=2).run(suite)
+    else:
+        print("Invalid file type for parser. Use .bminor or .py files")
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
     if len(sys.argv) < 3:
         print(
-            "Usage: bminor.py --scan|--parser [test | filename.bminor | test/.../*.py]")
+            "Usage: bminor.py --scan|--parser|--semantic [test | filename.bminor | test/.../*.py]")
         print("Example: bminor.py --scan test/scanner/good1.bminor")
         print("\nparser flags: --print | --pretty | --json")
         print("Example: bminor.py --parser code.bminor --json")
@@ -108,6 +139,8 @@ if __name__ == "__main__":
         run_scan(filename)
     elif mode == "--parser":
         run_parser(filename)
+    elif mode == "--semantic":
+        run_semantic(filename)
     else:
         print("Invalid mode. Use --scan or --parser")
         sys.exit(1)

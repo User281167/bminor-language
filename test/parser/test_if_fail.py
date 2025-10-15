@@ -1,8 +1,8 @@
 import unittest
 from parser import Parser, ParserError
 from scanner import Lexer
-from model import *
-from errors import clear_errors, has_error, errors_detected
+from parser.model import *
+from utils.errors import clear_errors, has_error, errors_detected
 
 
 class TestInvalidIfStmt(unittest.TestCase):

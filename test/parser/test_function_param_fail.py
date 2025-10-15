@@ -1,8 +1,8 @@
 import unittest
 from parser import Parser, ParserError
 from scanner import Lexer
-from model import *
-from errors import clear_errors, errors_detected, has_error
+from parser.model import *
+from utils.errors import clear_errors, errors_detected, has_error
 
 
 class TestFunctionParamsError(unittest.TestCase):

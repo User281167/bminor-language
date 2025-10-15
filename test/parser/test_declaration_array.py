@@ -1,8 +1,8 @@
-from errors import clear_errors
+from utils.errors import clear_errors
 import unittest
 from parser import Parser
 from scanner import Lexer
-from model import *
+from parser.model import *
 
 
 class TestAssignmentArray(unittest.TestCase):

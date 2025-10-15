@@ -1,7 +1,7 @@
 from graphviz import Digraph
 from rich import print
 
-from model import *
+from .model import *
 
 
 class ASTPrinter(Visitor):
