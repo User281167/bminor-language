@@ -60,8 +60,8 @@ _bin_ops = {
     ('float', '!=', 'float'): 'boolean',
 
     # Booleans
-    ('boolean', '&&', 'boolean'): 'boolean',
-    ('boolean', '||', 'boolean'): 'boolean',
+    ('boolean', 'LAND', 'boolean'): 'boolean',
+    ('boolean', 'LOR', 'boolean'): 'boolean',
     ('boolean', '==', 'boolean'): 'boolean',
     ('boolean', '!=', 'boolean'): 'boolean',
 
