@@ -7,6 +7,12 @@ class SemanticError(Enum):
     MISMATCH_DECLARATION = "Mismatch declaration"
     MISMATCH_FUNCTION_CALL = "Mismatch function call"
 
+    INVALID_UNARY_OP = "Invalid unary operator"
+    INVALID_BINARY_OP = "Invalid binary operator"
+
+    UNARY_OP_TYPE = "Unary operator type"
+    BINARY_OP_TYPE = "Binary operator type"
+
     UNKNOWN = "Unknown error"
 
     INMUTABLE_ASSIGNMENT = "Inmutable assignment"

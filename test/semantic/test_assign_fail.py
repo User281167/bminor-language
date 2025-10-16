@@ -3,7 +3,6 @@ from parser import Parser
 from scanner import Lexer
 from parser.model import *
 from semantic.checker import Check, SemanticError
-
 from utils import error, errors_detected, clear_errors, has_error
 
 

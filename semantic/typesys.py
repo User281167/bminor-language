@@ -16,6 +16,8 @@ como punto de partida. Puede volver a refactorizar el sistema de tipos
 más adelante.
 '''
 
+from parser.model import SimpleType
+
 
 class CheckError(Exception):
     pass
@@ -82,7 +84,7 @@ _bin_ops = {
 _unary_ops = {
     ('+', 'integer'): 'integer',
     ('-', 'integer'): 'integer',
-    ('^', 'integer'): 'integer',
+    # ('^', 'integer'): 'integer',
 
     ('+', 'float'): 'float',
     ('-', 'float'): 'float',
@@ -112,4 +114,10 @@ def check_binop(op: str, left_type: str, right_type: str):
 
 
 def check_unaryop(op: str, operand_type: str):
-    return _unary_ops.get((op, operand_type))
+    result = _unary_ops.get((op, operand_type))
+
+    if result is None:
+        raise CheckError(
+            f"Unary operator '{op}' is not supported for '{operand_type}'")
+
+    return SimpleType(result)

@@ -246,14 +246,22 @@ class Check(Visitor):
 #             error(
 #                 f'Error de tipo: {n.left.type} {n.oper} {n.right.type}', n.lineno)
 
-#     def visit(self, n: UnaryOp, env: Symtab):
-#         # Visitar n.expr (operando)
-#         n.expr.accept(self, env)
+    def visit(self, n: UnaryOper, env: Symtab):
+        # Visitar n.expr (operando)
+        n.expr.accept(self, env)
 
-#         # Validar si es un operador unario valido
-#         n.type = check_unaryop(n.oper, n.expr.type)
-#         if not n.type and n.expr.type:
-#             error(f'Error de tipo: {n.oper} {n.expr.type}', n.lineno)
+        # Validar si es un operador unario valido
+        try:
+            n.type = check_unaryop(n.oper, n.expr.type.name)
+        except CheckError as e:
+            self._error(str(e), n.lineno,
+                        SemanticError.INVALID_UNARY_OP)
+            n.type = SimpleType('undefined')
+            return
+
+        if not n.type and n.expr.type:
+            self._error(f"{n.oper} {n.expr.type}", n.lineno,
+                        SemanticError.UNARY_OP_TYPE)
 
 #     '''
 # 	def visit(self, n:TypeCast, env:Symtab):
