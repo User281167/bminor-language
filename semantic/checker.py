@@ -9,49 +9,44 @@
 # Una clave para esta parte del proyecto es realizar pruebas adecuadas.
 # A medida que agregue código, piense en cómo podría probarlo.
 # '''
-# from rich import print
-# from typing import Union, List
+from typing import Union, List
 
-# from utils import error, errors_detected
-# from parser.model import *
-# from .symtab import Symtab
-# from .typesys import typenames, check_binop, check_unaryop, CheckError
+from utils import error
+from parser.model import *
+from .semantic_error import SemanticError
+from .symtab import Symtab
+from .typesys import typenames, check_binop, check_unaryop, CheckError
 
 
-# class Check(Visitor):
-#     @classmethod
-#     def checker(cls, n: Program):
-#         checker = cls()
+class Check(Visitor):
+    @classmethod
+    def checker(cls, n: Program):
+        checker = cls()
 
-#         # Crear una nueva tabla de simbolos
-#         env = Symtab('global')
+        # Crear una nueva tabla de simbolos
+        env = Symtab('global')
 
-#         # Visitar todas las declaraciones
-#         for decl in n.body:
-#             decl.accept(checker, env)
+        # Visitar todas las declaraciones
+        for decl in n.body:
+            decl.accept(checker, env)
 
-#         return env
+        return env
 
-#     # --- Statements
+    def _error(self, msg: str, lineno: int, error_type: SemanticError = None):
+        error(f"{error_type or SemanticError.UNKNOWN}: {msg}", lineno, error_type)
 
-#     def visit(self, n: Assignment, env: Symtab):
-#         # Validar n.loc (location) y n.expr
-#         n.loc.accept(self, env)
-#         n.expr.accept(self, env)
+    # --- Statements
 
-#         # Type inference on memory locations
-#         if n.loc.type == '<infer>':
-#             n.loc.type = n.expr.type
+    def visit(self, n: Assignment, env: Symtab):
+        # Validar n.loc (location) y n.expr
+        n.location.accept(self, env)
+        n.expr.accept(self, env)
 
-#         if n.loc.type != n.expr.type:
-#             error(f'Error de tipo. {n.loc.type} != {n.expr.type}', n.lineno)
-#             return
+        if n.location.type != n.expr.type:
+            self._error(f"Assignment {n.loc.type} != {n.expr.type}", n.lineno,
+                        SemanticError.MISMATCH_ASSIGNMENT)
+            return
 
-#         # ¿Qué pasa con la mutabilidad? ¿Quién es responsable? Yo.
-#         if not n.loc.mutable:
-#             error(f"No se puede asignar a una 'loc' inmutable", n.lineno)
-
-#         n.loc.usage = 'store'
 
 #     def visit(self, n: PrintStmt, env: Symtab):
 #         # visitar n.exprs
@@ -151,33 +146,28 @@
 #         else:
 #             n.scope = 'global'
 
-#     def check(self, n: VarDecl, env: Symtab):
-#         if n.value:
-#             n.value.accept(self, env)
-#             # If there is no type set, copy it from the value
-#             if not n.type:
-#                 n.type = n.value.type
 
-#             if n.value.type == '<infer>':
-#                 n.value.type == n.type
+    def visit(self, n: VarDecl, env: Symtab):
+        self.check(n, env)
 
-#             if n.value.type == '<infer>':
-#                 error(f"No se puede inferir tipo de {n.name}", n.lineno)
+    def check(self, n: VarDecl, env: Symtab):
+        if n.value:
+            n.value.accept(self, env)
 
-#             # Verify types match up if a value was provided.
-#             # Could have:  var x int = 3.4;    // Error.
-#             if n.type != n.value.type:
-#                 error(
-#                     f'Error de tipo en declaración. {n.type} != {n.value.type}', n.lineno)
+            if n.type != n.value.type:
+                self._error(
+                    f"Declaration {n.name} has type {n.type} != {n.value.type}", n.lineno, SemanticError.MISMATCH_DECLARATION)
+                return
 
-#         # Agregar n.name a symtab
-#         try:
-#             env.add(n.name, n)
-#         except Symtab.SymbolConflictError as ex:
-#             error(
-#                 f"La Variable '{n.name}' ya definida y con tipo de dato diferente", n.lineno)
-#         except Symtab.SymbolDefinedError as exññ:
-#             error(f"La Variable '{n.name}' ya definida", n.lineno)
+        # Agregar n.name a symtab
+        try:
+            env.add(n.name, n)
+        except Symtab.SymbolConflictError as ex:
+            self._error(f"Variable '{n.name}' is already defined",
+                        n.lineno, SemanticError.REDEFINE_VARIABLE_TYPE)
+        except Symtab.SymbolDefinedError as exññ:
+            self._error(f"Variable '{n.name}' is already defined",
+                        n.lineno, SemanticError.REDEFINE_VARIABLE)
 
 #     def check(self, n: ArrayDecl, env: Symtab):
 #         ...
@@ -224,11 +214,17 @@
 
 #     # --- Expressions
 
-#     def visit(self, n: Literal, env: Symtab):
-#         # No hay nada que hacer. Los literales son
-#         # primitivos básicos. Ya tienen un tipo
-#         # definido en el archivo model.py.
-#         pass
+    def visit(self, n: Literal, env: Symtab):
+        # No hay nada que hacer. Los literales son
+        # primitivos básicos. Ya tienen un tipo
+        # definido en el archivo model.py.
+        pass
+
+    def visit(self, n: SimpleType, env: Symtab):
+        # No hay nada que hacer. Los tipos simples son
+        # primitivos básicos. Ya tienen un tipo
+        # definido en el archivo model.py.
+        pass
 
 #     def visit(self, n: BinOp, env: Symtab):
 #         # Visitar n.left y n.right
@@ -305,29 +301,21 @@
 #         # El tipo de resultado es el tipo de retorno de la función
 #         n.type = func.type
 
-#     def visit(self, n: Location, env: Symtab):
-#         self.check(n, env)
+    def check(self, n: VarLoc, env: Symtab):
+        # Verificar si n.name existe symtab
+        decl = env.get(n.name)
 
-#         # Las ubicaciones deben tener mutabilidad indicada (para la asignación)
-#         assert hasattr(n, 'mutable')
+        if not decl:
+            self._error(
+                f"{SemanticError.UNDECLARED_VARIABLE} {n.name!r}", n.lineno, SemanticError.UNDECLARED_VARIABLE)
+            return
 
-#     def check(self, n: VarLoc, env: Symtab):
-#         # Verificar si n.name existe symtab
-#         decl = env.get(n.name)
+        # Propaga informacion sobre tipo
+        n.type = decl.type
 
-#         if not decl:
-#             error(f"Nombre no definido {n.name!r}", n.lineno)
-#             return
+    def visit(self, n: Location, env: Symtab):
+        self.check(n, env)
 
-#         elif isinstance(decl, FuncDecl):
-#             error("Function no es first-class", n.lineno)
-#             return
-
-#         # Propaga informacion sobre tipo
-#         n.type = decl.type
-
-#         # n.mutable = not isinstance(decl, Union[Constant, FuncDecl])
-#         n.mutable = not isinstance(decl, FuncDecl)
 
 #     '''
 # 	def check(self, n:MemoryLocation, env:Symtab):
@@ -342,35 +330,32 @@
 # 	'''
 
 
-# if __name__ == '__main__':
-#     import sys
+if __name__ == '__main__':
+    import sys
 
-#     if sys.platform != 'ios':
-#         if len(sys.argv) != 2:
-#             raise SystemExit("Usage: python gcheck.py <filename>")
+    if sys.platform != 'ios':
+        if len(sys.argv) != 2:
+            raise SystemExit("Usage: python gcheck.py <filename>")
 
-#         filename = sys.argv[1]
+        filename = sys.argv[1]
 
-#     else:
-#         from File_Picker import file_picker_dialog
+    else:
+        from File_Picker import file_picker_dialog
 
-#         filename = file_picker_dialog(
-#             title='Seleccionar una archivo',
-#             root_dir='./test',
-#             file_pattern='^.*[.]bminor'
-#         )
+        filename = file_picker_dialog(
+            title='Seleccionar una archivo',
+            root_dir='./test',
+            file_pattern='^.*[.]bminor'
+        )
 
-#     if filename:
-#         from parser import Parser
-#         from scanner import Lexer
+    if filename:
+        from parser import Parser
+        from scanner import Lexer
 
-#         txt = open(filename, encoding='utf-8').read()
-#         tokens = Lexer.tokenize(code)
-#         top = Parser.parse(tokens)
-#         env = Check.checker(top)
+        txt = open(filename, encoding='utf-8').read()
+        tokens = Lexer.tokenize(code)
+        top = Parser.parse(tokens)
+        env = Check.checker(top)
 
-#         if not errors_detected():
-#             env.print()
-
-class Check:
-    pass
+        if not errors_detected():
+            env.print()
