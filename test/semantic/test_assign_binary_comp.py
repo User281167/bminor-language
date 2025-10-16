@@ -18,6 +18,7 @@ class TestAssignmentComparisons(unittest.TestCase):
 
     def assertComparison(self, code, expected_oper, left_type, right_type):
         env = self.semantic(code)
+        self.assertFalse(errors_detected())
         decl = env.get("x")
         self.assertIsInstance(decl.value, BinOper)
         self.assertEqual(decl.value.oper, expected_oper)

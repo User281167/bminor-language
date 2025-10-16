@@ -35,6 +35,20 @@ class Check(Visitor):
     def _error(self, msg: str, lineno: int, error_type: SemanticError = None):
         error(f"{error_type or SemanticError.UNKNOWN}: {msg}", lineno, error_type)
 
+    def _add_to_env(self, n, env,
+                    dec_type: str = "VarDecl",
+                    conflict: SemanticError = SemanticError.REDEFINE_VARIABLE_TYPE,
+                    defined: SemanticError = SemanticError.REDEFINE_VARIABLE):
+        # Agregar n.name a symtab
+        try:
+            env.add(n.name, n)
+        except Symtab.SymbolConflictError as ex:
+            self._error(f"{dec_type} '{n.name}' is already defined",
+                        n.lineno, conflict)
+        except Symtab.SymbolDefinedError as ex:
+            self._error(f"{dec_type} '{n.name}' is already defined",
+                        n.lineno, defined)
+
     # --- Statements
 
     def visit(self, n: Assignment, env: Symtab):
@@ -133,22 +147,18 @@ class Check(Visitor):
 
 #     # --- Declaration
 
-#     def visit(self, n: Declaration, env: Symtab):
-#         self.check(n, env)
-
-#         # Todas las definiciones tienen nombre. Tras la
-#         # comprobación, el nombre debe formar parte del
-#         # entorno (de ahí el propósito de definirlo).
-#         assert n.name in env
-
-#         if '$func' in env:
-#             n.scope = 'local'
-#         else:
-#             n.scope = 'global'
-
-
-    def visit(self, n: VarDecl, env: Symtab):
+    def visit(self, n: Declaration, env: Symtab):
         self.check(n, env)
+
+        # Todas las definiciones tienen nombre. Tras la
+        # comprobación, el nombre debe formar parte del
+        # entorno (de ahí el propósito de definirlo).
+        assert n.name in env
+
+        if '$func' in env:
+            n.scope = 'local'
+        else:
+            n.scope = 'global'
 
     def check(self, n: VarDecl, env: Symtab):
         if n.value:
@@ -157,20 +167,68 @@ class Check(Visitor):
             if n.type != n.value.type:
                 self._error(
                     f"Declaration {n.name} has type {n.type} != {n.value.type}", n.lineno, SemanticError.MISMATCH_DECLARATION)
-                return
 
+        # Agregar n.name a symtab aunque el tipo no sea valido
+        self._add_to_env(n, env)
+
+    def check(self, n: ArrayDecl, env: Symtab):
         # Agregar n.name a symtab
-        try:
-            env.add(n.name, n)
-        except Symtab.SymbolConflictError as ex:
-            self._error(f"Variable '{n.name}' is already defined",
-                        n.lineno, SemanticError.REDEFINE_VARIABLE_TYPE)
-        except Symtab.SymbolDefinedError as exññ:
-            self._error(f"Variable '{n.name}' is already defined",
-                        n.lineno, SemanticError.REDEFINE_VARIABLE)
+        # Multi-dimencionales no soportados
+        if isinstance(n.type.base, ArrayType):
+            self._error(f"Multi-dimensional arrays are not supported",
+                        n.lineno, SemanticError.MULTI_DIMENSIONAL_ARRAYS)
 
-#     def check(self, n: ArrayDecl, env: Symtab):
-#         ...
+        if n.value:
+            n.type.size.accept(self, env)
+
+            # Verificar tipo base
+            if n.type.size.type.name != SimpleType.INTEGER:
+                self._error(
+                    f"Array size must be integer", n.lineno, SemanticError.ARRAY_SIZE_MUST_BE_INTEGER)
+
+            # Intentar obtener valor si es posible
+            size_value = None
+
+            if isinstance(n.type.size, Integer):
+                size_value = n.type.size.value
+            elif isinstance(n.type.size, UnaryOper):
+                # Solo si la expresión es constante
+                if isinstance(n.type.size.expr, Integer):
+                    if n.type.size.oper == "+":
+                        size_value = n.type.size.expr.value
+                    elif n.type.size.oper == "-":
+                        size_value = -n.type.size.expr.value
+            elif isinstance(n.type.size, VarLoc):
+                value_decl = env.get(n.type.size.name)
+
+                if value_decl.type.name != SimpleType.INTEGER:
+                    self._error(
+                        f"Array size variable '{n.type.size.name}' must be integer", n.lineno, SemanticError.ARRAY_SIZE_MUST_BE_INTEGER)
+                elif isinstance(value_decl.value, Integer):
+                    size_value = value_decl.value.value
+                elif isinstance(value_decl.value, UnaryOper) and isinstance(value_decl.value.expr, Integer):
+                    if value_decl.value.oper == "+":
+                        size_value = value_decl.value.expr.value
+                    elif value_decl.value.oper == "-":
+                        size_value = -value_decl.value.expr.value
+
+            # Validar valor si lo tenemos
+            if size_value is not None:
+                if size_value < 0:
+                    self._error(
+                        f"Array size must be positive", n.lineno, SemanticError.ARRAY_SIZE_MUST_BE_POSITIVE)
+                elif size_value != len(n.value):
+                    self._error(
+                        f"Array size {size_value} != {len(n.value)}", n.lineno, SemanticError.ARRAY_SIZE_MISMATCH)
+
+        for item in n.value or []:
+            item.accept(self, env)
+
+            if n.type.base != item.type:
+                self._error(
+                    f"Declaration {n.name} has type {n.type.base} != {item.type}", n.lineno, SemanticError.MISMATCH_ARRAY_ASSIGNMENT)
+
+        self._add_to_env(n, env, "Array variable")
 
 #     def check(self, n: FuncDecl, env: Symtab):
 #         # Guardar la función en symtab actual

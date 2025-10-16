@@ -122,6 +122,13 @@ class Type(Expression):
 class SimpleType(Type):
     name: str  # integer, float, string, boolean
 
+    INTEGER = 'integer'
+    FLOAT = 'float'
+    STRING = 'string'
+    BOOLEAN = 'boolean'
+    CHAR = 'char'
+    VOID = 'void'
+
 
 @dataclass
 class ArrayType(Type):

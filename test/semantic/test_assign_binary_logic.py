@@ -3,21 +3,25 @@ from parser import Parser
 from scanner import Lexer
 from parser.model import *
 from semantic.checker import Check
-from utils import errors_detected
+from utils import errors_detected, clear_errors, get_errors
 
 
 class TestLogicalOperators(unittest.TestCase):
     def setUp(self):
         self.lexer = Lexer()
         self.parser = Parser()
+        clear_errors()
 
     def semantic(self, code):
         tokens = self.lexer.tokenize(code)
         ast = self.parser.parse(tokens)
+        # print(errors_detected())
+        # print(get_errors())
         return Check.checker(ast)
 
     def assertLogical(self, code, expected_oper):
         env = self.semantic(code)
+        self.assertFalse(errors_detected())
         decl = env.get("x")
         self.assertIsInstance(decl.value, BinOper)
         self.assertEqual(decl.value.oper, expected_oper)

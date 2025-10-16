@@ -7,6 +7,11 @@ class SemanticError(Enum):
     MISMATCH_DECLARATION = "Mismatch declaration"
     MISMATCH_FUNCTION_CALL = "Mismatch function call"
 
+    MISMATCH_ARRAY_ASSIGNMENT = "Mismatch array assignment"
+    ARRAY_SIZE_MUST_BE_INTEGER = "Array size must be integer"
+    ARRAY_SIZE_MUST_BE_POSITIVE = "Array size must be positive"
+    ARRAY_SIZE_MISMATCH = "Array size mismatch"
+
     INVALID_UNARY_OP = "Invalid unary operator"
     INVALID_BINARY_OP = "Invalid binary operator"
 
@@ -25,5 +30,4 @@ class SemanticError(Enum):
     REDEFINE_VARIABLE_TYPE = "Redeclare variable type"
     REDEFINE_VARIABLE = "Redeclare variable"
 
-
-print(SemanticError.MISMATCHING_TYPES)
+    MULTI_DIMENSIONAL_ARRAYS = "Multi-dimensional arrays are not supported"
