@@ -34,7 +34,7 @@ _bin_ops = {
     ('integer', '/', 'integer'): 'integer',
     ('integer', '%', 'integer'): 'integer',
 
-    ('integer', '=', 'integer'): 'integer',
+    # ('integer', '=', 'integer'): 'integer',
 
     ('integer', '<', 'integer'): 'boolean',
     ('integer', '<=', 'integer'): 'boolean',
@@ -50,7 +50,7 @@ _bin_ops = {
     ('float', '/', 'float'): 'float',
     ('float', '%', 'float'): 'float',
 
-    ('float', '=', 'float'): 'float',
+    # ('float', '=', 'float'): 'float',
 
     ('float', '<', 'float'): 'boolean',
     ('float', '<=', 'float'): 'boolean',
@@ -66,7 +66,7 @@ _bin_ops = {
     ('boolean', '!=', 'boolean'): 'boolean',
 
     # Char
-    ('char', '=', 'char'): 'char',
+    # ('char', '=', 'char'): 'char',
 
     ('char', '<', 'char'): 'boolean',
     ('char', '<=', 'char'): 'boolean',
@@ -78,7 +78,7 @@ _bin_ops = {
     # Strings
     ('string', '+', 'string'): 'string',
 
-    ('string', '=', 'string'): 'string',
+    # ('string', '=', 'string'): 'string',
 }
 
 _unary_ops = {
