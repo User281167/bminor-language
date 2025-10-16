@@ -226,25 +226,23 @@ class Check(Visitor):
         # definido en el archivo model.py.
         pass
 
-#     def visit(self, n: BinOp, env: Symtab):
-#         # Visitar n.left y n.right
-#         n.left.accept(self, env)
-#         n.right.accept(self, env)
+    def visit(self, n: BinOper, env: Symtab):
+        # Visitar n.left y n.right
+        n.left.accept(self, env)
+        n.right.accept(self, env)
 
-#         # Handle type-inference of memory locations
-#         if n.left.type == '<infer>':
-#             n.left.type = n.right.type
+        # Verificar compatibilidad de tipos
+        try:
+            n.type = check_binop(n.oper, n.left.type.name, n.right.type.name)
+        except CheckError as e:
+            self._error(str(e), n.lineno,
+                        SemanticError.INVALID_BINARY_OP)
+            n.type = SimpleType('undefined')
+            return
 
-#         if n.right.type == '<infer>':
-#             n.right.type = n.left.type
-
-#         # Verificar compatibilidad de tipos
-#         n.type = check_binop(n.oper, n.left.type, n.right.type)
-
-#         if not n.type and (n.left.type and n.right.type):
-#             # Question: How are errors reported?
-#             error(
-#                 f'Error de tipo: {n.left.type} {n.oper} {n.right.type}', n.lineno)
+        if not n.type and (n.left.type and n.right.type):
+            self._error(f"{n.left.type} {n.oper} {n.right.type}", n.lineno,
+                        SemanticError.BINARY_OP_TYPE)
 
     def visit(self, n: UnaryOper, env: Symtab):
         # Visitar n.expr (operando)

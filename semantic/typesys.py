@@ -110,7 +110,13 @@ def loockup_type(name: str):
 
 
 def check_binop(op: str, left_type: str, right_type: str):
-    return _bin_ops.get((left_type, op, right_type))
+    result = _bin_ops.get((left_type, op, right_type))
+
+    if result is None:
+        raise CheckError(
+            f"Binary operator '{op}' is not supported for '{left_type}' and '{right_type}'")
+
+    return SimpleType(result)
 
 
 def check_unaryop(op: str, operand_type: str):
