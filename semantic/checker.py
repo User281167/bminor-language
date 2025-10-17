@@ -147,6 +147,7 @@ class Check(Visitor):
 
 #     # --- Declaration
 
+
     def visit(self, n: Declaration, env: Symtab):
         self.check(n, env)
 
@@ -238,42 +239,41 @@ class Check(Visitor):
 
         self._add_to_env(n, env, "Array variable")
 
-#     def check(self, n: FuncDecl, env: Symtab):
-#         # Guardar la función en symtab actual
-#         try:
-#             env.add(n.name, n)
-#         except Symtab.SymbolConflictError as ex:
-#             error(
-#                 f"La Función '{n.name}' ya definida y con tipo de dato diferente", n.lineno)
-#         except Symtab.SymbolDefinedError as exññ:
-#             error(f"La Función '{n.name}' ya definida", n.lineno)
+    def check(self, n: FuncDecl, env: Symtab):
+        # Guardar la función en symtab actual
+        self._add_to_env(n, env, "Function", SemanticError.REDEFINE_FUNCTION_TYPE,
+                         SemanticError.REDEFINE_FUNCTION)
 
-#         # Crear una nueva symtab (local) para Function
-#         env = Symtab(n.name, env)
+        # Crear una nueva symtab (local) para Function
+        env = Symtab("function " + n.name, env)
+        n.env = env
 
-#         # Magic variable that references the current function
-#         env['$func'] = n
+        # Magic variable that references the current function
+        env['$func'] = n
 
-#         # Agregar todos los n.params dentro de symtab
-#         for p in n.parms:
-#             p.accept(self, env)
+        # Agregar todos los n.params dentro de symtab
+        for p in n.params:
+            p.accept(self, env)
 
-#         # Visitar n.stmts
-#         if n.body:
-#             for stmt in n.body:
-#                 stmt.accept(self, env)
+        # Visitar n.stmts
+        if n.body:
+            for stmt in n.body:
+                stmt.accept(self, env)
 
-#         env['$func'] = None
+        env['$func'] = None
 
-#     def check(self, n: VarParm, env: Symtab):
-#         # Guardar Parameter (name, type) en symtab
-#         try:
-#             env.add(n.name, n)
-#         except Symtab.SymbolConflictError as ex:
-#             error(
-#                 f"El Parámetro '{n.name}' ya definido y con tipo de dato diferente", n.lineno)
-#         except Symtab.SymbolDefinedError as exññ:
-#             error(f"El Parámetro '{n.name}' ya definido", n.lineno)
+    def visit(self, n: Param, env: Symtab):
+        # Visitar n.type
+        n.type.accept(self, env)
+
+        if n.type.name == SimpleType.VOID:
+            self._error(
+                f"Parameter '{n.name}' has void type", n.lineno, SemanticError.VOID_PARAMETER)
+
+        # Guardar Parameter (name, type) en symtab
+        self._add_to_env(n, env, "Parameter", SemanticError.REDEFINE_PARAMETER_TYPE,
+                         SemanticError.REDEFINE_PARAMETER)
+
 
 #     def check(self, n: VarParm, env: Symtab):
 #         ...

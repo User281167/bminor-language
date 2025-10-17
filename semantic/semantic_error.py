@@ -33,4 +33,12 @@ class SemanticError(Enum):
     REDEFINE_VARIABLE_TYPE = "Redeclare variable type"
     REDEFINE_VARIABLE = "Redeclare variable"
 
+    REDEFINE_FUNCTION_TYPE = "Redeclare function type"
+    REDEFINE_FUNCTION = "Redeclare function"
+
+    REDEFINE_PARAMETER_TYPE = "Redeclare parameter type"
+    REDEFINE_PARAMETER = "Redeclare parameter"
+
     MULTI_DIMENSIONAL_ARRAYS = "Multi-dimensional arrays are not supported"
+
+    VOID_PARAMETER = "Void parameter"
