@@ -69,3 +69,15 @@ class TestArrayDeclarationErrors(unittest.TestCase):
     def test_array_type_mismatch_string(self):
         code = 'x: array [2] string = {"hello", 42};'
         self.assertArrayError(code, SemanticError.MISMATCH_ARRAY_ASSIGNMENT)
+
+    def test_array_type_mismatch_string(self):
+        code = 'x: array [false] string = {"hello", 42};'
+        self.assertArrayError(code, SemanticError.ARRAY_SIZE_MUST_BE_INTEGER)
+
+    def test_array_type_mismatch_string(self):
+        code = 'x: array [true] string = {"hello", 42};'
+        self.assertArrayError(code, SemanticError.ARRAY_SIZE_MUST_BE_INTEGER)
+
+    def test_array_size_array(self):
+        code = "a: array [3] integer = {1, 2, 3}; x: array [a] integer;"
+        self.assertArrayError(code, SemanticError.ARRAY_SIZE_MUST_BE_INTEGER)

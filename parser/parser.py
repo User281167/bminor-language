@@ -262,11 +262,11 @@ class Parser(sly.Parser):
 
     @_("ID")
     def lval(self, p):
-        return _L(VarLoc(p.ID), p)
+        return _L(_L(VarLoc(p.ID), p), p)
 
     @_("ID index")
     def lval(self, p):
-        return _L(ArrayLoc(array=VarLoc(p.ID), index=p[1]), p)
+        return _L(ArrayLoc(array=_L(VarLoc(p.ID), p), index=p[1]), p)
 
     @_("expr2 LOR expr3")
     def expr2(self, p):
@@ -364,7 +364,7 @@ class Parser(sly.Parser):
 
     @_("ID index")
     def group(self, p):
-        return _L(ArrayLoc(array=VarLoc(p.ID), index=p[1]), p)
+        return _L(ArrayLoc(array=_L(VarLoc(p.ID), p), index=p[1]), p)
 
     @_("factor")
     def group(self, p):
@@ -376,7 +376,7 @@ class Parser(sly.Parser):
 
     @_("ID")
     def factor(self, p):
-        return _L(VarLoc(p.ID), p)
+        return _L(_L(VarLoc(p.ID), p), p)
 
     @_("INTEGER_LITERAL")
     def factor(self, p):

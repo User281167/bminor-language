@@ -3,13 +3,14 @@ from parser import Parser
 from scanner import Lexer
 from parser.model import *
 from semantic.checker import Check
-from utils import errors_detected
+from utils import errors_detected, clear_errors
 
 
 class TestAssignmentBinary(unittest.TestCase):
     def setUp(self):
         self.lexer = Lexer()
         self.parser = Parser()
+        clear_errors()
 
     def semantic(self, code):
         tokens = self.lexer.tokenize(code)
@@ -27,49 +28,38 @@ class TestAssignmentBinary(unittest.TestCase):
 
     # Integer arithmetic
     def test_integer_add(self):
-        self.assertBinary("x: integer = 1 + 2;",
-                          "integer", "+", Integer, Integer)
+        self.assertBinary("x: integer = 1 + 2;", "integer", "+", Integer, Integer)
 
     def test_integer_subtract(self):
-        self.assertBinary("x: integer = 5 - 3;",
-                          "integer", "-", Integer, Integer)
+        self.assertBinary("x: integer = 5 - 3;", "integer", "-", Integer, Integer)
 
     def test_integer_multiply(self):
-        self.assertBinary("x: integer = 4 * 6;",
-                          "integer", "*", Integer, Integer)
+        self.assertBinary("x: integer = 4 * 6;", "integer", "*", Integer, Integer)
 
     def test_integer_divide(self):
-        self.assertBinary("x: integer = 8 / 2;",
-                          "integer", "/", Integer, Integer)
+        self.assertBinary("x: integer = 8 / 2;", "integer", "/", Integer, Integer)
 
     def test_integer_modulo(self):
-        self.assertBinary("x: integer = 9 % 4;",
-                          "integer", "%", Integer, Integer)
+        self.assertBinary("x: integer = 9 % 4;", "integer", "%", Integer, Integer)
 
     # Integer comparisons
     def test_integer_less(self):
-        self.assertBinary("x: boolean = 1 < 2;",
-                          "boolean", "<", Integer, Integer)
+        self.assertBinary("x: boolean = 1 < 2;", "boolean", "<", Integer, Integer)
 
     def test_integer_less_equal(self):
-        self.assertBinary("x: boolean = 3 <= 3;",
-                          "boolean", "<=", Integer, Integer)
+        self.assertBinary("x: boolean = 3 <= 3;", "boolean", "<=", Integer, Integer)
 
     def test_integer_greater(self):
-        self.assertBinary("x: boolean = 5 > 2;",
-                          "boolean", ">", Integer, Integer)
+        self.assertBinary("x: boolean = 5 > 2;", "boolean", ">", Integer, Integer)
 
     def test_integer_greater_equal(self):
-        self.assertBinary("x: boolean = 7 >= 7;",
-                          "boolean", ">=", Integer, Integer)
+        self.assertBinary("x: boolean = 7 >= 7;", "boolean", ">=", Integer, Integer)
 
     def test_integer_equal(self):
-        self.assertBinary("x: boolean = 10 == 10;",
-                          "boolean", "==", Integer, Integer)
+        self.assertBinary("x: boolean = 10 == 10;", "boolean", "==", Integer, Integer)
 
     def test_integer_not_equal(self):
-        self.assertBinary("x: boolean = 11 != 12;",
-                          "boolean", "!=", Integer, Integer)
+        self.assertBinary("x: boolean = 11 != 12;", "boolean", "!=", Integer, Integer)
 
     # Float arithmetic
     def test_float_add(self):

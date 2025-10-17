@@ -15,6 +15,10 @@ class SemanticError(Enum):
     ARRAY_SIZE_MUST_BE_POSITIVE = "Array size must be positive"
     ARRAY_SIZE_MISMATCH = "Array size mismatch"
 
+    INDEX_MUST_BE_INTEGER = "Index must be integer"
+    INDEX_MUST_BE_POSITIVE = "Index must be positive"
+    INDEX_OUT_OF_BOUNDS = "Index out of bounds"
+
     INVALID_UNARY_OP = "Invalid unary operator"
     INVALID_BINARY_OP = "Invalid binary operator"
 
@@ -39,6 +43,10 @@ class SemanticError(Enum):
     REDEFINE_PARAMETER_TYPE = "Redeclare parameter type"
     REDEFINE_PARAMETER = "Redeclare parameter"
 
+    ARRAY_EXPECTED = "Array expected"
+
     MULTI_DIMENSIONAL_ARRAYS = "Multi-dimensional arrays are not supported"
 
     VOID_PARAMETER = "Void parameter"
+
+    ARRAY_INDEX_MUST_BE_INTEGER = "Array index must be integer"

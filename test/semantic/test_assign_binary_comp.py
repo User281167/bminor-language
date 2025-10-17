@@ -3,13 +3,14 @@ from parser import Parser
 from scanner import Lexer
 from parser.model import *
 from semantic.checker import Check
-from utils import errors_detected
+from utils import errors_detected, clear_errors
 
 
 class TestAssignmentComparisons(unittest.TestCase):
     def setUp(self):
         self.lexer = Lexer()
         self.parser = Parser()
+        clear_errors()
 
     def semantic(self, code):
         tokens = self.lexer.tokenize(code)
@@ -66,9 +67,7 @@ class TestAssignmentComparisons(unittest.TestCase):
         self.assertComparison("x: boolean = 11.1 != 12.2;", "!=", Float, Float)
 
     def test_boolean_equal(self):
-        self.assertComparison("x: boolean = true == true;",
-                              "==", Boolean, Boolean)
+        self.assertComparison("x: boolean = true == true;", "==", Boolean, Boolean)
 
     def test_boolean_not_equal(self):
-        self.assertComparison(
-            "x: boolean = true != false;", "!=", Boolean, Boolean)
+        self.assertComparison("x: boolean = true != false;", "!=", Boolean, Boolean)

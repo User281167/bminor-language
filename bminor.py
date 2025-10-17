@@ -99,7 +99,7 @@ def run_semantic(filename):
             ast = parser.parse(tokens)
             env = Check.checker(ast)
 
-            if "--table":
+            if "--table" in sys.argv:
                 env.print()
         except Exception as e:
             print(e)
