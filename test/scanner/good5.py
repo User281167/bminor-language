@@ -1,4 +1,3 @@
-
 import unittest
 from scanner import Lexer, TokenType
 
@@ -9,16 +8,34 @@ class TestCharLiterals(unittest.TestCase):
 
     def test_print_integer_and_char(self):
         tokens = list(self.lexer.tokenize("print 42 'a';"))
-        expected_types = [TokenType.PRINT.value,
-                          TokenType.INTEGER_LITERAL.value, TokenType.CHAR_LITERAL.value, ';']
+        expected_types = [
+            TokenType.PRINT.value,
+            TokenType.INTEGER_LITERAL.value,
+            TokenType.CHAR_LITERAL.value,
+            ";",
+        ]
         self.assertEqual([t.type for t in tokens], expected_types)
         self.assertEqual(tokens[1].value, 42)
         self.assertEqual(tokens[2].type, TokenType.CHAR_LITERAL.value)
 
     def test_ascii_printable_char(self):
         # Test specific printable characters (excluding ' and \ which need escaping)
-        test_chars = ['a', 'Z', '0', '9', '!', '~',
-                      ' ', '@', '#', '$', '%', '^', '&', '*']
+        test_chars = [
+            "a",
+            "Z",
+            "0",
+            "9",
+            "!",
+            "~",
+            " ",
+            "@",
+            "#",
+            "$",
+            "%",
+            "^",
+            "&",
+            "*",
+        ]
         for c in test_chars:
             with self.subTest(char=c):
                 tokens = list(self.lexer.tokenize(f"'{c}'"))
@@ -64,24 +81,23 @@ class TestCharLiterals(unittest.TestCase):
     def test_all_valid_escapes(self):
         # Test all standard C escape sequences
         escape_tests = [
-            ('\\a', "'\\a'"),   # bell
-            ('\\b', "'\\b'"),   # backspace
-            ('\\e', "'\\e'"),   # escape (if supported)
-            ('\\f', "'\\f'"),   # form feed
-            ('\\n', "'\\n'"),   # newline
-            ('\\r', "'\\r'"),   # carriage return
-            ('\\t', "'\\t'"),   # tab
-            ('\\v', "'\\v'"),   # vertical tab
+            ("\\a", "'\\a'"),  # bell
+            ("\\b", "'\\b'"),  # backspace
+            ("\\e", "'\\e'"),  # escape (if supported)
+            ("\\f", "'\\f'"),  # form feed
+            ("\\n", "'\\n'"),  # newline
+            ("\\r", "'\\r'"),  # carriage return
+            ("\\t", "'\\t'"),  # tab
+            ("\\v", "'\\v'"),  # vertical tab
             ("\\'", "'" + "\\" + "'" + "'"),  # escaped single quote
             ('\\"', "'\\\"'"),  # escaped double quote
-            ('\\\\', "'\\\\'"),  # escaped backslash
+            ("\\\\", "'\\\\'"),  # escaped backslash
         ]
 
         for desc, test_string in escape_tests:
             with self.subTest(escape=desc):
                 tokens = list(self.lexer.tokenize(test_string))
-                self.assertEqual(
-                    len(tokens), 1, f"Failed for {desc}: {test_string}")
+                self.assertEqual(len(tokens), 1, f"Failed for {desc}: {test_string}")
                 self.assertEqual(tokens[0].type, TokenType.CHAR_LITERAL.value)
 
     def test_all_ascii_printable_chars(self):
@@ -92,19 +108,19 @@ class TestCharLiterals(unittest.TestCase):
                 with self.subTest(ascii_code=code, char=char):
                     tokens = list(self.lexer.tokenize(f"'{char}'"))
                     self.assertEqual(
-                        len(tokens), 1, f"Failed for ASCII {code} ('{char}')")
-                    self.assertEqual(
-                        tokens[0].type, TokenType.CHAR_LITERAL.value)
+                        len(tokens), 1, f"Failed for ASCII {code} ('{char}')"
+                    )
+                    self.assertEqual(tokens[0].type, TokenType.CHAR_LITERAL.value)
 
     def test_hex_escape_samples(self):
         # Test various hex escapes
         hex_tests = [
-            ("'\\x20'", 32),   # space
-            ("'\\x41'", 65),   # 'A'
-            ("'\\x61'", 97),   # 'a'
-            ("'\\x30'", 48),   # '0'
+            ("'\\x20'", 32),  # space
+            ("'\\x41'", 65),  # 'A'
+            ("'\\x61'", 97),  # 'a'
+            ("'\\x30'", 48),  # '0'
             ("'\\x7E'", 126),  # '~'
-            ("'\\x21'", 33),   # '!'
+            ("'\\x21'", 33),  # '!'
         ]
 
         for test_string, expected_ascii in hex_tests:
@@ -117,16 +133,15 @@ class TestCharLiterals(unittest.TestCase):
         # Test multiple char literals in a single tokenization
         tokens = list(self.lexer.tokenize("'a' + '\\n' + '\\x41'"))
         print(f"\n>>>>>>>>>>Testing mixed char literals: {tokens}")
-        char_tokens = [t for t in tokens if t.type ==
-                       TokenType.CHAR_LITERAL.value]
+        char_tokens = [t for t in tokens if t.type == TokenType.CHAR_LITERAL.value]
         self.assertEqual(len(char_tokens), 3)
 
     def test_char_literal_boundaries(self):
         # Test edge cases for ASCII printable range
         boundary_tests = [
-            ("'\\x20'", "space (ASCII 32)"),      # First printable
-            ("'\\x7E'", "tilde (ASCII 126)"),     # Last printable
-            ("' '", "literal space"),              # Space as literal char
+            ("'\\x20'", "space (ASCII 32)"),  # First printable
+            ("'\\x7E'", "tilde (ASCII 126)"),  # Last printable
+            ("' '", "literal space"),  # Space as literal char
         ]
 
         for test_string, desc in boundary_tests:

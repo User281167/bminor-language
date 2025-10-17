@@ -29,7 +29,7 @@ class TestAssignmentVoid(unittest.TestCase):
         self.assertMismatch("x: void = 42;")
 
     def test_assign_string_to_void(self):
-        self.assertMismatch("x: void = \"hello\";")
+        self.assertMismatch('x: void = "hello";')
 
     def test_assign_void_array(self):
         code = "x: array [1] void;"

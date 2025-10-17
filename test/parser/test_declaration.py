@@ -40,7 +40,7 @@ class TestAssignment(unittest.TestCase):
         self.assertEqual(decl.name, "c")
         self.assertEqual(decl.type.name, "char")
         self.assertIsInstance(decl.value, Char)
-        self.assertEqual(decl.value.value, 'a')
+        self.assertEqual(decl.value.value, "a")
 
     def test_char_declaration(self):
         code = "c: char;"
@@ -78,7 +78,7 @@ class TestAssignment(unittest.TestCase):
         self.assertEqual(decl.name, "s")
         self.assertEqual(decl.type.name, "string")
         self.assertIsInstance(decl.value, String)
-        self.assertEqual(decl.value.value, 'hello')
+        self.assertEqual(decl.value.value, "hello")
 
     def test_string_declaration(self):
         code = "s: string;"

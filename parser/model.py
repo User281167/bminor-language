@@ -33,7 +33,7 @@ class Node:
         tree = Tree(label)
 
         for field_name, value in self.__dict__.items():
-            if field_name == 'lineno' and not show_lineno:
+            if field_name == "lineno" and not show_lineno:
                 continue
 
             field_label = Text(f"{field_name}:", style="bold cyan")
@@ -45,8 +45,7 @@ class Node:
                 list_tree = Tree(field_label)
                 for item in value:
                     if isinstance(item, Node):
-                        list_tree.add(item._build_tree(
-                            show_lineno, indent + 1))
+                        list_tree.add(item._build_tree(show_lineno, indent + 1))
                     else:
                         list_tree.add(Text(str(item), style="green"))
                 tree.add(list_tree)
@@ -56,11 +55,11 @@ class Node:
         return tree
 
     def to_string(self, indent=0, show_lineo=False):
-        pad = '  ' * indent
+        pad = "  " * indent
         result = f"{pad}{self.__class__.__name__}("
 
         for field_name, value in self.__dict__.items():
-            if field_name == 'lineno' and not show_lineo:
+            if field_name == "lineno" and not show_lineo:
                 continue
 
             if isinstance(value, Node):
@@ -98,6 +97,7 @@ class Statement(Node):
 class Expression(Node):
     pass
 
+
 # =====================================================================
 # Definiciones
 # =====================================================================
@@ -122,12 +122,12 @@ class Type(Expression):
 class SimpleType(Type):
     name: str  # integer, float, string, boolean
 
-    INTEGER = 'integer'
-    FLOAT = 'float'
-    STRING = 'string'
-    BOOLEAN = 'boolean'
-    CHAR = 'char'
-    VOID = 'void'
+    INTEGER = "integer"
+    FLOAT = "float"
+    STRING = "string"
+    BOOLEAN = "boolean"
+    CHAR = "char"
+    VOID = "void"
 
 
 @dataclass
@@ -139,8 +139,7 @@ class ArrayType(Type):
 @dataclass
 class FuncType(Type):
     return_type: Type  # simple type | array type
-    param_types: List[Type] = field(
-        default_factory=list)  # tipos de parámetros
+    param_types: List[Type] = field(default_factory=list)  # tipos de parámetros
 
 
 @dataclass
@@ -150,7 +149,7 @@ class VarDecl(Declaration):
     value: Optional[Expression] = None
 
 
-'''
+"""
 Statement
     -- VarParm
     -- ArrayParm
@@ -167,7 +166,7 @@ Statement
   +-- DoWhileStmt
   |
   +-- Assignment
-'''
+"""
 
 
 @dataclass
@@ -218,7 +217,7 @@ class PrintStmt(Statement):
     expr: Expression
 
 
-'''
+"""
   +-- Declaration (abstract)
   | |
   | +-- VarDecl: Guardar la información de una declaración de variable
@@ -226,7 +225,7 @@ class PrintStmt(Statement):
   | +-- ArrayDecl: Declaración de Arreglos (multi-dimencioanles)
   | |
   | +-- FuncDecl: Para guardar información sobre las funciones declaradas
-'''
+"""
 
 
 @dataclass
@@ -263,6 +262,7 @@ class FuncDecl(Declaration):
         ]
     )
     """
+
     name: str
     return_type: Type
     params: List[Param] = field(default_factory=list)
@@ -298,7 +298,7 @@ class Integer(Literal):
 
     def __post_init__(self):
         assert isinstance(self.value, int), "Value debe ser un 'integer'"
-        self.type = SimpleType('integer')
+        self.type = SimpleType("integer")
 
 
 @dataclass
@@ -307,7 +307,7 @@ class Float(Literal):
 
     def __post_init__(self):
         assert isinstance(self.value, float), "Value debe ser un 'float'"
-        self.type = SimpleType('float')
+        self.type = SimpleType("float")
 
 
 @dataclass
@@ -316,16 +316,16 @@ class Boolean(Literal):
 
     def __post_init__(self):
         assert isinstance(self.value, bool), "Value debe ser un 'boolean'"
-        self.type = SimpleType('boolean')
+        self.type = SimpleType("boolean")
 
 
-'''
+"""
   - Char
   - String
   - Increment (pre/post fijo)
   - Decrement
   - FuncCall
-'''
+"""
 
 
 @dataclass
@@ -344,7 +344,7 @@ class Char(Literal):
 
         # assert isinstance(self.value, str) and len(
         # self.value) in (0, 1), "Debe ser un solo carácter"
-        self.type = SimpleType('char')
+        self.type = SimpleType("char")
 
 
 @dataclass
@@ -356,15 +356,15 @@ class String(Literal):
         self.value = self.value[1:-1]
 
         # assert isinstance(self.value, str), "Debe ser una cadena de texto"
-        self.type = SimpleType('string')
+        self.type = SimpleType("string")
 
 
-'''
+"""
   +-- Location ('load'/'store')
     -- VarLoc
     -- ArrayLoc
 
-'''
+"""
 
 
 @dataclass

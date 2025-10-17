@@ -15,7 +15,9 @@ class TestAssignmentUnary(unittest.TestCase):
         ast = self.parser.parse(tokens)
         return Check.checker(ast)
 
-    def assertUnary(self, code, expected_type, expected_oper, expected_value_type, expected_value):
+    def assertUnary(
+        self, code, expected_type, expected_oper, expected_value_type, expected_value
+    ):
         env = self.semantic(code)
         decl = env.get("x")
         self.assertIsInstance(decl.value, UnaryOper)
@@ -40,8 +42,7 @@ class TestAssignmentUnary(unittest.TestCase):
         self.assertUnary("x: boolean = !true;", "boolean", "!", Boolean, True)
 
     def test_unary_not_false(self):
-        self.assertUnary("x: boolean = !false;",
-                         "boolean", "!", Boolean, False)
+        self.assertUnary("x: boolean = !false;", "boolean", "!", Boolean, False)
 
     def test_nested_unary_integer(self):
         env = self.semantic("x: integer = -(-42);")

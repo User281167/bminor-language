@@ -40,7 +40,7 @@ class TestAssignmentError(unittest.TestCase):
         self.assertTrue(has_error(ParserError.MISSING_STATEMENT))
 
     def test_assign_string_no_value(self):
-        code = 's: string = ;'
+        code = "s: string = ;"
         self.parse(code)
         self.assertEqual(errors_detected(), 1)
         self.assertTrue(has_error(ParserError.MISSING_STATEMENT))

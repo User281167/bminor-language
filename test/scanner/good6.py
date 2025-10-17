@@ -47,8 +47,9 @@ class TestStringLiterals(unittest.TestCase):
 
     def test_string_with_escape_sequences(self):
         """Test string with various escape sequences"""
-        tokens = list(self.lexer.tokenize(
-            '"Line 1\\nLine 2\\tTabbed\\rCarriage Return"'))
+        tokens = list(
+            self.lexer.tokenize('"Line 1\\nLine 2\\tTabbed\\rCarriage Return"')
+        )
         self.assertEqual(len(tokens), 1)
         self.assertEqual(tokens[0].type, TokenType.STRING_LITERAL.value)
 
@@ -62,14 +63,15 @@ class TestStringLiterals(unittest.TestCase):
 
     def test_string_with_hex_escapes(self):
         """Test string with hexadecimal escape sequences"""
-        tokens = list(self.lexer.tokenize(
-            '"ASCII A=\\x41, Space=\\x20, Tilde=\\x7E"'))
+        tokens = list(self.lexer.tokenize('"ASCII A=\\x41, Space=\\x20, Tilde=\\x7E"'))
         self.assertEqual(len(tokens), 1)
         self.assertEqual(tokens[0].type, TokenType.STRING_LITERAL.value)
 
     def test_string_with_mixed_content(self):
         """Test string with mix of regular chars, escapes, and hex codes"""
-        test_string = '"Name: John\\tAge: 25\\nStatus: \\x41ctive\\nPath: C:\\\\temp\\\\file.txt"'
+        test_string = (
+            '"Name: John\\tAge: 25\\nStatus: \\x41ctive\\nPath: C:\\\\temp\\\\file.txt"'
+        )
         tokens = list(self.lexer.tokenize(test_string))
         self.assertEqual(len(tokens), 1)
         self.assertEqual(tokens[0].type, TokenType.STRING_LITERAL.value)
@@ -79,15 +81,13 @@ class TestStringLiterals(unittest.TestCase):
     def test_multiple_strings_in_sequence(self):
         """Test multiple string literals in one input"""
         tokens = list(self.lexer.tokenize('"First" "Second" "Third"'))
-        string_tokens = [t for t in tokens if t.type ==
-                         TokenType.STRING_LITERAL.value]
+        string_tokens = [t for t in tokens if t.type == TokenType.STRING_LITERAL.value]
         self.assertEqual(len(string_tokens), 3)
 
     def test_string_in_print_statement(self):
         """Test string literal within a print statement"""
         tokens = list(self.lexer.tokenize('print "Hello, World!";'))
-        expected_types = [TokenType.PRINT.value,
-                          TokenType.STRING_LITERAL.value, ';']
+        expected_types = [TokenType.PRINT.value, TokenType.STRING_LITERAL.value, ";"]
         self.assertEqual([t.type for t in tokens], expected_types)
 
     def test_string_with_literal_control_chars(self):
@@ -109,20 +109,19 @@ class TestStringLiterals(unittest.TestCase):
     def test_string_edge_cases(self):
         """Test strings with edge case characters"""
         edge_cases = [
-            '""',                           # Empty
-            '" "',                          # Just space
+            '""',  # Empty
+            '" "',  # Just space
             # Exclamation (ASCII 33, first printable after space)
             '"!"',
-            '"~"',                          # Tilde (ASCII 126, last printable)
-            '"\\x20\\x21\\x7E"',           # Space, !, ~ as hex escapes
+            '"~"',  # Tilde (ASCII 126, last printable)
+            '"\\x20\\x21\\x7E"',  # Space, !, ~ as hex escapes
         ]
 
         for test_case in edge_cases:
             with self.subTest(string=test_case):
                 tokens = list(self.lexer.tokenize(test_case))
                 self.assertEqual(len(tokens), 1)
-                self.assertEqual(
-                    tokens[0].type, TokenType.STRING_LITERAL.value)
+                self.assertEqual(tokens[0].type, TokenType.STRING_LITERAL.value)
 
     def test_string_with_simple_comments(self):
         """Test string literals that include comment-like sequences"""
@@ -136,8 +135,7 @@ class TestStringLiterals(unittest.TestCase):
             with self.subTest(string=test_string):
                 tokens = list(self.lexer.tokenize(test_string))
                 self.assertEqual(len(tokens), 1)
-                self.assertEqual(
-                    tokens[0].type, TokenType.STRING_LITERAL.value)
+                self.assertEqual(tokens[0].type, TokenType.STRING_LITERAL.value)
 
     def test_string_with_multiline_content(self):
         """Test string literals that span multiple lines using escape sequences"""
@@ -152,8 +150,7 @@ class TestStringLiterals(unittest.TestCase):
         tokens = list(self.lexer.tokenize(test_string))
         self.assertEqual(len(tokens), 1)
         self.assertEqual(tokens[0].type, TokenType.STRING_LITERAL.value)
-        self.assertEqual(
-            tokens[0].value, '"This is not a /* multiline comment */"')
+        self.assertEqual(tokens[0].value, '"This is not a /* multiline comment */"')
 
     def test_string_with_string_content(self):
         input_string = '"string"'  # valid string literal no keyword
@@ -189,18 +186,17 @@ class TestStringLiterals(unittest.TestCase):
             with self.subTest(char=char_test):
                 tokens = list(self.lexer.tokenize(f'"{char_test}"'))
                 self.assertEqual(len(tokens), 1)
-                self.assertEqual(
-                    tokens[0].type, TokenType.STRING_LITERAL.value)
+                self.assertEqual(tokens[0].type, TokenType.STRING_LITERAL.value)
 
     def test_literals_quotes(self):
-        input_test = ['"', '\\']
+        input_test = ['"', "\\"]
 
         for char_test in input_test:
             # Escapar el carácter para que se represente correctamente dentro del string
             if char_test == '"':
-                escaped = r'\"'
-            elif char_test == '\\':
-                escaped = r'\\'
+                escaped = r"\""
+            elif char_test == "\\":
+                escaped = r"\\"
             else:
                 escaped = char_test
 
@@ -209,5 +205,4 @@ class TestStringLiterals(unittest.TestCase):
                 source = f'"{escaped}"'
                 tokens = list(self.lexer.tokenize(source))
                 self.assertEqual(len(tokens), 1)
-                self.assertEqual(
-                    tokens[0].type, TokenType.STRING_LITERAL.value)
+                self.assertEqual(tokens[0].type, TokenType.STRING_LITERAL.value)

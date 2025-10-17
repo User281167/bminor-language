@@ -40,8 +40,7 @@ class TestArrayDeclaration(unittest.TestCase):
         self.assertArray("x: array [3] char = {'a', 'b', 'c'};", "char", 3)
 
     def test_array_string(self):
-        self.assertArray(
-            'x: array [2] string = {"hello", "world"};', "string", 2)
+        self.assertArray('x: array [2] string = {"hello", "world"};', "string", 2)
 
     def test_array_boolean(self):
         self.assertArray("x: array [2] boolean = {true, false};", "boolean", 2)
@@ -50,7 +49,7 @@ class TestArrayDeclaration(unittest.TestCase):
         self.assertArray("x: array [0] integer = {};", "integer", 0)
 
     def test_array_empty_string(self):
-        self.assertArray('x: array [0] string = {};', "string", 0)
+        self.assertArray("x: array [0] string = {};", "string", 0)
 
     def test_array_single_char(self):
         self.assertArray("x: array [1] char = {'x'};", "char", 1)

@@ -18,7 +18,7 @@ class Parser(sly.Parser):
     log = logging.getLogger()
     log.setLevel(logging.ERROR)
     expected_shift_reduce = 1
-    debugfile = 'grammar.txt'
+    debugfile = "grammar.txt"
 
     tokens = Lexer.tokens
 
@@ -46,12 +46,15 @@ class Parser(sly.Parser):
 
     @_("ID ':' type_func ';'")
     def decl(self, p):
-        return _L(FuncDecl(
-            name=p.ID,
-            return_type=p.type_func.return_type,
-            params=p.type_func.param_types,
-            body=[]
-        ), p)
+        return _L(
+            FuncDecl(
+                name=p.ID,
+                return_type=p.type_func.return_type,
+                params=p.type_func.param_types,
+                body=[],
+            ),
+            p,
+        )
 
     @_("decl_init")
     def decl(self, p):
@@ -64,20 +67,21 @@ class Parser(sly.Parser):
     @_("ID ':' type_array_sized '=' '{' opt_expr_list '}' ';'")
     def decl_init(self, p):
         # type_array_sized.size ya contiene la expresión del índice en el modelo ArrayType
-        return _L(ArrayDecl(
-            name=p.ID,
-            type=p.type_array_sized,
-            value=p.opt_expr_list
-        ), p)
+        return _L(
+            ArrayDecl(name=p.ID, type=p.type_array_sized, value=p.opt_expr_list), p
+        )
 
     @_("ID ':' type_func '=' '{' opt_stmt_list '}'")
     def decl_init(self, p):
-        return _L(FuncDecl(
-            name=p.ID,
-            return_type=p.type_func.return_type,
-            params=p.type_func.param_types,
-            body=p.opt_stmt_list
-        ), p)
+        return _L(
+            FuncDecl(
+                name=p.ID,
+                return_type=p.type_func.return_type,
+                params=p.type_func.param_types,
+                body=p.opt_stmt_list,
+            ),
+            p,
+        )
 
     # Statements
 
@@ -108,8 +112,7 @@ class Parser(sly.Parser):
     def closed_stmt(self, p):
         return p[0]
 
-    @_("if_stmt_open",
-       "for_stmt_open")
+    @_("if_stmt_open", "for_stmt_open")
     def open_stmt(self, p):
         return p[0]
 
@@ -122,21 +125,31 @@ class Parser(sly.Parser):
     @_("if_cond closed_stmt ELSE closed_stmt")
     def if_stmt_closed(self, p):
         return _L(
-            IfStmt(condition=p.if_cond, then_branch=p.closed_stmt0,
-                   else_branch=[p.closed_stmt1] if not isinstance(p.closed_stmt1, list) else p.closed_stmt1), p
+            IfStmt(
+                condition=p.if_cond,
+                then_branch=p.closed_stmt0,
+                else_branch=(
+                    [p.closed_stmt1]
+                    if not isinstance(p.closed_stmt1, list)
+                    else p.closed_stmt1
+                ),
+            ),
+            p,
         )
 
     @_("if_cond stmt")
     def if_stmt_open(self, p):
-        return _L(
-            IfStmt(condition=p.if_cond, then_branch=p.stmt), p
-        )
+        return _L(IfStmt(condition=p.if_cond, then_branch=p.stmt), p)
 
     @_("if_cond closed_stmt ELSE if_stmt_open")
     def if_stmt_open(self, p):
         return _L(
-            IfStmt(condition=p.if_cond, then_branch=p.closed_stmt,
-                   else_branch=p.if_stmt_open), p
+            IfStmt(
+                condition=p.if_cond,
+                then_branch=p.closed_stmt,
+                else_branch=p.if_stmt_open,
+            ),
+            p,
         )
 
     @_("FOR '(' opt_expr ';' opt_expr ';' opt_expr ')'")
@@ -146,29 +159,59 @@ class Parser(sly.Parser):
     @_("for_header open_stmt")
     def for_stmt_open(self, p):
         init, cond, update = p.for_header
-        return _L(ForStmt(init=init, condition=cond, update=update,
-                          body=[p.open_stmt] if not isinstance(p.open_stmt, list) else p.open_stmt), p)
+        return _L(
+            ForStmt(
+                init=init,
+                condition=cond,
+                update=update,
+                body=(
+                    [p.open_stmt] if not isinstance(p.open_stmt, list) else p.open_stmt
+                ),
+            ),
+            p,
+        )
 
     @_("for_header closed_stmt")
     def for_stmt_closed(self, p):
         init, cond, update = p.for_header
-        return _L(ForStmt(init=init, condition=cond, update=update,
-                          body=[p.closed_stmt] if not isinstance(p.closed_stmt, list) else p.closed_stmt), p)
+        return _L(
+            ForStmt(
+                init=init,
+                condition=cond,
+                update=update,
+                body=(
+                    [p.closed_stmt]
+                    if not isinstance(p.closed_stmt, list)
+                    else p.closed_stmt
+                ),
+            ),
+            p,
+        )
 
     @_("WHILE '(' opt_expr ')' open_stmt")
     def while_stmt_open(self, p):
         return _L(
-            WhileStmt(condition=p.opt_expr,
-                      body=[p.open_stmt] if not isinstance(p.open_stmt, list) else p.open_stmt),
-            p
+            WhileStmt(
+                condition=p.opt_expr,
+                body=(
+                    [p.open_stmt] if not isinstance(p.open_stmt, list) else p.open_stmt
+                ),
+            ),
+            p,
         )
 
     @_("WHILE '(' opt_expr ')' closed_stmt")
     def while_stmt_closed(self, p):
         return _L(
-            WhileStmt(condition=p.opt_expr,
-                      body=[p.closed_stmt] if not isinstance(p.closed_stmt, list) else p.closed_stmt),
-            p
+            WhileStmt(
+                condition=p.opt_expr,
+                body=(
+                    [p.closed_stmt]
+                    if not isinstance(p.closed_stmt, list)
+                    else p.closed_stmt
+                ),
+            ),
+            p,
         )
 
     @_("while_stmt_open")
@@ -183,11 +226,14 @@ class Parser(sly.Parser):
     def do_while_stmt(self, p):
         return _L(
             DoWhileStmt(
-                body=[p.closed_stmt] if not isinstance(
-                    p.closed_stmt, list) else p.closed_stmt,
-                condition=p.expr
+                body=(
+                    [p.closed_stmt]
+                    if not isinstance(p.closed_stmt, list)
+                    else p.closed_stmt
+                ),
+                condition=p.expr,
             ),
-            p
+            p,
         )
 
     @_("do_while_stmt")
@@ -397,7 +443,7 @@ class Parser(sly.Parser):
     @_("TRUE")
     @_("FALSE")
     def factor(self, p):
-        return _L(Boolean(p[0] == 'true'), p)
+        return _L(Boolean(p[0] == "true"), p)
 
     # Types
     @_("INTEGER")
@@ -470,8 +516,8 @@ class Parser(sly.Parser):
         return None
 
     def error(self, p):
-        lineno = p.lineno if p else 'EOF'
-        value = repr(p.value) if p else 'EOF'
+        lineno = p.lineno if p else "EOF"
+        value = repr(p.value) if p else "EOF"
 
         if p and not isinstance(p.value, str):
             error_type = ParserError.UNEXPECTED_TOKEN
@@ -479,7 +525,7 @@ class Parser(sly.Parser):
             error(message, lineno, error_type)
             return
         elif not p or p is None:
-            if lineno == 'EOF':
+            if lineno == "EOF":
                 error_type = ParserError.UNEXPECTED_EOF
                 message = f"Syntax error: {error_type.value}"
                 error(message, lineno, error_type)
@@ -496,7 +542,21 @@ class Parser(sly.Parser):
         if p.value in "&|~":
             error_type = ParserError.UNSUPPORTED_OPERATOR
             message = f"{error_type.value} near {value}"
-        elif p.value in ["&&", "==", "!=", "<=", ">=", "<", ">", "||", "+", "-", "*", "/", "%"]:
+        elif p.value in [
+            "&&",
+            "==",
+            "!=",
+            "<=",
+            ">=",
+            "<",
+            ">",
+            "||",
+            "+",
+            "-",
+            "*",
+            "/",
+            "%",
+        ]:
             error_type = ParserError.MISSING_EXPRESSION
             message = f"{error_type.value} near {value}"
         elif repr(p.value) in ("'++'", "'--'"):
@@ -511,7 +571,7 @@ class Parser(sly.Parser):
         elif p.value == "'":
             error_type = ParserError.MALFORMED_CHAR
             message = f"{error_type.value} near {value}"
-        elif p.value == "\"":
+        elif p.value == '"':
             error_type = ParserError.MALFORMED_STRING
             message = f"{error_type.value} near {value}"
         elif p.value == ":":
@@ -535,7 +595,7 @@ class Parser(sly.Parser):
         elif p.value == ")":
             error_type = ParserError.MISSING_EXPRESSION
             message = f"{error_type.value}, unexpected ')' or expected list of parameters after {value}"
-        elif p.value == ';':
+        elif p.value == ";":
             error_type = ParserError.MISSING_STATEMENT
             message = f"{error_type.value} near {value}"
         elif p.value in [t.lower() for t in Lexer.tokens]:
@@ -569,11 +629,11 @@ def parse(txt):
     return p.parse(l.tokenize(txt))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
     import json
 
-    if sys.platform != 'ios':
+    if sys.platform != "ios":
 
         if len(sys.argv) != 2:
             raise SystemExit("Usage: python parse.py <filename>")
@@ -584,13 +644,13 @@ if __name__ == '__main__':
         from File_Picker import file_picker_dialog
 
         filename = file_picker_dialog(
-            title='Seleccionar una archivo',
-            root_dir='./test',
-            file_pattern='^.*[.]bminor'
+            title="Seleccionar una archivo",
+            root_dir="./test",
+            file_pattern="^.*[.]bminor",
         )
 
     if filename:
-        txt = open(filename, encoding='utf-8').read()
+        txt = open(filename, encoding="utf-8").read()
         ast = parse(txt)
 
         print(ast)

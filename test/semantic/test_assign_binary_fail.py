@@ -35,10 +35,10 @@ class TestAssignmentBinaryError(unittest.TestCase):
         self.assertBinaryError("x: char = 'a' * \"hello\";")
 
     def test_string_plus_integer(self):
-        self.assertBinaryError("x: string = \"hi\" + 5;")
+        self.assertBinaryError('x: string = "hi" + 5;')
 
     def test_integer_less_string(self):
-        self.assertBinaryError("x: boolean = 10 < \"ten\";")
+        self.assertBinaryError('x: boolean = 10 < "ten";')
 
     def test_float_modulo_boolean(self):
         self.assertBinaryError("x: float = 5.5 % true;")
@@ -50,4 +50,4 @@ class TestAssignmentBinaryError(unittest.TestCase):
         self.assertBinaryError("x: boolean = 'x' < 3.14;")
 
     def test_string_equal_boolean(self):
-        self.assertBinaryError("x: boolean = \"yes\" == true;")
+        self.assertBinaryError('x: boolean = "yes" == true;')

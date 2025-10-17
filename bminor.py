@@ -30,11 +30,9 @@ def run_scan(filename):
             print(e)
             sys.exit(1)
     elif filename.endswith(".py"):
-        match = re.match(
-            r'test[\\/]{1}scanner[\\/]{1}(good|bad)([0-9]+)\.py', filename)
+        match = re.match(r"test[\\/]{1}scanner[\\/]{1}(good|bad)([0-9]+)\.py", filename)
         if not match:
-            print(
-                "Invalid test file name. Use test/scanner/(good|bad)[0-9].py")
+            print("Invalid test file name. Use test/scanner/(good|bad)[0-9].py")
             sys.exit(1)
         path = os.path.abspath(filename)
         spec = importlib.util.spec_from_file_location("dynamic_test", path)
@@ -42,11 +40,11 @@ def run_scan(filename):
         spec.loader.exec_module(test_module)
 
         unittest.TextTestRunner(verbosity=2).run(
-            unittest.TestLoader().loadTestsFromModule(test_module))
+            unittest.TestLoader().loadTestsFromModule(test_module)
+        )
     elif filename == "test":
-        test_dir = os.path.join(
-            os.path.dirname(__file__), 'test', 'scanner')
-        suite = unittest.TestLoader().discover(test_dir, pattern='*.py')
+        test_dir = os.path.join(os.path.dirname(__file__), "test", "scanner")
+        suite = unittest.TestLoader().discover(test_dir, pattern="*.py")
         unittest.TextTestRunner(verbosity=2).run(suite)
     else:
         print("Invalid file type for scan. Use .bminor or .py files")
@@ -78,11 +76,11 @@ def run_parser(filename):
         spec.loader.exec_module(test_module)
 
         unittest.TextTestRunner(verbosity=2).run(
-            unittest.TestLoader().loadTestsFromModule(test_module))
+            unittest.TestLoader().loadTestsFromModule(test_module)
+        )
     elif filename == "test":
-        test_dir = os.path.join(
-            os.path.dirname(__file__), 'test', 'parser')
-        suite = unittest.TestLoader().discover(test_dir, pattern='*.py')
+        test_dir = os.path.join(os.path.dirname(__file__), "test", "parser")
+        suite = unittest.TestLoader().discover(test_dir, pattern="*.py")
         unittest.TextTestRunner(verbosity=2).run(suite)
     else:
         print("Invalid file type for parser. Use .bminor or .py files")
@@ -111,11 +109,11 @@ def run_semantic(filename):
         spec.loader.exec_module(test_module)
 
         unittest.TextTestRunner(verbosity=2).run(
-            unittest.TestLoader().loadTestsFromModule(test_module))
+            unittest.TestLoader().loadTestsFromModule(test_module)
+        )
     elif filename == "test":
-        test_dir = os.path.join(
-            os.path.dirname(__file__), 'test', 'semantic')
-        suite = unittest.TestLoader().discover(test_dir, pattern='*.py')
+        test_dir = os.path.join(os.path.dirname(__file__), "test", "semantic")
+        suite = unittest.TestLoader().discover(test_dir, pattern="*.py")
         unittest.TextTestRunner(verbosity=2).run(suite)
     else:
         print("Invalid file type for parser. Use .bminor or .py files")
@@ -127,7 +125,8 @@ if __name__ == "__main__":
 
     if len(sys.argv) < 3:
         print(
-            "Usage: bminor.py --scan|--parser|--semantic [test | filename.bminor | test/.../*.py]")
+            "Usage: bminor.py --scan|--parser|--semantic [test | filename.bminor | test/.../*.py]"
+        )
         print("Example: bminor.py --scan test/scanner/good1.bminor")
         print("\nparser flags: --print | --pretty | --json")
         print("Example: bminor.py --parser code.bminor --json")

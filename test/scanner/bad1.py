@@ -11,7 +11,7 @@ class TestBadNumbers(unittest.TestCase):
     def capture_lexer_log(self, input_text):
         stream = StringIO()
         handler = logging.StreamHandler(stream)
-        logger = logging.getLogger('lexer')
+        logger = logging.getLogger("lexer")
         logger.addHandler(handler)
         logger.setLevel(logging.ERROR)
         tokens = list(self.lexer.tokenize(input_text))
@@ -39,10 +39,7 @@ class TestBadNumbers(unittest.TestCase):
         log, tokens = self.capture_lexer_log("3.14e")
         self.assertEqual(len(tokens), 2)
 
-        expected = [
-            (TokenType.FLOAT_LITERAL.value, 3.14),
-            (TokenType.ID.value, 'e')
-        ]
+        expected = [(TokenType.FLOAT_LITERAL.value, 3.14), (TokenType.ID.value, "e")]
 
         for i in range(len(tokens)):
             self.assertEqual(tokens[i].value, expected[i][1])
@@ -56,8 +53,8 @@ class TestBadNumbers(unittest.TestCase):
 
         expected = [
             (TokenType.FLOAT_LITERAL.value, 3.14),
-            (TokenType.ID.value, 'e'),
-            ('-', '-')
+            (TokenType.ID.value, "e"),
+            ("-", "-"),
         ]
 
         for i in range(len(tokens)):
@@ -72,8 +69,8 @@ class TestBadNumbers(unittest.TestCase):
 
         expected = [
             (TokenType.FLOAT_LITERAL.value, 3.14),
-            (TokenType.ID.value, 'e'),
-            ('+', '+')
+            (TokenType.ID.value, "e"),
+            ("+", "+"),
         ]
 
         for i in range(len(tokens)):
@@ -85,10 +82,7 @@ class TestBadNumbers(unittest.TestCase):
         log, tokens = self.capture_lexer_log("0003.14e")
         self.assertEqual(len(tokens), 2)
 
-        expected = [
-            (TokenType.FLOAT_LITERAL.value, 3.14),
-            (TokenType.ID.value, 'e')
-        ]
+        expected = [(TokenType.FLOAT_LITERAL.value, 3.14), (TokenType.ID.value, "e")]
 
         for i in range(len(tokens)):
             self.assertEqual(tokens[i].value, expected[i][1])
@@ -101,10 +95,10 @@ class TestBadNumbers(unittest.TestCase):
 
         expected = [
             (TokenType.FLOAT_LITERAL.value, 3.14),
-            (TokenType.ID.value, 'e'),
-            ('+', '+'),
-            ('-', '-'),
-            (TokenType.INTEGER_LITERAL.value, 2)
+            (TokenType.ID.value, "e"),
+            ("+", "+"),
+            ("-", "-"),
+            (TokenType.INTEGER_LITERAL.value, 2),
         ]
 
         for i in range(len(tokens)):
@@ -118,9 +112,9 @@ class TestBadNumbers(unittest.TestCase):
 
         expected = [
             (TokenType.INTEGER_LITERAL.value, 42),
-            (OperatorType.INC.value, '++'),
-            ('-', '-'),
-            (TokenType.INTEGER_LITERAL.value, 2)
+            (OperatorType.INC.value, "++"),
+            ("-", "-"),
+            (TokenType.INTEGER_LITERAL.value, 2),
         ]
 
         for i in range(len(tokens)):
@@ -134,9 +128,9 @@ class TestBadNumbers(unittest.TestCase):
 
         expected = [
             (TokenType.INTEGER_LITERAL.value, 42),
-            (OperatorType.DEC.value, '--'),
-            ('-', '-'),
-            (TokenType.INTEGER_LITERAL.value, 2)
+            (OperatorType.DEC.value, "--"),
+            ("-", "-"),
+            (TokenType.INTEGER_LITERAL.value, 2),
         ]
 
         for i in range(len(tokens)):

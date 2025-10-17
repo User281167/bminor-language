@@ -7,9 +7,7 @@ class TestKeywords(unittest.TestCase):
         self.lexer = Lexer()
 
     def test_keywords_and_numbers_and_symbols(self):
-        test_input = (
-            "array auto boolean char else false float for function if integer print return string true void while     // this is a comment"
-        )
+        test_input = "array auto boolean char else false float for function if integer print return string true void while     // this is a comment"
         tokens = list(self.lexer.tokenize(test_input))
         expected = [
             TokenType.ARRAY.value,
@@ -129,7 +127,7 @@ class TestKeywords(unittest.TestCase):
             TokenType.INTEGER.value,
             TokenType.INTEGER_LITERAL.value,
             TokenType.FOR.value,
-            TokenType.FLOAT_LITERAL.value
+            TokenType.FLOAT_LITERAL.value,
         ]
         self.assertEqual([t.type for t in tokens], expected)
         self.assertEqual(tokens[1].value, 123)
@@ -143,12 +141,12 @@ class TestKeywords(unittest.TestCase):
         expected = [
             TokenType.IF.value,
             TokenType.INTEGER_LITERAL.value,
-            '+',
+            "+",
             TokenType.FLOAT_LITERAL.value,
-            '-',
+            "-",
             TokenType.ELSE.value,
             TokenType.FLOAT_LITERAL.value,
-            ';'
+            ";",
         ]
         self.assertEqual([t.type for t in tokens], expected)
         self.assertEqual(tokens[1].value, 1)
@@ -164,7 +162,7 @@ class TestKeywords(unittest.TestCase):
             TokenType.RETURN.value,
             TokenType.FLOAT_LITERAL.value,
             TokenType.WHILE.value,
-            TokenType.INTEGER_LITERAL.value
+            TokenType.INTEGER_LITERAL.value,
         ]
         self.assertEqual([t.type for t in tokens], expected)
         self.assertEqual(tokens[1].value, 10)
@@ -180,17 +178,37 @@ class TestKeywords(unittest.TestCase):
         )
         tokens = list(self.lexer.tokenize(test_input))
         expected_types = [
-            TokenType.ID.value, ':', TokenType.INTEGER.value, '=', TokenType.INTEGER_LITERAL.value, ';',
-            TokenType.ID.value, ':', TokenType.FLOAT.value, '=', TokenType.FLOAT_LITERAL.value, ';',
-            TokenType.ID.value, ':', TokenType.BOOLEAN.value, '=', TokenType.TRUE.value, ';',
-            TokenType.ID.value, ':', TokenType.STRING.value, '=', TokenType.FALSE.value, ';'
+            TokenType.ID.value,
+            ":",
+            TokenType.INTEGER.value,
+            "=",
+            TokenType.INTEGER_LITERAL.value,
+            ";",
+            TokenType.ID.value,
+            ":",
+            TokenType.FLOAT.value,
+            "=",
+            TokenType.FLOAT_LITERAL.value,
+            ";",
+            TokenType.ID.value,
+            ":",
+            TokenType.BOOLEAN.value,
+            "=",
+            TokenType.TRUE.value,
+            ";",
+            TokenType.ID.value,
+            ":",
+            TokenType.STRING.value,
+            "=",
+            TokenType.FALSE.value,
+            ";",
         ]
         self.assertEqual([t.type for t in tokens], expected_types)
-        self.assertEqual(tokens[0].value, 'x')
+        self.assertEqual(tokens[0].value, "x")
         self.assertEqual(tokens[4].value, 42)
-        self.assertEqual(tokens[6].value, 'y')
+        self.assertEqual(tokens[6].value, "y")
         self.assertEqual(tokens[10].value, 3.14)
-        self.assertEqual(tokens[12].value, 'flag')
+        self.assertEqual(tokens[12].value, "flag")
         self.assertEqual(tokens[16].type, TokenType.TRUE.value)
-        self.assertEqual(tokens[18].value, 'msg')
+        self.assertEqual(tokens[18].value, "msg")
         self.assertEqual(tokens[22].type, TokenType.FALSE.value)

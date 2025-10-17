@@ -71,49 +71,57 @@ class TestArrayPassingSemanticErrors(unittest.TestCase):
     def test_array_with_invalid_char_literal(self):
         code = "c: array [2] char = {'ab', 'c'};"
         self.parse(code)
-        self.assertNotEqual(errors_detected(), 0,
-                            "Se esperaba error por literal char inválido")
+        self.assertNotEqual(
+            errors_detected(), 0, "Se esperaba error por literal char inválido"
+        )
 
     def test_array_with_unterminated_string(self):
         code = 's: array [2] string = {"hello", "world;'
         self.parse(code)
-        self.assertNotEqual(errors_detected(), 0,
-                            "Se esperaba error por string sin terminar")
+        self.assertNotEqual(
+            errors_detected(), 0, "Se esperaba error por string sin terminar"
+        )
 
     def test_array_with_invalid_float_literal(self):
         code = "f: array [2] float = {1.2.3, 4.5};"
         self.parse(code)
-        self.assertNotEqual(errors_detected(), 0,
-                            "Se esperaba error por literal float inválido")
+        self.assertNotEqual(
+            errors_detected(), 0, "Se esperaba error por literal float inválido"
+        )
 
     # ========== ADDITIONAL PARSER SYNTAX ERRORS ==========
 
     def test_missing_array_type(self):
         code = "a: array [5] = {1, 2, 3};"
         self.parse(code)
-        self.assertNotEqual(errors_detected(), 0,
-                            "Se esperaba error por falta de tipo de array")
+        self.assertNotEqual(
+            errors_detected(), 0, "Se esperaba error por falta de tipo de array"
+        )
 
     def test_invalid_array_syntax_missing_brackets_around_size(self):
         code = "a: array 5 integer = {1, 2, 3};"
         self.parse(code)
-        self.assertNotEqual(errors_detected(), 0,
-                            "Se esperaba error por sintaxis de array inválida")
+        self.assertNotEqual(
+            errors_detected(), 0, "Se esperaba error por sintaxis de array inválida"
+        )
 
     def test_malformed_array_initialization_missing_opening_brace(self):
         code = "a: array [5] integer = 1, 2, 3};"
         self.parse(code)
-        self.assertNotEqual(errors_detected(), 0,
-                            "Se esperaba error por llave de apertura faltante")
+        self.assertNotEqual(
+            errors_detected(), 0, "Se esperaba error por llave de apertura faltante"
+        )
 
     def test_malformed_array_initialization_missing_closing_brace(self):
         code = "a: array [5] integer = {1, 2, 3;"
         self.parse(code)
-        self.assertNotEqual(errors_detected(), 0,
-                            "Se esperaba error por llave de cierre faltante")
+        self.assertNotEqual(
+            errors_detected(), 0, "Se esperaba error por llave de cierre faltante"
+        )
 
     def test_array_with_invalid_nested_structure(self):
         code = "a: array [2] integer = {1, {2, 3}};"
         self.parse(code)
-        self.assertNotEqual(errors_detected(), 0,
-                            "Se esperaba error por estructura anidada inválida")
+        self.assertNotEqual(
+            errors_detected(), 0, "Se esperaba error por estructura anidada inválida"
+        )

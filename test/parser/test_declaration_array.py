@@ -54,7 +54,7 @@ class TestAssignmentArray(unittest.TestCase):
         self.assertEqual(decl.type.base.name, "char")
         self.assertEqual(decl.type.size.value, 4)
         self.assertEqual(len(decl.value), 4)
-        expected_chars = ['a', 'b', 'c', 'd']
+        expected_chars = ["a", "b", "c", "d"]
         for i, val in enumerate(decl.value):
             self.assertIsInstance(val, Char)
             self.assertEqual(val.value, expected_chars[i])
@@ -124,7 +124,7 @@ class TestAssignmentArray(unittest.TestCase):
         self.assertEqual(len(decl.value), 0)
 
     def test_empty_string_array(self):
-        code = 's: array [2] string = {};'
+        code = "s: array [2] string = {};"
         ast = self.parse(code)
         decl = ast.body[0]
         self.assertIsInstance(decl, ArrayDecl)
@@ -165,7 +165,7 @@ class TestAssignmentArray(unittest.TestCase):
         self.assertEqual(decl.type.base.name, "boolean")
         self.assertIsInstance(decl.type.size, UnaryOper)
         self.assertEqual(decl.type.size.expr.value, 1)
-        self.assertEqual(decl.type.size.oper, '-')
+        self.assertEqual(decl.type.size.oper, "-")
         self.assertEqual(len(decl.value), 0)
 
     # ========== FILLED ARRAY ASSIGNMENTS WITH VARIOUS SIZES ==========

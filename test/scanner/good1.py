@@ -21,7 +21,7 @@ class TestNumbers(unittest.TestCase):
         self.assertEqual(tokens[0].value, 42)
 
     def test_valid_big_integer(self):
-        test_input = '231432443'
+        test_input = "231432443"
         tokens = list(self.lexer.tokenize(test_input))
         self.assertEqual(len(tokens), 1)
         self.assertEqual(tokens[0].type, TokenType.INTEGER_LITERAL.value)
@@ -106,7 +106,7 @@ class TestNumbers(unittest.TestCase):
         self.assertTrue(isinstance(tokens[0].value, float))
 
     def test_valid_integer_and_float(self):
-        test_input = '42.42 5 3.14 .42\n 0093 .54 2e10 2e-1'
+        test_input = "42.42 5 3.14 .42\n 0093 .54 2e10 2e-1"
         tokens = list(self.lexer.tokenize(test_input))
         self.assertEqual(len(tokens), 8)
 
@@ -118,16 +118,18 @@ class TestNumbers(unittest.TestCase):
             (TokenType.INTEGER_LITERAL.value, 93),
             (TokenType.FLOAT_LITERAL.value, 0.54),
             (TokenType.FLOAT_LITERAL.value, 2e10),
-            (TokenType.FLOAT_LITERAL.value, 2e-1)
+            (TokenType.FLOAT_LITERAL.value, 2e-1),
         ]
 
         for i in range(len(tokens)):
             self.assertEqual(
-                tokens[i].value, expected[i][1],
-                f'Expected {expected[i][1]} but got {tokens[i].value} at index {i}'
+                tokens[i].value,
+                expected[i][1],
+                f"Expected {expected[i][1]} but got {tokens[i].value} at index {i}",
             )
 
             self.assertEqual(
-                tokens[i].type, expected[i][0],
-                f'Expected {expected[i][0]} but got {tokens[i].type} at index {i}'
+                tokens[i].type,
+                expected[i][0],
+                f"Expected {expected[i][0]} but got {tokens[i].type} at index {i}",
             )

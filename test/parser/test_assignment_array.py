@@ -42,7 +42,7 @@ class TestArrayAssignment(unittest.TestCase):
         main_dcl = ast.body[0]
         decl = main_dcl.body[0]
         self.assertIsInstance(decl.location.index, BinOper)
-        self.assertEqual(decl.location.index.oper, '+')
+        self.assertEqual(decl.location.index.oper, "+")
         self.assertEqual(decl.location.index.left.name, "i")
         self.assertEqual(decl.location.index.right.value, 1)
         self.assertEqual(decl.value.value, 42)
@@ -53,7 +53,7 @@ class TestArrayAssignment(unittest.TestCase):
         main_dcl = ast.body[0]
         decl = main_dcl.body[0]
         self.assertIsInstance(decl.value, BinOper)
-        self.assertEqual(decl.value.oper, '*')
+        self.assertEqual(decl.value.oper, "*")
         self.assertEqual(decl.value.left.name, "a")
         self.assertEqual(decl.value.right.value, 2)
 
@@ -63,7 +63,7 @@ class TestArrayAssignment(unittest.TestCase):
         main_dcl = ast.body[0]
         decl = main_dcl.body[0]
         self.assertIsInstance(decl.location.index, UnaryOper)
-        self.assertEqual(decl.location.index.oper, '-')
+        self.assertEqual(decl.location.index.oper, "-")
         self.assertEqual(decl.location.index.expr.value, 1)
         self.assertEqual(decl.value.value, 99)
 
@@ -73,7 +73,7 @@ class TestArrayAssignment(unittest.TestCase):
         main_dcl = ast.body[0]
         decl = main_dcl.body[0]
         self.assertIsInstance(decl.value, UnaryOper)
-        self.assertEqual(decl.value.oper, '!')
+        self.assertEqual(decl.value.oper, "!")
         self.assertEqual(decl.value.expr.name, "ready")
 
     def test_array_assignment_float(self):
@@ -107,16 +107,16 @@ class TestArrayAssignment(unittest.TestCase):
         ast = self.parse(code)
         decl = ast.body[0].body[0]
         self.assertIsInstance(decl.location.index, BinOper)
-        self.assertEqual(decl.location.index.oper, '*')
+        self.assertEqual(decl.location.index.oper, "*")
         self.assertIsInstance(decl.location.index.left, BinOper)
-        self.assertEqual(decl.location.index.left.oper, '+')
+        self.assertEqual(decl.location.index.left.oper, "+")
 
     def test_array_assignment_logical_expr(self):
         code = "main: function boolean() = {flags[0] = a && b;}"
         ast = self.parse(code)
         decl = ast.body[0].body[0]
         self.assertIsInstance(decl.value, BinOper)
-        self.assertEqual(decl.value.oper, 'LAND')
+        self.assertEqual(decl.value.oper, "LAND")
         self.assertEqual(decl.value.left.name, "a")
         self.assertEqual(decl.value.right.name, "b")
 
@@ -135,7 +135,7 @@ class TestArrayAssignment(unittest.TestCase):
         decl = ast.body[0].body[0]
         self.assertIsInstance(decl.location.index, Literal)
         self.assertEqual(decl.location.index.type.name, "char")
-        self.assertEqual(decl.location.index.value, 'a')
+        self.assertEqual(decl.location.index.value, "a")
         self.assertEqual(decl.value.value, 2)
 
     def test_array_assignment_value_string(self):
@@ -154,7 +154,7 @@ class TestArrayAssignment(unittest.TestCase):
         self.assertEqual(decl.location.array.name, "letters")
         self.assertEqual(decl.location.index.value, 1)
         self.assertEqual(decl.value.type.name, "char")
-        self.assertEqual(decl.value.value, 'z')
+        self.assertEqual(decl.value.value, "z")
 
     def test_array_assignment_index_boolean(self):
         code = "main: function integer() = {x[true] = 5;}"
@@ -169,6 +169,6 @@ class TestArrayAssignment(unittest.TestCase):
         ast = self.parse(code)
         decl = ast.body[0].body[0]
         self.assertIsInstance(decl.value, BinOper)
-        self.assertEqual(decl.value.oper, 'LOR')
+        self.assertEqual(decl.value.oper, "LOR")
         self.assertEqual(decl.value.left.name, "a")
         self.assertEqual(decl.value.right.name, "b")

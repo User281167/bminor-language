@@ -1,5 +1,5 @@
 # typesys.py
-'''
+"""
 Sistema de tipos
 ================
 Este archivo implementa las características básicas del sistema de tipos. Existe
@@ -14,7 +14,7 @@ Una forma de lograr todos estos objetivos es comenzar con algún tipo de
 enfoque basado en tablas. No es lo más sofisticado, pero funcionará
 como punto de partida. Puede volver a refactorizar el sistema de tipos
 más adelante.
-'''
+"""
 
 from parser.model import SimpleType
 
@@ -23,73 +23,61 @@ class CheckError(Exception):
     pass
 
 
-typenames = {'integer', 'float', 'boolean', 'char', 'string'}
+typenames = {"integer", "float", "boolean", "char", "string"}
 
 # Capabilities
 _bin_ops = {
     # Integer operations
-    ('integer', '+', 'integer'): 'integer',
-    ('integer', '-', 'integer'): 'integer',
-    ('integer', '*', 'integer'): 'integer',
-    ('integer', '/', 'integer'): 'integer',
-    ('integer', '%', 'integer'): 'integer',
-
+    ("integer", "+", "integer"): "integer",
+    ("integer", "-", "integer"): "integer",
+    ("integer", "*", "integer"): "integer",
+    ("integer", "/", "integer"): "integer",
+    ("integer", "%", "integer"): "integer",
     # ('integer', '=', 'integer'): 'integer',
-
-    ('integer', '<', 'integer'): 'boolean',
-    ('integer', '<=', 'integer'): 'boolean',
-    ('integer', '>', 'integer'): 'boolean',
-    ('integer', '>=', 'integer'): 'boolean',
-    ('integer', '==', 'integer'): 'boolean',
-    ('integer', '!=', 'integer'): 'boolean',
-
+    ("integer", "<", "integer"): "boolean",
+    ("integer", "<=", "integer"): "boolean",
+    ("integer", ">", "integer"): "boolean",
+    ("integer", ">=", "integer"): "boolean",
+    ("integer", "==", "integer"): "boolean",
+    ("integer", "!=", "integer"): "boolean",
     # Float operations
-    ('float', '+', 'float'): 'float',
-    ('float', '-', 'float'): 'float',
-    ('float', '*', 'float'): 'float',
-    ('float', '/', 'float'): 'float',
-    ('float', '%', 'float'): 'float',
-
+    ("float", "+", "float"): "float",
+    ("float", "-", "float"): "float",
+    ("float", "*", "float"): "float",
+    ("float", "/", "float"): "float",
+    ("float", "%", "float"): "float",
     # ('float', '=', 'float'): 'float',
-
-    ('float', '<', 'float'): 'boolean',
-    ('float', '<=', 'float'): 'boolean',
-    ('float', '>', 'float'): 'boolean',
-    ('float', '>=', 'float'): 'boolean',
-    ('float', '==', 'float'): 'boolean',
-    ('float', '!=', 'float'): 'boolean',
-
+    ("float", "<", "float"): "boolean",
+    ("float", "<=", "float"): "boolean",
+    ("float", ">", "float"): "boolean",
+    ("float", ">=", "float"): "boolean",
+    ("float", "==", "float"): "boolean",
+    ("float", "!=", "float"): "boolean",
     # Booleans
-    ('boolean', 'LAND', 'boolean'): 'boolean',
-    ('boolean', 'LOR', 'boolean'): 'boolean',
-    ('boolean', '==', 'boolean'): 'boolean',
-    ('boolean', '!=', 'boolean'): 'boolean',
-
+    ("boolean", "LAND", "boolean"): "boolean",
+    ("boolean", "LOR", "boolean"): "boolean",
+    ("boolean", "==", "boolean"): "boolean",
+    ("boolean", "!=", "boolean"): "boolean",
     # Char
     # ('char', '=', 'char'): 'char',
-
-    ('char', '<', 'char'): 'boolean',
-    ('char', '<=', 'char'): 'boolean',
-    ('char', '>', 'char'): 'boolean',
-    ('char', '>=', 'char'): 'boolean',
-    ('char', '==', 'char'): 'boolean',
-    ('char', '!=', 'char'): 'boolean',
-
+    ("char", "<", "char"): "boolean",
+    ("char", "<=", "char"): "boolean",
+    ("char", ">", "char"): "boolean",
+    ("char", ">=", "char"): "boolean",
+    ("char", "==", "char"): "boolean",
+    ("char", "!=", "char"): "boolean",
     # Strings
-    ('string', '+', 'string'): 'string',
-
+    ("string", "+", "string"): "string",
     # ('string', '=', 'string'): 'string',
 }
 
 _unary_ops = {
-    ('+', 'integer'): 'integer',
-    ('-', 'integer'): 'integer',
+    ("+", "integer"): "integer",
+    ("-", "integer"): "integer",
     # ('^', 'integer'): 'integer',
-
-    ('+', 'float'): 'float',
-    ('-', 'float'): 'float',
-
-    ('!', 'boolean'): 'boolean',
+    ("+", "float"): "float",
+    ("-", "float"): "float",
+    ("!", "boolean"): "boolean",
 }
 
 # Check if a binary operator is supported. Returns the
@@ -98,11 +86,11 @@ _unary_ops = {
 
 
 def loockup_type(name: str):
-    '''
+    """
     Dado el nombre de un tipo primitivo, se busca el objeto "type" apropiado.
     Para empezar, los tipos son solo nombres, pero mas adelante pueden ser
     objetos mas avanzados.
-    '''
+    """
     if name in typenames:
         return name
     else:
@@ -114,7 +102,8 @@ def check_binop(op: str, left_type: str, right_type: str):
 
     if result is None:
         raise CheckError(
-            f"Binary operator '{op}' is not supported for '{left_type}' and '{right_type}'")
+            f"Binary operator '{op}' is not supported for '{left_type}' and '{right_type}'"
+        )
 
     return SimpleType(result)
 
@@ -123,7 +112,6 @@ def check_unaryop(op: str, operand_type: str):
     result = _unary_ops.get((op, operand_type))
 
     if result is None:
-        raise CheckError(
-            f"Unary operator '{op}' is not supported for '{operand_type}'")
+        raise CheckError(f"Unary operator '{op}' is not supported for '{operand_type}'")
 
     return SimpleType(result)

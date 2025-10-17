@@ -11,14 +11,18 @@ class TestInvalidInputs(unittest.TestCase):
         for ch in ["π", "λ", "ж", "😀", "©"]:
             tokens = list(self.lexer.tokenize(ch))
             self.assertEqual(len(tokens), 1)
-            self.assertEqual(
-                tokens[0].type, LexerError.ILLEGAL_CHARACTER.value)
+            self.assertEqual(tokens[0].type, LexerError.ILLEGAL_CHARACTER.value)
 
     def test_keywords_with_utf8(self):
         # Replace 'i' with Cyrillic 'і' in 'if', etc.
         tokens = list(self.lexer.tokenize("іf whіle truе fаlse"))
-        self.assertTrue(all(t.type == LexerError.ILLEGAL_CHARACTER.value or t.type ==
-                        TokenType.ID.value for t in tokens))
+        self.assertTrue(
+            all(
+                t.type == LexerError.ILLEGAL_CHARACTER.value
+                or t.type == TokenType.ID.value
+                for t in tokens
+            )
+        )
 
         # Invalid: starts with number, should split into INTEGER_LITERAL and ID
         tokens = list(self.lexer.tokenize("9abc"))
@@ -29,7 +33,8 @@ class TestInvalidInputs(unittest.TestCase):
     def test_malformed_float(self):
         tokens = list(self.lexer.tokenize("3.14."))
         self.assertTrue(
-            any(t.type == LexerError.UNEXPECTED_TOKEN.value for t in tokens))
+            any(t.type == LexerError.UNEXPECTED_TOKEN.value for t in tokens)
+        )
 
     def test_malformed_id(self):
         tokens = list(self.lexer.tokenize("9abc"))
@@ -40,16 +45,14 @@ class TestInvalidInputs(unittest.TestCase):
         for ch in ["@", "$", "#", "~"]:
             tokens = list(self.lexer.tokenize(ch))
             self.assertEqual(len(tokens), 1)
-            self.assertEqual(
-                tokens[0].type, LexerError.ILLEGAL_CHARACTER.value)
+            self.assertEqual(tokens[0].type, LexerError.ILLEGAL_CHARACTER.value)
 
     def test_invalid_operator_utf8(self):
         # ≤, ≥, ≠ are not valid operators
         for ch in ["≤", "≥", "≠"]:
             tokens = list(self.lexer.tokenize(ch))
             self.assertEqual(len(tokens), 1)
-            self.assertEqual(
-                tokens[0].type, LexerError.ILLEGAL_CHARACTER.value)
+            self.assertEqual(tokens[0].type, LexerError.ILLEGAL_CHARACTER.value)
 
     def test_id_max_length_exceeded(self):
         long_id = "a" * 300

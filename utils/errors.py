@@ -1,4 +1,4 @@
-'''
+"""
 Gestión de errores del compilador.
 
 Una de las partes más importantes (y molestas) de escribir un compilador
@@ -8,9 +8,10 @@ Facilitar la notificación de errores. Facilitar la detección de errores.
 
 Podría ampliarse para que sea más potente posteriormente.
 
-Variable global que indica si se ha producido algún error. El compilador puede 
+Variable global que indica si se ha producido algún error. El compilador puede
 consultar esto posteriormente para decidir si debe detenerse.
-'''
+"""
+
 from rich import print
 
 
@@ -24,7 +25,7 @@ def error(message, lineno=None, error_type=None):
     if error_type:
         _errors.append(error_type)
     if lineno:
-        print(f'{lineno}: [red]{message}[/red]')
+        print(f"{lineno}: [red]{message}[/red]")
     else:
         print(f"[red]{message}[/red]")
 

@@ -11,19 +11,19 @@ class TestInvalidInputs(unittest.TestCase):
     def capture_lexer_log(self, input_text):
         """Capture the lexer's log output and return it along with the tokens.
 
-            The logger is reset after capturing the output.
+        The logger is reset after capturing the output.
 
-            Args:
-                input_text: The text to tokenize.
+        Args:
+            input_text: The text to tokenize.
 
-            Returns:
-                A tuple of (log_output, tokens), where log_output is the string
-                output of the logger during tokenization, and tokens is the list
-                of tokens produced by the lexer.
+        Returns:
+            A tuple of (log_output, tokens), where log_output is the string
+            output of the logger during tokenization, and tokens is the list
+            of tokens produced by the lexer.
         """
         stream = StringIO()
         handler = logging.StreamHandler(stream)
-        logger = logging.getLogger('lexer')
+        logger = logging.getLogger("lexer")
         logger.addHandler(handler)
         logger.setLevel(logging.ERROR)
         tokens = list(self.lexer.tokenize(input_text))
@@ -59,7 +59,7 @@ class TestInvalidInputs(unittest.TestCase):
         # Should tokenize == as EQ, = as literal
         self.assertEqual(len(tokens), 2)
         self.assertEqual(tokens[0].type, OperatorType.EQ.value)
-        self.assertEqual(tokens[1].type, '=')
+        self.assertEqual(tokens[1].type, "=")
 
     def test_utf8_similar_operators(self):
         # Use Cyrillic '≤' (U+2264) and '≥' (U+2265), which should NOT match

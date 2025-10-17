@@ -12,7 +12,7 @@ class TestBadCharLiterals(unittest.TestCase):
         """Capture lexer error logs and return them with tokens"""
         stream = StringIO()
         handler = logging.StreamHandler(stream)
-        logger = logging.getLogger('lexer')
+        logger = logging.getLogger("lexer")
         logger.addHandler(handler)
         logger.setLevel(logging.ERROR)
         tokens = list(self.lexer.tokenize(input_text))
@@ -30,8 +30,7 @@ class TestBadCharLiterals(unittest.TestCase):
         log, tokens = self.capture_lexer_log("''")
         self.assertIn(LexerError.MALFORMED_CHAR.value, log)
 
-        error_tokens = [t for t in tokens if t.type ==
-                        LexerError.MALFORMED_CHAR.value]
+        error_tokens = [t for t in tokens if t.type == LexerError.MALFORMED_CHAR.value]
 
         self.assertGreater(len(error_tokens), 0)
 
@@ -39,8 +38,7 @@ class TestBadCharLiterals(unittest.TestCase):
         """Test multiple characters in char literal 'ab'"""
         log, tokens = self.capture_lexer_log("'ab'")
         self.assertIn(LexerError.MALFORMED_CHAR.value, log)
-        error_tokens = [t for t in tokens if t.type ==
-                        LexerError.MALFORMED_CHAR.value]
+        error_tokens = [t for t in tokens if t.type == LexerError.MALFORMED_CHAR.value]
         self.assertGreater(len(error_tokens), 0)
 
     def test_unterminated_char_literal(self):
@@ -48,7 +46,7 @@ class TestBadCharLiterals(unittest.TestCase):
         log, tokens = self.capture_lexer_log("'a")
         expected = [
             LexerError.MALFORMED_CHAR.value,
-            TokenType.ID.value  # a is treated as ID after error
+            TokenType.ID.value,  # a is treated as ID after error
         ]
 
         self.assertIn(LexerError.MALFORMED_CHAR.value, log)
@@ -59,20 +57,22 @@ class TestBadCharLiterals(unittest.TestCase):
         # get \ as illegal character
         log, tokens = self.capture_lexer_log("'\\")
         self.assertIn(LexerError.MALFORMED_CHAR.value, log)
-        expected_types = [LexerError.MALFORMED_CHAR.value,
-                          LexerError.MALFORMED_CHAR.value]
+        expected_types = [
+            LexerError.MALFORMED_CHAR.value,
+            LexerError.MALFORMED_CHAR.value,
+        ]
         self.assertEqual([t.type for t in tokens], expected_types)
 
     def test_invalid_escape_sequence(self):
         """Test invalid escape sequences like '\\z'"""
-        invalid_escapes = ['\\z', '\\q', '\\w', '\\1', '\\2']
+        invalid_escapes = ["\\z", "\\q", "\\w", "\\1", "\\2"]
         for escape in invalid_escapes:
             with self.subTest(escape=escape):
                 log, tokens = self.capture_lexer_log(f"'{escape}'")
                 # Should either be malformed char or unexpected token
                 self.assertTrue(
-                    LexerError.MALFORMED_CHAR.value in log or
-                    LexerError.UNEXPECTED_TOKEN.value in log
+                    LexerError.MALFORMED_CHAR.value in log
+                    or LexerError.UNEXPECTED_TOKEN.value in log
                 )
 
     def test_incomplete_hex_escape(self):
@@ -88,19 +88,30 @@ class TestBadCharLiterals(unittest.TestCase):
     def test_utf8_characters(self):
         """Test UTF-8 characters that should be rejected"""
         utf8_chars = [
-            'ñ', 'é', 'ü', 'ß',           # Latin characters
-            'α', 'β', 'γ',                 # Greek letters
-            '中', '文',                     # Chinese characters
-            '🚀', '💻', '🔥',              # Emojis
-            '©', '®', '™',                 # Symbols
+            "ñ",
+            "é",
+            "ü",
+            "ß",  # Latin characters
+            "α",
+            "β",
+            "γ",  # Greek letters
+            "中",
+            "文",  # Chinese characters
+            "🚀",
+            "💻",
+            "🔥",  # Emojis
+            "©",
+            "®",
+            "™",  # Symbols
         ]
 
         for char in utf8_chars:
             with self.subTest(utf8_char=char):
                 log, tokens = self.capture_lexer_log(char)
                 self.assertIn(LexerError.ILLEGAL_CHARACTER.value, log)
-                error_tokens = [t for t in tokens if t.type ==
-                                LexerError.ILLEGAL_CHARACTER.value]
+                error_tokens = [
+                    t for t in tokens if t.type == LexerError.ILLEGAL_CHARACTER.value
+                ]
                 self.assertGreater(len(error_tokens), 0)
 
     def test_non_printable_ascii(self):
@@ -132,11 +143,10 @@ class TestBadCharLiterals(unittest.TestCase):
                 log, tokens = self.capture_lexer_log(test_input)
                 self.assertIn(LexerError.ILLEGAL_CHARACTER.value, log)
                 # Should still tokenize the valid parts
-                valid_tokens = [
-                    t for t in tokens if not t.type.startswith('error')]
+                valid_tokens = [t for t in tokens if not t.type.startswith("error")]
                 self.assertGreater(len(valid_tokens), 0)
 
-#     # === EDGE CASES ===
+    #     # === EDGE CASES ===
 
     def test_char_literal_at_eof(self):
         """Test unterminated char literal at end of file"""
@@ -161,10 +171,10 @@ class TestBadCharLiterals(unittest.TestCase):
     def test_malformed_char_in_expression(self):
         """Test malformed char literals within valid expressions"""
         test_cases = [
-            "int x = 'ab' + 5;",          # Multiple chars in literal
-            "if (c == '') return;",       # Empty char literal
-            "char c = '\\z';",            # Invalid escape
-            "printf('%c', 'hello');",     # Multiple chars
+            "int x = 'ab' + 5;",  # Multiple chars in literal
+            "if (c == '') return;",  # Empty char literal
+            "char c = '\\z';",  # Invalid escape
+            "printf('%c', 'hello');",  # Multiple chars
         ]
 
         for test_case in test_cases:
@@ -172,8 +182,7 @@ class TestBadCharLiterals(unittest.TestCase):
                 log, tokens = self.capture_lexer_log(test_case)
                 self.assertIn(LexerError.MALFORMED_CHAR.value, log)
                 # Should still parse other valid tokens
-                valid_tokens = [
-                    t for t in tokens if not t.type.startswith('error')]
+                valid_tokens = [t for t in tokens if not t.type.startswith("error")]
                 self.assertGreater(len(valid_tokens), 0)
 
     def test_error_recovery(self):
@@ -190,4 +199,5 @@ class TestBadCharLiterals(unittest.TestCase):
                 tokens = list(self.lexer.tokenize(s))
                 print(f"\n>>>>>>>>>>Testing illegal UTF-8: {tokens}")
                 self.assertTrue(
-                    any(t.type == LexerError.ILLEGAL_CHARACTER.value for t in tokens))
+                    any(t.type == LexerError.ILLEGAL_CHARACTER.value for t in tokens)
+                )

@@ -20,29 +20,35 @@ class TestAssignmentFailingCases(unittest.TestCase):
         code = "x integer = 5;"
         self.parse(code)
         self.assertNotEqual(
-            errors_detected(), 0, "Se esperaba al menos un error por sintaxis (falta ':')")
+            errors_detected(),
+            0,
+            "Se esperaba al menos un error por sintaxis (falta ':')",
+        )
         self.assertTrue(has_error(ParserError.UNEXPECTED_TOKEN))
 
     def test_unterminated_string_literal(self):
         # Código inválido: cadena sin terminar
         code = 's: string = "hello;'
         self.parse(code)
-        self.assertNotEqual(errors_detected(), 0,
-                            "Se esperaba error por cadena sin terminar")
+        self.assertNotEqual(
+            errors_detected(), 0, "Se esperaba error por cadena sin terminar"
+        )
         self.assertTrue(has_error(ParserError.MALFORMED_STRING))
 
     def test_invalid_char_literal(self):
         # Código inválido: literal de char con más de un carácter
         code = "c: char = 'ab';"
         self.parse(code)
-        self.assertNotEqual(errors_detected(), 0,
-                            "Se esperaba error por literal char inválido")
+        self.assertNotEqual(
+            errors_detected(), 0, "Se esperaba error por literal char inválido"
+        )
         self.assertTrue(has_error(ParserError.MALFORMED_CHAR))
 
     def test_invalid_float_literal(self):
         # Código inválido: literal de float con más de un punto
         code = "f: float = 1.2.3;"
         self.parse(code)
-        self.assertNotEqual(errors_detected(), 0,
-                            "Se esperaba error por literal float inválido")
+        self.assertNotEqual(
+            errors_detected(), 0, "Se esperaba error por literal float inválido"
+        )
         self.assertTrue(has_error(ParserError.UNEXPECTED_TOKEN))

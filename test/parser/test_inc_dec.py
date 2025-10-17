@@ -29,19 +29,13 @@ class TestIncDec(unittest.TestCase):
         code = "main: function integer () = {arr[0]++;}"
         ast = self.parse(code)
         stmt = ast.body[0].body[0]
-        self.assertEqual(
-            stmt,
-            Increment(ArrayLoc(VarLoc("arr"), Integer(0)), True)
-        )
+        self.assertEqual(stmt, Increment(ArrayLoc(VarLoc("arr"), Integer(0)), True))
 
     def test_array_index_decrement(self):
         code = "main: function integer () = {arr[0]--;}"
         ast = self.parse(code)
         stmt = ast.body[0].body[0]
-        self.assertEqual(
-            stmt,
-            Decrement(ArrayLoc(VarLoc("arr"), Integer(0)), True)
-        )
+        self.assertEqual(stmt, Decrement(ArrayLoc(VarLoc("arr"), Integer(0)), True))
 
     def test_pre_increment(self):
         code = "main: function integer () = {++x;}"
@@ -59,25 +53,13 @@ class TestIncDec(unittest.TestCase):
         code = "main: function integer () = {y = x++;}"
         ast = self.parse(code)
         stmt = ast.body[0].body[0]
-        self.assertEqual(
-            stmt,
-            Assignment(
-                VarLoc("y"),
-                Increment(VarLoc("x"), True)
-            )
-        )
+        self.assertEqual(stmt, Assignment(VarLoc("y"), Increment(VarLoc("x"), True)))
 
     def test_decrement_in_expression(self):
         code = "main: function integer () = {y = --x;}"
         ast = self.parse(code)
         stmt = ast.body[0].body[0]
-        self.assertEqual(
-            stmt,
-            Assignment(
-                VarLoc("y"),
-                Decrement(VarLoc("x"), False)
-            )
-        )
+        self.assertEqual(stmt, Assignment(VarLoc("y"), Decrement(VarLoc("x"), False)))
 
     def test_char_increment(self):
         code = "main: function char () = {c: char = 'a'; c++;}"
@@ -89,7 +71,7 @@ class TestIncDec(unittest.TestCase):
 
     def test_string_decrement(self):
         # Correcto para el parser mal para el semántico
-        code = "main: function string () = {s: string = \"hello\"; s--;}"
+        code = 'main: function string () = {s: string = "hello"; s--;}'
         ast = self.parse(code)
         decl = ast.body[0].body[0]
         dec = ast.body[0].body[1]
@@ -116,10 +98,10 @@ class TestIncDec(unittest.TestCase):
 
     def test_decrement_string_literal(self):
         # valido pero no semántico
-        code = "main: function string () = {\"hello\"--;}"
+        code = 'main: function string () = {"hello"--;}'
         ast = self.parse(code)
         decl = ast.body[0].body[0]
-        self.assertEqual(decl, Decrement(String("\"hello\""), True))
+        self.assertEqual(decl, Decrement(String('"hello"'), True))
 
     def test_increment_boolean_literal(self):
         # valido pero no semántico
@@ -150,12 +132,10 @@ class TestIncDec(unittest.TestCase):
         code = "main: function integer () = {(x + 1)++;}"
         ast = self.parse(code)
         decl = ast.body[0].body[0]
-        self.assertEqual(decl, Increment(
-            BinOper("+", VarLoc("x"), Integer(1)), True))
+        self.assertEqual(decl, Increment(BinOper("+", VarLoc("x"), Integer(1)), True))
 
     def test_decrement_grouped_expression(self):
         code = "main: function integer () = {--(x + 1);}"
         ast = self.parse(code)
         decl = ast.body[0].body[0]
-        self.assertEqual(decl, Decrement(
-            BinOper("+", VarLoc("x"), Integer(1)), False))
+        self.assertEqual(decl, Decrement(BinOper("+", VarLoc("x"), Integer(1)), False))

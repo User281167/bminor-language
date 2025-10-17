@@ -29,10 +29,10 @@ class TestAssignmentError(unittest.TestCase):
         self.assertMismatch('pi: float = "3.14";')
 
     def test_string_from_char(self):
-        self.assertMismatch('msg: string = \'a\';')
+        self.assertMismatch("msg: string = 'a';")
 
     def test_char_from_string(self):
-        self.assertMismatch("letter: char = \"a\";")
+        self.assertMismatch('letter: char = "a";')
 
     def test_boolean_from_integer(self):
         self.assertMismatch("flag: boolean = 1;")
@@ -47,7 +47,7 @@ class TestAssignmentError(unittest.TestCase):
         self.assertMismatch("c: char = 65;")
 
     def test_string_from_boolean(self):
-        self.assertMismatch('s: string = true;')
+        self.assertMismatch("s: string = true;")
 
     def test_boolean_from_string(self):
-        self.assertMismatch("ok: boolean = \"true\";")
+        self.assertMismatch('ok: boolean = "true";')

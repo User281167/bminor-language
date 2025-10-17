@@ -43,8 +43,8 @@ class TestAssignment(unittest.TestCase):
         self.assertEqual(decl.name, "c")
         self.assertEqual(decl.type.name, "char")
         self.assertIsInstance(decl.value, Char)
-        self.assertEqual(decl.value.value, 'a')
-        self.assertEqual(decl.value.type.name, 'char')
+        self.assertEqual(decl.value.value, "a")
+        self.assertEqual(decl.value.type.name, "char")
 
     def test_assign_float(self):
         code = "f: float = 3.14;"
@@ -55,7 +55,7 @@ class TestAssignment(unittest.TestCase):
         self.assertEqual(decl.type.name, "float")
         self.assertIsInstance(decl.value, Float)
         self.assertAlmostEqual(decl.value.value, 3.14, places=7)
-        self.assertEqual(decl.value.type.name, 'float')
+        self.assertEqual(decl.value.type.name, "float")
 
     def test_assign_string(self):
         code = 's: string = "hello";'
@@ -65,8 +65,8 @@ class TestAssignment(unittest.TestCase):
         self.assertEqual(decl.name, "s")
         self.assertEqual(decl.type.name, "string")
         self.assertIsInstance(decl.value, String)
-        self.assertEqual(decl.value.value, 'hello')
-        self.assertEqual(decl.value.type.name, 'string')
+        self.assertEqual(decl.value.value, "hello")
+        self.assertEqual(decl.value.type.name, "string")
 
     def test_assign_boolean_true(self):
         code = "b: boolean = true;"
@@ -77,7 +77,7 @@ class TestAssignment(unittest.TestCase):
         self.assertEqual(decl.type.name, "boolean")
         self.assertIsInstance(decl.value, Boolean)
         self.assertEqual(decl.value.value, True)
-        self.assertEqual(decl.value.type.name, 'boolean')
+        self.assertEqual(decl.value.type.name, "boolean")
 
     def test_assign_boolean_false(self):
         code = "b: boolean = false;"
@@ -88,7 +88,7 @@ class TestAssignment(unittest.TestCase):
         self.assertEqual(decl.type.name, "boolean")
         self.assertIsInstance(decl.value, Boolean)
         self.assertEqual(decl.value.value, False)
-        self.assertEqual(decl.value.type.name, 'boolean')
+        self.assertEqual(decl.value.type.name, "boolean")
 
     def test_assign_boolean_var(self):
         code = "b: boolean = a;"
@@ -121,7 +121,7 @@ class TestAssignment(unittest.TestCase):
         self.assertEqual(decl.value.name, "a")
 
     def test_assign_string_var(self):
-        code = 's: string = a;'
+        code = "s: string = a;"
         ast = self.parse(code)
         decl = ast.body[0]
         self.assertIsInstance(decl, VarDecl)
