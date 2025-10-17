@@ -510,7 +510,16 @@ class Check(Visitor):
                 SemanticError.UNDECLARED_ARRAY,
             )
             return
-        elif not isinstance(load_arr, ArrayDecl):
+        # Dentro de una función se puede usar un array como parámetro comprobar que el parámetro es un array
+        elif isinstance(load_arr, Param) and not isinstance(load_arr.type, ArrayType):
+            self._error(
+                f"{n.array.name!r} is not an array",
+                n.lineno,
+                SemanticError.ARRAY_EXPECTED,
+            )
+            return
+        # si no es param array deber ser una declaración
+        elif not isinstance(load_arr, Param) and not isinstance(load_arr, ArrayDecl):
             self._error(
                 f"{n.array.name!r} is not an array",
                 n.lineno,
