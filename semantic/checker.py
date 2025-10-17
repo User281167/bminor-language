@@ -57,15 +57,21 @@ class Check(Visitor):
     def visit(self, n: Assignment, env: Symtab):
         # Validar n.loc (location) y n.expr
         n.location.accept(self, env)
-        n.expr.accept(self, env)
+        n.value.accept(self, env)
 
-        if n.location.type != n.expr.type:
+        if n.location.type != n.value.type:
+            name = None
+
+            if isinstance(n.location, VarLoc):
+                name = "variable " + n.location.name
+            elif isinstance(n.location, ArrayLoc):
+                name = "array " + n.location.array.name
+
             self._error(
-                f"Assignment {n.loc.type} != {n.expr.type}",
+                f"Assignment {n.location.type} != {n.value.type} in {name}",
                 n.lineno,
                 SemanticError.MISMATCH_ASSIGNMENT,
             )
-            return
 
     #     def visit(self, n: PrintStmt, env: Symtab):
     #         # visitar n.exprs
