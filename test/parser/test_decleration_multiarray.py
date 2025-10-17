@@ -1,9 +1,9 @@
-from utils.errors import errors_detected, clear_errors
 import unittest
 from parser import Parser
-from scanner import Lexer
 from parser.model import *
-from utils.errors import errors_detected
+
+from scanner import Lexer
+from utils.errors import clear_errors, errors_detected
 
 
 class TestAssignmentMultiDimensionalArray(unittest.TestCase):

@@ -1,9 +1,10 @@
 from dataclasses import dataclass, field
+from typing import List, Optional, Union
+
 from multimethod import multimeta, multimethod
-from typing import List, Union, Optional
 from rich.console import Console
-from rich.tree import Tree
 from rich.text import Text
+from rich.tree import Tree
 
 console = Console()
 

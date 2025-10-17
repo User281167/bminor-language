@@ -1,9 +1,9 @@
 # symtab.py
-from rich.table import Table
-from rich.console import Console
-from rich import print
-
 from parser.model import Node
+
+from rich import print
+from rich.console import Console
+from rich.table import Table
 
 
 class Symtab:

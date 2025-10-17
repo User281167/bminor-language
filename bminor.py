@@ -1,14 +1,16 @@
-import sys
 import importlib.util
-import unittest
-import re
 import os
-from scanner import Lexer
+import re
+import sys
+import unittest
 from parser import Parser
-from semantic import Check
-from utils import save_ast_to_json, print_json
+
 import rich
 from rich.table import Table
+
+from scanner import Lexer
+from semantic import Check
+from utils import print_json, save_ast_to_json
 
 
 def run_scan(filename):
@@ -146,5 +148,7 @@ if __name__ == "__main__":
     elif mode == "--semantic":
         run_semantic(filename)
     else:
+        print("Invalid mode. Use --scan, --parser or --semantic")
+        sys.exit(1)
         print("Invalid mode. Use --scan, --parser or --semantic")
         sys.exit(1)

@@ -1,8 +1,8 @@
-from scanner import OperatorType
 import unittest
 from parser import Parser
-from scanner import Lexer
 from parser.model import *
+
+from scanner import Lexer, OperatorType
 
 
 class TestLogicalExpressions(unittest.TestCase):

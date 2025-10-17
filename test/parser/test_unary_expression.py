@@ -1,7 +1,8 @@
 import unittest
 from parser import Parser
-from scanner import Lexer
 from parser.model import *
+
+from scanner import Lexer
 
 
 class TestUnaryExpression(unittest.TestCase):

@@ -11,5 +11,13 @@
     "python.formatting.provider": "black",
     "[python]": {
         "editor.defaultFormatter": "ms-python.black-formatter"
-    }
+    },
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": true
+    },
+    "python.sortImports.args": [
+        "--profile",
+        "black"
+    ]
 }

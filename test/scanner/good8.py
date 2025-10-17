@@ -1,5 +1,6 @@
 import unittest
-from scanner import Lexer, TokenType, LiteralType, OperatorType
+
+from scanner import Lexer, LiteralType, OperatorType, TokenType
 
 
 class TestArrayAndLoopTokens(unittest.TestCase):

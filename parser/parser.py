@@ -1,12 +1,14 @@
 # grammar.py
 import logging
+
 import sly
 from rich import print
 
 from scanner import Lexer
+from utils import error, errors_detected
+
 from .model import *
 from .parser_errors import ParserError
-from utils import error, errors_detected
 
 
 def _L(node, p):
@@ -536,7 +538,7 @@ class Parser(sly.Parser):
             error(message, lineno, error_type)
             return
 
-        from scanner import TokenType, Lexer
+        from scanner import Lexer, TokenType
 
         # Clasificación de errores
         if p.value in "&|~":
@@ -630,8 +632,8 @@ def parse(txt):
 
 
 if __name__ == "__main__":
-    import sys
     import json
+    import sys
 
     if sys.platform != "ios":
 

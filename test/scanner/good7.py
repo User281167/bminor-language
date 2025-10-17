@@ -1,5 +1,6 @@
 import unittest
-from scanner import Lexer, TokenType, LiteralType
+
+from scanner import Lexer, LiteralType, TokenType
 
 
 class TestVariableDeclarations(unittest.TestCase):

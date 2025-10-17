@@ -238,8 +238,9 @@ class ASTPrinter(Visitor):
 
 if __name__ == "__main__":
     import sys
-    from scanner import Lexer
     from parser import Parser
+
+    from scanner import Lexer
 
     if len(sys.argv) != 2:
         raise SystemExit("Usage: python astprint.py <filename>")

@@ -1,9 +1,10 @@
 import unittest
 from parser import Parser
-from scanner import Lexer
 from parser.model import *
+
+from scanner import Lexer
 from semantic.checker import Check, SemanticError
-from utils import error, errors_detected, clear_errors, has_error
+from utils import clear_errors, error, errors_detected, has_error
 
 
 class TestArrayDeclarationErrors(unittest.TestCase):

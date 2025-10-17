@@ -13,11 +13,12 @@ Convenciones:
 - Se utiliza un logger interno para registrar errores con formato estandarizado.
 """
 
-import sly
 import logging
 
+import sly
+
 from .lexer_errors import LexerError
-from .lexer_type import TokenType, OperatorType, LiteralType
+from .lexer_type import LiteralType, OperatorType, TokenType
 
 MAX_ID_LENGTH = 255
 

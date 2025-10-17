@@ -1,5 +1,6 @@
 import unittest
-from scanner import Lexer, TokenType, LexerError
+
+from scanner import Lexer, LexerError, TokenType
 
 
 class TestBadKeywords(unittest.TestCase):

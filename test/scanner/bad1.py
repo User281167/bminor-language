@@ -1,7 +1,8 @@
-import unittest
-from scanner import Lexer, LexerError, TokenType, OperatorType
 import logging
+import unittest
 from io import StringIO
+
+from scanner import Lexer, LexerError, OperatorType, TokenType
 
 
 class TestBadNumbers(unittest.TestCase):

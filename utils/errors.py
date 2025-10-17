@@ -14,7 +14,6 @@ consultar esto posteriormente para decidir si debe detenerse.
 
 from rich import print
 
-
 _errors_detected = 0
 _errors = []
 

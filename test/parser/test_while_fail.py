@@ -1,8 +1,9 @@
 import unittest
 from parser import Parser, ParserError
-from scanner import Lexer
 from parser.model import *
-from utils.errors import errors_detected, clear_errors, has_error
+
+from scanner import Lexer
+from utils.errors import clear_errors, errors_detected, has_error
 
 
 class TestWhileLoopError(unittest.TestCase):

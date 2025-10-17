@@ -1,5 +1,6 @@
 import unittest
-from scanner import Lexer, TokenType, OperatorType, LiteralType
+
+from scanner import Lexer, LiteralType, OperatorType, TokenType
 
 
 class TestOperators(unittest.TestCase):

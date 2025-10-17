@@ -1,4 +1,5 @@
 import unittest
+
 from scanner import Lexer, TokenType
 
 

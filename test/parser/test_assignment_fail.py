@@ -1,7 +1,8 @@
 import unittest
 from parser import Parser, ParserError
-from scanner import Lexer
 from parser.model import *
+
+from scanner import Lexer
 from utils.errors import clear_errors, errors_detected, has_error
 
 

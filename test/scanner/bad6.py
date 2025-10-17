@@ -1,7 +1,8 @@
-import unittest
-from scanner import Lexer, LexerError, TokenType
 import logging
+import unittest
 from io import StringIO
+
+from scanner import Lexer, LexerError, TokenType
 
 
 class TestBadStringLiterals(unittest.TestCase):

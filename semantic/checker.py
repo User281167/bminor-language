@@ -9,13 +9,14 @@
 # Una clave para esta parte del proyecto es realizar pruebas adecuadas.
 # A medida que agregue código, piense en cómo podría probarlo.
 # '''
-from typing import Union, List
+from parser.model import *
+from typing import List, Union
 
 from utils import error
-from parser.model import *
+
 from .semantic_error import SemanticError
 from .symtab import Symtab
-from .typesys import typenames, check_binop, check_unaryop, CheckError
+from .typesys import CheckError, check_binop, check_unaryop, typenames
 
 
 class Check(Visitor):
@@ -567,6 +568,7 @@ if __name__ == "__main__":
 
     if filename:
         from parser import Parser
+
         from scanner import Lexer
 
         txt = open(filename, encoding="utf-8").read()
