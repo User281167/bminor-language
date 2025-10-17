@@ -133,6 +133,8 @@ if __name__ == "__main__":
         print("Example: bminor.py --parser code.bminor --json")
         print("\nscan flags: --table")
         print("Example: bminor.py --scan code.bminor --table")
+        print("\nsemantic flags: --table")
+        print("Example: bminor.py --semantic code.bminor --table")
         sys.exit(1)
 
     mode = sys.argv[1]
