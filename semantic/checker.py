@@ -207,7 +207,13 @@ class Check(Visitor):
         value_decl = env.get(n.name)
         size_value = None
 
-        if isinstance(value_decl, ArrayType):
+        if not value_decl:
+            self._error(
+                f"{msg} '{n.name}' is not declared",
+                n.lineno,
+                SemanticError.UNDECLARED_VARIABLE,
+            )
+        elif isinstance(value_decl, ArrayType):
             self._error(
                 f"{msg} '{n.name}' must be integer no array type",
                 n.lineno,
@@ -223,6 +229,21 @@ class Check(Visitor):
             size_value = value_decl.value.value
         elif isinstance(value_decl.value, UnaryOper):
             size_value = self._get_unary_integer(value_decl.value)
+        elif isinstance(value_decl.value, VarLoc):
+            # seguir buscando el valor si es una variable
+            size_value = self._get_varloc_integer(value_decl.value, env, msg)
+
+        return size_value
+
+    def _get_array_size(self, size, env: Symtab):
+        size_value = None
+
+        if isinstance(size, Integer):
+            size_value = size.value
+        elif isinstance(size, UnaryOper):
+            size_value = self._get_unary_integer(size)
+        elif isinstance(size, VarLoc):
+            size_value = self._get_varloc_integer(size, env, "Array size")
 
         return size_value
 
@@ -252,7 +273,7 @@ class Check(Visitor):
 
             if not loc:
                 self._error(
-                    f"Array size '{n.type.size.name}' is not defined '{n.name}'",
+                    f"Array size '{n.type.size.name}' is not defined in '{n.name}'",
                     n.lineno,
                     SemanticError.UNDECLARED_VARIABLE,
                 )
@@ -556,6 +577,12 @@ class Check(Visitor):
         elif isinstance(n.index, VarLoc):
             index_value = self._get_varloc_integer(n.index, env, "Array index")
 
+        # obtener el tamaño del array
+        array_size = None
+
+        if not load_arr.type.size is None:
+            array_size = self._get_array_size(load_arr.type.size, env)
+
         if index_value is not None:
             if index_value < 0:
                 self._error(
@@ -563,12 +590,9 @@ class Check(Visitor):
                     n.lineno,
                     SemanticError.INDEX_MUST_BE_POSITIVE,
                 )
-            elif (
-                isinstance(load_arr.type.size, Integer)
-                and index_value >= load_arr.type.size.value
-            ):
+            elif array_size is not None and index_value >= array_size:
                 self._error(
-                    f"Index {index_value} out of bounds for array of size {load_arr.type.size.value} in '{load_arr.name}'",
+                    f"Index {index_value} out of bounds for array of size {array_size} in '{load_arr.name}'",
                     n.lineno,
                     SemanticError.INDEX_OUT_OF_BOUNDS,
                 )
