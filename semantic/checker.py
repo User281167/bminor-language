@@ -55,7 +55,16 @@ class Check(Visitor):
     # --- Statements
 
     def visit(self, n: Assignment, env: Symtab):
-        # Validar n.loc (location) y n.expr
+        """
+        Validar n.loc (location) y n.expr
+
+        Primero se llama a accept() sobre n.loc y n.expr para
+        que realicen sus respectivas verificaciones.
+
+        Validar que n.loc.type == n.expr.type tanto para
+        variables como para arrays
+        """
+
         n.location.accept(self, env)
         n.value.accept(self, env)
 
@@ -172,6 +181,13 @@ class Check(Visitor):
             n.scope = "global"
 
     def check(self, n: VarDecl, env: Symtab):
+        """
+        Comprueba la declaración de variable n en el entorno symtab actual.
+        Se encarga de verificar que el tipo de la variable sea valido y
+        que el tipo de la variable coincida con el tipo de su valor inicial
+        si es que lo tiene.
+        """
+
         if n.type == SimpleTypes.VOID.value:
             self._error(
                 f"Variable '{n.name}' has void type",
@@ -193,6 +209,14 @@ class Check(Visitor):
         self._add_to_env(n, env)
 
     def _get_unary_integer(self, n: UnaryOper):
+        """
+        Dado un nodo UnaryOper, devuelve el valor de la expresi o n si es una expresi o n  unaria de enteros v lida.
+        De lo contrario, devuelve None.
+
+        Por ejemplo, si la expresi o n es "-5", esta funci o n devolver  -5.
+        Si la expresi o n es "+5", esta funci o n devolver  5.
+        Si la expresi o n no es una expresi o n  unaria de enteros v lida (por ejemplo "+5.5"), esta funci o n devolver  None.
+        """
         if isinstance(n.expr, Integer):
             if n.oper == "-":
                 return -n.expr.value
@@ -202,8 +226,19 @@ class Check(Visitor):
         return None
 
     def _get_varloc_integer(self, n: VarLoc, env: Symtab, msg: str):
-        # Intentar obtener el valor de una variable
-        # Uso en index o array size para validar
+        """
+        Intentar obtener el valor de una variable.
+
+        Uso en index o array size para validar. Si la Si la variable es un array, se produce un error,
+        ya que el tamaño del array debe ser un entero. Si el valor de la variable
+        no es un entero, se produce un error.
+
+        Si el valor de la variable es un entero, se devuelve el valor. Si el valor
+        de la variable es una expresión unaria de enteros válida, se devuelve el valor
+        de la expresión. Si el valor de la variable es una variable, se sigue
+        buscando el valor de la variable.
+        """
+
         value_decl = env.get(n.name)
         size_value = None
 
@@ -236,6 +271,9 @@ class Check(Visitor):
         return size_value
 
     def _get_array_size(self, size, env: Symtab):
+        """
+        Intentar obtener el valor de un array size.
+        """
         size_value = None
 
         if isinstance(size, Integer):
@@ -249,6 +287,29 @@ class Check(Visitor):
 
     def check(self, n: ArrayDecl, env: Symtab):
         # Agregar n.name a symtab
+        """
+        Verificar que el array decl es correcto.
+
+        Primero, se verifica si el nombre del array ya existe en el
+        entorno actual. Si no existe.
+
+        Luego se verifica si el tipo base del array es un array
+        o void. Si es alguno de los dos.
+
+        Después, se verifica el tipo base y el valor de size. Si
+        el valor de size es una variable, se sigue buscando el valor
+        de la variable. Si el valor de size es una expresIón unaria de
+        enteros válida, se devuelve el valor de la expresIón.
+
+        Luego se verifica si el valor de size es un entero.
+
+        Finalmente, se verifica si el valor de size es positivo. Si
+        no lo es. Si el valor de size coincide
+        con el n mero de elementos en el array, se produce un error.
+
+        Por último, se verifica que cada elemento del array tenga el
+        mismo tipo que el tipo base del array.
+        """
         self._add_to_env(n, env, "Array variable")
 
         # Multi-dimencionales o void no soportados
@@ -331,6 +392,24 @@ class Check(Visitor):
 
     def check(self, n: FuncDecl, env: Symtab):
         # Guardar la función en symtab actual
+        """
+        Verificar que la declaración de la función sea correcta.
+
+        Primero, se verifica si la función ya existe en el entorno
+        actual. Si no existe, se crea una nueva tabla de símbolos
+        local para la función.
+
+        Luego se verifica el tipo de retorno y los parámetros de la
+        función.
+
+        Después, se verifica el cuerpo de la función.
+
+        Por último, se elimina la tabla de símbolos local y se
+        elimina la referencia a la función actual.
+
+        Se produce un error si se encuentra algún error en la
+        declaración de la función.
+        """
         self._add_to_env(
             n,
             env,
@@ -361,7 +440,10 @@ class Check(Visitor):
         env["$func"] = None
 
     def visit(self, n: Param, env: Symtab):
-        # Visitar n.type
+        """
+        Validar que Param no sea void.
+        Agregar Param a la tabla de símbolos.
+        """
         n.type.accept(self, env)
 
         if n.type == SimpleTypes.VOID.value:
@@ -395,9 +477,11 @@ class Check(Visitor):
         pass
 
     def visit(self, n: ArrayType, env: Symtab):
-        # ArrayDecl y ArrayLoc verifican inicialización o index
-        # ArrayTpe verifica tipos de parámetros o retorno en funciones
-        # No se acepta que tenga un tamaño especifico en el parámetro o retorno
+        """ "
+        ArrayDecl y ArrayLoc verifican inicialización o index
+        ArrayTpe verifica tipos de parámetros o retorno en funciones
+        No se acepta que tenga un tamaño especifico en el parámetro o retorno
+        """
 
         n.base.accept(self, env)
 
@@ -415,7 +499,12 @@ class Check(Visitor):
             )
 
     def visit(self, n: BinOper, env: Symtab):
-        # Visitar n.left y n.right
+        """
+        Verificar tipos de operadores binarios.
+        Verificar si la operación es soportada para los tipos
+        de los operandos.
+        """
+
         n.left.accept(self, env)
         n.right.accept(self, env)
 
@@ -435,7 +524,12 @@ class Check(Visitor):
             )
 
     def visit(self, n: UnaryOper, env: Symtab):
-        # Visitar n.expr (operando)
+        """
+        Verificar tipos de operadores unarios.
+        Verificar si la operación es soportada para el tipo
+        del operando.
+        """
+
         n.expr.accept(self, env)
 
         # Validar si es un operador unario valido
@@ -516,7 +610,15 @@ class Check(Visitor):
         n.type = decl.type
 
     def check(self, n: ArrayLoc, env: Symtab):
-        # Visitar n.array y n.index
+        """
+        Verificar que el ArrayLoc sea correcto.
+        Se verifica si el array que se est ́ accediendo existe y si es un
+        array. Si no es un array, se produce un error.
+        Además, se verifica que el índice sea un entero y que no
+        supere el tamaño del array. Si el índice es negativo o
+        supera el tamaño del array, se produce un error.
+        """
+
         n.array.accept(self, env)
         n.index.accept(self, env)
 
