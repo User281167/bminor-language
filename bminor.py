@@ -97,7 +97,10 @@ def run_semantic(filename):
 
             tokens = Lexer().tokenize(code)
             ast = parser.parse(tokens)
-            check = Check.checker(ast)
+            env = Check.checker(ast)
+
+            if "--table":
+                env.print()
         except Exception as e:
             print(e)
             sys.exit(1)
@@ -142,5 +145,5 @@ if __name__ == "__main__":
     elif mode == "--semantic":
         run_semantic(filename)
     else:
-        print("Invalid mode. Use --scan or --parser")
+        print("Invalid mode. Use --scan, --parser or --semantic")
         sys.exit(1)
