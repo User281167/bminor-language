@@ -8,16 +8,11 @@
     ],
     "python.testing.pytestEnabled": false,
     "python.testing.unittestEnabled": true,
-    "python.formatting.provider": "black",
     "[python]": {
         "editor.defaultFormatter": "ms-python.black-formatter"
     },
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
-        "source.organizeImports": true
+        "source.organizeImports": "explicit"
     },
-    "python.sortImports.args": [
-        "--profile",
-        "black"
-    ]
 }
