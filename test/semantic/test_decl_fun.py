@@ -88,15 +88,14 @@ class TestFunctionDeclarations(unittest.TestCase):
         self.assertIn("s", func.env)
         self.assertFalse(errors_detected())
 
-    # def test_function_with_array_param(self):
-    #     code = "sumArray: function void(arr: array [] integer);"
-    #     env = self.semantic(code)
-    #     func = env.get("sumArray")
-    #     param = func.params[0]
+    def test_function_with_array_param(self):
+        code = "sumArray: function void(arr: array [] integer);"
+        env = self.semantic(code)
+        func = env.get("sumArray")
+        param = func.params[0]
 
-    #     self.assertEqual(param.name, "arr")
-    #     self.assertEqual(param.type.name, "array")
-    #     self.assertEqual(param.type.subtype.name, "integer")
-    #     self.assertEqual(param.scope, "function sumArray")
-    #     self.assertIn("arr", func.env)
-    #     self.assertFalse(errors_detected())
+        self.assertEqual(param.name, "arr")
+        self.assertIsInstance(param.type, ArrayType)
+        self.assertEqual(param.type.base.name, "integer")
+        self.assertIn("arr", func.env)
+        self.assertFalse(errors_detected())

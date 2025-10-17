@@ -123,13 +123,6 @@ class Type(Expression):
 class SimpleType(Type):
     name: str  # integer, float, string, boolean
 
-    INTEGER = "integer"
-    FLOAT = "float"
-    STRING = "string"
-    BOOLEAN = "boolean"
-    CHAR = "char"
-    VOID = "void"
-
 
 @dataclass
 class ArrayType(Type):
@@ -390,3 +383,17 @@ class Increment(Expression):
 class Decrement(Expression):
     location: Location
     postfix: bool = False
+
+
+from enum import Enum
+
+
+class SimpleTypes(Enum):
+    INTEGER = SimpleType("integer")
+    FLOAT = SimpleType("float")
+    BOOLEAN = SimpleType("boolean")
+    CHAR = SimpleType("char")
+    STRING = SimpleType("string")
+    VOID = SimpleType("void")
+
+    UNDEFINED = SimpleType("undefined")

@@ -166,7 +166,7 @@ class Check(Visitor):
             n.scope = "global"
 
     def check(self, n: VarDecl, env: Symtab):
-        if n.type.name == SimpleType.VOID:
+        if n.type == SimpleTypes.VOID.value:
             self._error(
                 f"Variable '{n.name}' has void type",
                 n.lineno,
@@ -196,6 +196,8 @@ class Check(Visitor):
         return None
 
     def _get_varloc_integer(self, n: VarLoc, env: Symtab, msg: str):
+        # Intentar obtener el valor de una variable
+        # Uso en index o array size para validar
         value_decl = env.get(n.name)
         size_value = None
 
@@ -205,7 +207,7 @@ class Check(Visitor):
                 n.lineno,
                 SemanticError.ARRAY_SIZE_MUST_BE_INTEGER,
             )
-        elif value_decl.type.name != SimpleType.INTEGER:
+        elif value_decl.type != SimpleTypes.INTEGER.value:
             self._error(
                 f"{msg} '{n.name}' must be integer no '{value_decl.type.name}'",
                 n.lineno,
@@ -225,12 +227,12 @@ class Check(Visitor):
         # Multi-dimencionales o void no soportados
         if isinstance(n.type.base, ArrayType):
             self._error(
-                f"Multi-dimensional arrays are not supported",
+                f"Multi-dimensional arrays are not supported '{n.name}'",
                 n.lineno,
                 SemanticError.MULTI_DIMENSIONAL_ARRAYS,
             )
             return
-        elif n.type.base.name == SimpleType.VOID:
+        elif n.type.base == SimpleTypes.VOID.value:
             self._error(
                 f"Array '{n.name}' has void type", n.lineno, SemanticError.VOID_ARRAY
             )
@@ -241,9 +243,10 @@ class Check(Visitor):
 
         if isinstance(n.type.size, VarLoc):
             loc = env.get(n.type.size.name)
+
             if not loc:
                 self._error(
-                    f"Array size '{n.type.size.name}' is not defined",
+                    f"Array size '{n.type.size.name}' is not defined '{n.name}'",
                     n.lineno,
                     SemanticError.UNDECLARED_VARIABLE,
                 )
@@ -251,14 +254,14 @@ class Check(Visitor):
         # Verificar tipo base y size
         if isinstance(n.type.size.type, ArrayType):
             self._error(
-                f"Array size must be integer no array type",
+                f"Array size must be integer no array type '{n.name}'",
                 n.lineno,
                 SemanticError.ARRAY_SIZE_MUST_BE_INTEGER,
             )
             return
-        elif n.type.size.type.name != SimpleType.INTEGER:
+        elif n.type.size.type != SimpleTypes.INTEGER.value:
             self._error(
-                f"Array size must be integer no '{n.type.size.type.name}'",
+                f"Array size must be integer no '{n.type.size.type.name}' '{n.name}'",
                 n.lineno,
                 SemanticError.ARRAY_SIZE_MUST_BE_INTEGER,
             )
@@ -316,6 +319,9 @@ class Check(Visitor):
         # Magic variable that references the current function
         env["$func"] = n
 
+        # Visitar n.type
+        n.return_type.accept(self, env)
+
         # Agregar todos los n.params dentro de symtab
         for p in n.params:
             p.accept(self, env)
@@ -331,7 +337,7 @@ class Check(Visitor):
         # Visitar n.type
         n.type.accept(self, env)
 
-        if n.type.name == SimpleType.VOID:
+        if n.type == SimpleTypes.VOID.value:
             self._error(
                 f"Parameter '{n.name}' has void type",
                 n.lineno,
@@ -347,10 +353,7 @@ class Check(Visitor):
             SemanticError.REDEFINE_PARAMETER,
         )
 
-    #     def check(self, n: VarParm, env: Symtab):
-    #         ...
-
-    #     # --- Expressions
+    # --- Expressions
 
     def visit(self, n: Literal, env: Symtab):
         # No hay nada que hacer. Los literales son
@@ -364,6 +367,26 @@ class Check(Visitor):
         # definido en el archivo model.py.
         pass
 
+    def visit(self, n: ArrayType, env: Symtab):
+        # ArrayDecl y ArrayLoc verifican inicialización o index
+        # ArrayTpe verifica tipos de parámetros o retorno en funciones
+        # No se acepta que tenga un tamaño especifico en el parámetro o retorno
+
+        n.base.accept(self, env)
+
+        if isinstance(n.base, ArrayType):
+            self._error(
+                f"Multidimensional arrays are not supported in function parameters or return type",
+                n.lineno,
+                SemanticError.MULTI_DIMENSIONAL_ARRAYS,
+            )
+        if n.size:
+            self._error(
+                f"Array not supported size in function parameters or return type",
+                n.lineno,
+                SemanticError.ARRAY_NOT_SUPPORTED_SIZE,
+            )
+
     def visit(self, n: BinOper, env: Symtab):
         # Visitar n.left y n.right
         n.left.accept(self, env)
@@ -374,7 +397,7 @@ class Check(Visitor):
             n.type = check_binop(n.oper, n.left.type.name, n.right.type.name)
         except CheckError as e:
             self._error(str(e), n.lineno, SemanticError.INVALID_BINARY_OP)
-            n.type = SimpleType("undefined")
+            n.type = SimpleTypes.UNDEFINED
             return
 
         if not n.type and (n.left.type and n.right.type):
@@ -393,7 +416,7 @@ class Check(Visitor):
             n.type = check_unaryop(n.oper, n.expr.type.name)
         except CheckError as e:
             self._error(str(e), n.lineno, SemanticError.INVALID_UNARY_OP)
-            n.type = SimpleType("undefined")
+            n.type = SimpleTypes.UNDEFINED
             return
 
         if not n.type and n.expr.type:
@@ -472,7 +495,7 @@ class Check(Visitor):
 
         # verificar que array que es el ID sea de typo array
         load_arr = env.get(n.array.name)
-        n.type = SimpleType("undefined")
+        n.type = SimpleTypes.UNDEFINED
 
         if not load_arr:
             self._error(
@@ -503,7 +526,7 @@ class Check(Visitor):
                 SemanticError.ARRAY_INDEX_MUST_BE_INTEGER,
             )
             return
-        if n.index.type.name != SimpleType.INTEGER:
+        if n.index.type != SimpleTypes.INTEGER.value:
             self._error(
                 f"Array index must be integer, not {n.index.type} for array '{load_arr.name}'",
                 n.lineno,

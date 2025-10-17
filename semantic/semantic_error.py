@@ -50,3 +50,7 @@ class SemanticError(Enum):
     VOID_PARAMETER = "Void parameter"
 
     ARRAY_INDEX_MUST_BE_INTEGER = "Array index must be integer"
+
+    ARRAY_NOT_SUPPORTED_SIZE = (
+        "Array not supported size in function parameters or return type"
+    )
