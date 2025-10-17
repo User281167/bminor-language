@@ -7,6 +7,9 @@ class SemanticError(Enum):
     MISMATCH_DECLARATION = "Mismatch declaration"
     MISMATCH_FUNCTION_CALL = "Mismatch function call"
 
+    VOID_VARIABLE = "Void variable"
+    VOID_ARRAY = "Void array"
+
     MISMATCH_ARRAY_ASSIGNMENT = "Mismatch array assignment"
     ARRAY_SIZE_MUST_BE_INTEGER = "Array size must be integer"
     ARRAY_SIZE_MUST_BE_POSITIVE = "Array size must be positive"

@@ -161,6 +161,10 @@ class Check(Visitor):
             n.scope = 'global'
 
     def check(self, n: VarDecl, env: Symtab):
+        if n.type.name == SimpleType.VOID:
+            self._error(
+                f"Variable '{n.name}' has void type", n.lineno, SemanticError.VOID_VARIABLE)
+
         if n.value:
             n.value.accept(self, env)
 
@@ -177,6 +181,10 @@ class Check(Visitor):
         if isinstance(n.type.base, ArrayType):
             self._error(f"Multi-dimensional arrays are not supported",
                         n.lineno, SemanticError.MULTI_DIMENSIONAL_ARRAYS)
+
+        if n.type.base.name == SimpleType.VOID:
+            self._error(
+                f"Array '{n.name}' has void type", n.lineno, SemanticError.VOID_ARRAY)
 
         if n.value:
             n.type.size.accept(self, env)
