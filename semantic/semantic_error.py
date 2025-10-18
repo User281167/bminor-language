@@ -54,3 +54,9 @@ class SemanticError(Enum):
     ARRAY_NOT_SUPPORTED_SIZE = (
         "Array not supported size in function parameters or return type"
     )
+
+    IS_NOT_FUNCTION = "Is not function"
+    UNDEFINED_FUNCTION = "Undefined function"
+    FUNCTION_CALL_ARGUMENT_MISMATCH = "Function call argument mismatch"
+    WRONG_NUMBER_OF_ARGUMENTS = "Wrong number of arguments"
+    MISMATCH_ARGUMENT_TYPE = "Mismatch argument type"

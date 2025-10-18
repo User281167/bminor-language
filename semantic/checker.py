@@ -39,7 +39,7 @@ class Check(Visitor):
     def _add_to_env(
         self,
         n,
-        env,
+        env: Symtab,
         dec_type: str = "VarDecl",
         conflict: SemanticError = SemanticError.REDEFINE_VARIABLE_TYPE,
         defined: SemanticError = SemanticError.REDEFINE_VARIABLE,
@@ -67,6 +67,20 @@ class Check(Visitor):
 
         n.location.accept(self, env)
         n.value.accept(self, env)
+
+        # si son arrays verificar que la base sea la misma no importa el tamaño
+        # get_data: function array[] integer ();
+        # data: array [5] integer;
+
+        # main: function void () = {
+        #     data = get_data();
+        # }
+        if (
+            isinstance(n.location.type, ArrayType)
+            and isinstance(n.value.type, ArrayType)
+            and not n.value.type.size
+        ):
+            return
 
         if n.location.type != n.value.type:
             name = None
@@ -200,7 +214,7 @@ class Check(Visitor):
 
             if n.type != n.value.type:
                 self._error(
-                    f"Declaration {n.name} has type {n.type} != {n.value.type}",
+                    f"Declaration {n.name!r} has type {n.type} != {n.value.type}",
                     n.lineno,
                     SemanticError.MISMATCH_DECLARATION,
                 )
@@ -410,6 +424,11 @@ class Check(Visitor):
         Se produce un error si se encuentra algún error en la
         declaración de la función.
         """
+
+        # Visitar n.type
+        n.return_type.accept(self, env)
+        n.type = n.return_type
+
         self._add_to_env(
             n,
             env,
@@ -419,14 +438,12 @@ class Check(Visitor):
         )
 
         # Crear una nueva symtab (local) para Function
+        # env = Symtab("function " + n.name, env)
         env = Symtab("function " + n.name, env)
         n.env = env
 
         # Magic variable that references the current function
         env["$func"] = n
-
-        # Visitar n.type
-        n.return_type.accept(self, env)
 
         # Agregar todos los n.params dentro de symtab
         for p in n.params:
@@ -561,35 +578,46 @@ class Check(Visitor):
     # 			n.expr.type = n.type
     # 	'''
 
-    #     def visit(self, n: FuncCall, env: Symtab):
-    #         # Validar si n.name existe
-    #         func = env.get(n.name)
+    def visit(self, n: FuncCall, env: Symtab):
+        func = env.get(n.name)
 
-    #         if func is None:
-    #             error(f"Function {n.name} no definida", n.lineno)
-    #             return
+        if func is None:
+            self._error(
+                f"Function {n.name} not defined",
+                n.lineno,
+                SemanticError.UNDEFINED_FUNCTION,
+            )
+            return
 
-    #         # La funcion debe ser una Function
-    #         if not isinstance(func, Function):
-    #             error(f'{n.name} no es función', n.lineno)
-    #             # Si no es una función, no es posible realizar más comprobaciones
-    #             return
+        # La funcion debe ser una Function
+        if not isinstance(func, FuncDecl):
+            self._error(
+                f"{n.name} is not a function", n.lineno, SemanticError.IS_NOT_FUNCTION
+            )
+            return
 
-    #         # El número de argumentos de la función debe coincidir con los parámetros
-    #         if len(n.args) != len(func.parms):
-    #             error(
-    #                 f'Se esperaban {len(func.parms)} argumentos. Se obtubieron {len(node.args)}.', n.lineno)
+        # El tipo de resultado es el tipo de retorno de la función
+        n.type = func.return_type
 
-    #         # Los tipos de argumentos de la función deben coincidir con los tipos de parámetros
-    #         for pos, (parm, arg) in enumerate(zip(func.parms, n.args), 1):
-    #             arg.accept(self, env)
+        # El número de argumentos de la función debe coincidir con los parámetros
+        if len(n.args) != len(func.params):
+            self._error(
+                f"Function {n.name!r} has {len(func.params)} parameters but {len(n.args)} arguments were given",
+                n.lineno,
+                SemanticError.WRONG_NUMBER_OF_ARGUMENTS,
+            )
+            return
 
-    #             if parm.type != arg.type:
-    #                 error(
-    #                     f"Error de tipo en el argumento {pos}. {parm.type} != {arg.type}", parm.lineno)
+        # Los tipos de argumentos de la función deben coincidir con los tipos de parámetros
+        for pos, (parm, arg) in enumerate(zip(func.params, n.args), 1):
+            arg.accept(self, env)
 
-    #         # El tipo de resultado es el tipo de retorno de la función
-    #         n.type = func.type
+            if parm.type != arg.type:
+                self._error(
+                    f"Function {n.name!r} parameter {pos}. expected {parm.type} given {arg.type}",
+                    arg.lineno,
+                    SemanticError.MISMATCH_ARGUMENT_TYPE,
+                )
 
     def visit(self, n: Location, env: Symtab):
         self.check(n, env)
