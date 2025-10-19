@@ -214,7 +214,7 @@ class Assignment(Statement):
 
 @dataclass
 class PrintStmt(Statement):
-    expr: Expression
+    expr: List[Expression] = field(default_factory=list)
 
 
 """

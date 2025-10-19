@@ -68,3 +68,6 @@ class SemanticError(Enum):
 
     BREAK_OUT_OF_LOOP = "Break out of loop"
     CONTINUE_OUT_OF_LOOP = "Continue out of loop"
+
+    PRINT_VOID_EXPRESSION = "Print void expression"
+    PRINT_ARRAY_NOT_ALLOWED = "Cannot print array"
