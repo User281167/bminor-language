@@ -171,8 +171,7 @@ for( i=0; i<100; i++ ) {
 }
 ```
 
-B-Minor no tiene sentencias switch, bucles while ni bucles do-while. (Pero podrías considerar añadirlos como un pequeño proyecto adicional).
-
+## Sentencia de impresión
 La sentencia print es un poco inusual porque es una sentencia y no una llamada a función, como printf en C. print toma una lista de expresiones separadas por comas y las imprime en la consola, así:
 
 ```c

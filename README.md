@@ -25,25 +25,11 @@ Este documento incluye:
 bminor soporta:
 
 - **Declaraciones** de variables, arreglos y funciones
-- **Inicialización** de estructuras
 - **Sentencias de control**: `if`, `for`, `while`, `do-while`
 - **Bloques** y expresiones anidadas
 - **Tipos primitivos**: `INTEGER`, `FLOAT`, `BOOLEAN`, `CHAR`, `STRING`, `VOID`
-- **Arreglos** y funciones como tipos
+- **Arreglos** de una dimensión y funciones
 - **Operadores**: aritméticos, lógicos, relacionales, incremento/decremento, negación
-
----
-
-## 🧪 Tests
-
-Los archivos de prueba se encuentran en la carpeta `test/`. Puedes ejecutar pruebas individuales o en lote:
-
-```bash
-python bminor.py --scan test/scanner/good1.bminor
-python bminor.py --parser test/parser/*.bminor
-```
-
-¡Perfecto! Aquí tienes una sección ampliada para el `README.md` de tu lenguaje **bminor**, explicando claramente cómo usar las funciones `run_scan`, `run_parser` y `run_semantic`, junto con instrucciones para instalar los requisitos del proyecto.
 
 ---
 
