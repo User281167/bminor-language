@@ -96,12 +96,24 @@ class Check(Visitor):
                 SemanticError.MISMATCH_ASSIGNMENT,
             )
 
-    #     def visit(self, n: PrintStmt, env: Symtab):
-    #         # visitar n.exprs
-    #         for expr in n.exprs:
-    #             expr.accept(self, env)
-    #             if expr.type == '<infer>':
-    #                 error("No se puede inferir el tipo de expresión en Print", n.lineno)
+    def visit(self, n: PrintStmt, env: Symtab):
+
+        # visitar n.exprs
+        for expr in n.expr:
+            expr.accept(self, env)
+
+            if expr.type == SimpleTypes.VOID.value:
+                self._error(
+                    f"Cannot print void type",
+                    n.lineno,
+                    SemanticError.PRINT_VOID_EXPRESSION,
+                )
+            elif isinstance(expr.type, ArrayType):
+                self._error(
+                    f"Cannot print array type",
+                    n.lineno,
+                    SemanticError.PRINT_ARRAY_NOT_ALLOWED,
+                )
 
     #     def visit(self, n: IfStmt, env: Symtab):
     #         # Visitar n.cond (validar tipos)
@@ -164,7 +176,6 @@ class Check(Visitor):
     # 	'''
 
     def visit(self, n: ReturnStmt, env: Symtab):
-        # Visitar n.expr y obtener tipo
         """
         Visita el nodo ReturnStmt y obtiene el tipo de la expresión
         n.expr. Luego, verifica que la función actual sea la
@@ -174,7 +185,9 @@ class Check(Visitor):
         Si la función retorna void y return no es void entonces se
         produce un error.
         """
-        n.expr.accept(self, env)
+
+        if not n.expr is None:
+            n.expr.accept(self, env)
 
         # Obtener la función actual
         if "$func" not in env:
@@ -186,12 +199,23 @@ class Check(Visitor):
         else:
             func = env.get("$func")
 
+            print(n.expr is None, func.return_type != SimpleTypes.VOID.value)
+
             if isinstance(n.expr, VarLoc) and not n.expr.name in env:
                 self._error(
                     f"Variable {n.expr.name!r} not defined in current scope",
                     n.lineno,
                     SemanticError.UNDECLARED_VARIABLE,
                 )
+                return
+            elif n.expr is None and func.return_type != SimpleTypes.VOID.value:
+                self._error(
+                    f"'Return' void function must return a value of type {func.return_type!r}",
+                    n.lineno,
+                    SemanticError.RETURN_IN_VOID_FUNCTION,
+                )
+                return
+            elif n.expr is None and func.return_type == SimpleTypes.VOID.value:
                 return
 
             if (
@@ -203,7 +227,8 @@ class Check(Visitor):
                     n.lineno,
                     SemanticError.RETURN_IN_VOID_FUNCTION,
                 )
-            elif func.return_type == SimpleTypes.VOID.value:
+
+            if func.return_type == SimpleTypes.VOID.value:
                 pass
             elif func.return_type != n.expr.type:
                 self._error(
@@ -655,9 +680,13 @@ class Check(Visitor):
     def visit(self, n: Location, env: Symtab):
         self.check(n, env)
 
+    def visit(self, n: VarLoc, env: Symtab):
+        self.check(n, env)
+
     def check(self, n: VarLoc, env: Symtab):
         # Verificar si n.name existe symtab
         decl = env.get(n.name)
+        n.type = SimpleTypes.UNDEFINED
 
         if not decl:
             self._error(
