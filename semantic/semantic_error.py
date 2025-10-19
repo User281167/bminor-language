@@ -60,3 +60,11 @@ class SemanticError(Enum):
     FUNCTION_CALL_ARGUMENT_MISMATCH = "Function call argument mismatch"
     WRONG_NUMBER_OF_ARGUMENTS = "Wrong number of arguments"
     MISMATCH_ARGUMENT_TYPE = "Mismatch argument type"
+
+    RETURN_TYPE_MISMATCH = "Return type mismatch"
+    RETURN_OUT_OF_FUNCTION = "Return out of function"
+    RETURN_TYPE_NOT_SUPPORTED = "Return type not supported"
+    RETURN_IN_VOID_FUNCTION = "Return in void function"
+
+    BREAK_OUT_OF_LOOP = "Break out of loop"
+    CONTINUE_OUT_OF_LOOP = "Continue out of loop"

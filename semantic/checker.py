@@ -163,23 +163,56 @@ class Check(Visitor):
     # 			error(f"'{name}' por fuera de un loop", n.lineno)
     # 	'''
 
-    #     def visit(self, n: ReturnStmt, env: Symtab):
-    #         # Visitar n.expr y obtene tipo
-    #         n.expr.accept(self, env)
+    def visit(self, n: ReturnStmt, env: Symtab):
+        # Visitar n.expr y obtener tipo
+        """
+        Visita el nodo ReturnStmt y obtiene el tipo de la expresión
+        n.expr. Luego, verifica que la función actual sea la
+        correcta y que el tipo de la expresión coincida con el tipo
+        de la función.
 
-    #         # Obtener la funcion
-    #         if '$func' not in env:
-    #             error("'Return' usado por fuera de una funcion", n.lineno)
-    #         else:
-    #             func = env.get('$func')
+        Si la función retorna void y return no es void entonces se
+        produce un error.
+        """
+        n.expr.accept(self, env)
 
-    #             if func.type == 'void':
-    #                 pass
-    #             elif func.type != n.expr.type:
-    #                 error(
-    #                     f"Error de tipo. return {func.type} != {n.expr.type}", n.lineno)
+        # Obtener la función actual
+        if "$func" not in env:
+            self._error(
+                f"'Return' is outside a function",
+                n.lineno,
+                SemanticError.RETURN_OUT_OF_FUNCTION,
+            )
+        else:
+            func = env.get("$func")
 
-    #     # --- Declaration
+            if isinstance(n.expr, VarLoc) and not n.expr.name in env:
+                self._error(
+                    f"Variable {n.expr.name!r} not defined in current scope",
+                    n.lineno,
+                    SemanticError.UNDECLARED_VARIABLE,
+                )
+                return
+
+            if (
+                func.return_type == SimpleTypes.VOID.value
+                and n.expr.type != SimpleTypes.VOID.value
+            ):
+                self._error(
+                    f"'Return' in void function",
+                    n.lineno,
+                    SemanticError.RETURN_IN_VOID_FUNCTION,
+                )
+            elif func.return_type == SimpleTypes.VOID.value:
+                pass
+            elif func.return_type != n.expr.type:
+                self._error(
+                    f"Error type. return {func.return_type} != {n.expr.type}",
+                    n.lineno,
+                    SemanticError.RETURN_TYPE_MISMATCH,
+                )
+
+    # --- Declaration
 
     def visit(self, n: Declaration, env: Symtab):
         self.check(n, env)
