@@ -190,4 +190,4 @@ class TestIfElseStmt(unittest.TestCase):
         self.assertIsInstance(stmt, IfStmt)
         self.assertIsInstance(stmt.condition, BinOper)
         self.assertEqual(stmt.condition.oper, ">")
-        self.assertIsInstance(stmt.then_branch, PrintStmt)
+        self.assertIsInstance(stmt.then_branch[0], PrintStmt)

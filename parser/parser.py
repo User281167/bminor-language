@@ -130,18 +130,20 @@ class Parser(sly.Parser):
             IfStmt(
                 condition=p.if_cond,
                 then_branch=p.closed_stmt0,
-                else_branch=(
-                    [p.closed_stmt1]
-                    if not isinstance(p.closed_stmt1, list)
-                    else p.closed_stmt1
-                ),
+                else_branch=p.closed_stmt1,
             ),
             p,
         )
 
     @_("if_cond stmt")
     def if_stmt_open(self, p):
-        return _L(IfStmt(condition=p.if_cond, then_branch=p.stmt), p)
+        return _L(
+            IfStmt(
+                condition=p.if_cond,
+                then_branch=p.stmt,
+            ),
+            p,
+        )
 
     @_("if_cond closed_stmt ELSE if_stmt_open")
     def if_stmt_open(self, p):
@@ -166,9 +168,7 @@ class Parser(sly.Parser):
                 init=init,
                 condition=cond,
                 update=update,
-                body=(
-                    [p.open_stmt] if not isinstance(p.open_stmt, list) else p.open_stmt
-                ),
+                body=p.open_stmt,
             ),
             p,
         )
@@ -177,16 +177,7 @@ class Parser(sly.Parser):
     def for_stmt_closed(self, p):
         init, cond, update = p.for_header
         return _L(
-            ForStmt(
-                init=init,
-                condition=cond,
-                update=update,
-                body=(
-                    [p.closed_stmt]
-                    if not isinstance(p.closed_stmt, list)
-                    else p.closed_stmt
-                ),
-            ),
+            ForStmt(init=init, condition=cond, update=update, body=p.closed_stmt),
             p,
         )
 
@@ -195,9 +186,7 @@ class Parser(sly.Parser):
         return _L(
             WhileStmt(
                 condition=p.opt_expr,
-                body=(
-                    [p.open_stmt] if not isinstance(p.open_stmt, list) else p.open_stmt
-                ),
+                body=p.open_stmt,
             ),
             p,
         )
@@ -207,11 +196,7 @@ class Parser(sly.Parser):
         return _L(
             WhileStmt(
                 condition=p.opt_expr,
-                body=(
-                    [p.closed_stmt]
-                    if not isinstance(p.closed_stmt, list)
-                    else p.closed_stmt
-                ),
+                body=p.closed_stmt,
             ),
             p,
         )
@@ -228,11 +213,7 @@ class Parser(sly.Parser):
     def do_while_stmt(self, p):
         return _L(
             DoWhileStmt(
-                body=(
-                    [p.closed_stmt]
-                    if not isinstance(p.closed_stmt, list)
-                    else p.closed_stmt
-                ),
+                body=p.closed_stmt,
                 condition=p.expr,
             ),
             p,

@@ -180,17 +180,31 @@ class IfStmt(Statement):
     then_branch: List[Statement]
     else_branch: List[Statement] = None
 
+    def __post_init__(self):
+        if not isinstance(self.then_branch, list):
+            self.then_branch = [self.then_branch]
+        if self.else_branch is not None and not isinstance(self.else_branch, list):
+            self.else_branch = [self.else_branch]
+
 
 @dataclass
 class WhileStmt(Statement):
     condition: Expression
     body: List[Statement]
 
+    def __post_init__(self):
+        if not isinstance(self.body, list):
+            self.body = [self.body]
+
 
 @dataclass
 class DoWhileStmt(Statement):
     body: List[Statement]
     condition: Expression
+
+    def __post_init__(self):
+        if not isinstance(self.body, list):
+            self.body = [self.body]
 
 
 @dataclass
@@ -199,6 +213,10 @@ class ForStmt(Statement):
     condition: Optional[Expression]
     update: Optional[Statement]
     body: List[Statement]
+
+    def __post_init__(self):
+        if not isinstance(self.body, list):
+            self.body = [self.body]
 
 
 @dataclass
