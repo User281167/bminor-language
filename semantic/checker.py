@@ -52,6 +52,50 @@ class Check(Visitor):
         except Symtab.SymbolDefinedError as ex:
             self._error(f"{dec_type} '{n.name}' is already defined", n.lineno, defined)
 
+    def _visit_scope(
+        self, scope: List[Statement], env: Symtab, parent: Node, deep: int = 1
+    ):
+        """
+        Validar scopes de tipo {} que no son body de funciones, if, o bucles, sino que son aislados
+
+        ejemplo
+
+        main: function void() = {
+            {
+                // scope
+            }
+
+            if () {
+                ...
+                {
+                    // scope
+                }
+            }
+        }
+        """
+
+        if not hasattr(parent, "name"):
+            parent.name = str(parent.__class__.__name__)
+
+        # Crear una nueva symtab (local) para el scope
+        env = Symtab(
+            f"scope {parent.name} line {scope[0].lineno} - level {deep}",
+            env,
+        )
+        parent.env = env
+
+        # Magic variable that references the current scope
+        env["$scope"] = parent
+
+        for stmt in scope:
+            if isinstance(stmt, list):
+                self._visit_scope(stmt, env, parent, deep + 1)
+                continue
+
+            stmt.accept(self, env)
+
+        env["$scope"] = None
+
     # --- Statements
 
     def visit(self, n: Assignment, env: Symtab):
@@ -150,6 +194,10 @@ class Check(Visitor):
 
         # Visitar n.cons (consecuente)
         for stmt in n.then_branch:
+            if isinstance(stmt, list):
+                self._visit_scope(stmt, env, n)
+                continue
+
             stmt.accept(self, env)
 
         # Visitar n.alt (alterno)
@@ -532,6 +580,9 @@ class Check(Visitor):
         # Visitar n.stmts
         if n.body:
             for stmt in n.body:
+                if isinstance(stmt, list):
+                    self._visit_scope(stmt, env, n)
+                    continue
                 stmt.accept(self, env)
 
         env["$func"] = None
