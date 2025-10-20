@@ -71,3 +71,7 @@ class SemanticError(Enum):
 
     PRINT_VOID_EXPRESSION = "Print void expression"
     PRINT_ARRAY_NOT_ALLOWED = "Cannot print array"
+
+    IF_CONDITION_MUST_BE_BOOLEAN = "If condition must be boolean"
+
+    BINARY_ARRAY_OP = "Binary array operator"

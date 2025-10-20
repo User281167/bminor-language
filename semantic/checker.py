@@ -115,24 +115,49 @@ class Check(Visitor):
                     SemanticError.PRINT_ARRAY_NOT_ALLOWED,
                 )
 
-    #     def visit(self, n: IfStmt, env: Symtab):
-    #         # Visitar n.cond (validar tipos)
-    #         n.cond.accept(self, env)
+    def visit(self, n: IfStmt, env: Symtab):
+        # Visitar n.cond (validar tipos)
+        n.condition.accept(self, env)
 
-    #         if n.cond.type == '<infer>':
-    #             n.test.type = 'boolean'
-    #         if n.cond.type != 'boolean':
-    #             error(
-    #                 f"cond en IF debe ser 'boolean'. Se obtuvo {n.cond.type}", n.lineno)
+        if isinstance(n.condition, ArrayType):
+            self._error(
+                f"Condition must be boolean. Got {n.condition.type.name}",
+                n.lineno,
+                SemanticError.IF_CONDITION_MUST_BE_BOOLEAN,
+            )
+            return
+        elif isinstance(n.condition.type, ArrayType):
+            self._error(
+                f"Condition must be boolean. Got array type",
+                n.lineno,
+                SemanticError.IF_CONDITION_MUST_BE_BOOLEAN,
+            )
+            return
+        elif n.condition.type != SimpleTypes.BOOLEAN.value:
+            self._error(
+                f"Condition must be boolean. Got {n.condition.type.name}",
+                n.lineno,
+                SemanticError.IF_CONDITION_MUST_BE_BOOLEAN,
+            )
+            return
 
-    #         # Visitar n.cons (consecuente)
-    #         for stmt in n.cons:
-    #             stmt.accept(self, env)
+        # Crear una nueva symtab (local) para if
+        env = Symtab(f"if line {n.lineno}", env)
+        n.env = env
 
-    #         # Visitar n.alt (alterno)
-    #         if n.alt:
-    #             for stmt in n.alt:
-    #                 stmt.accept(self, env)
+        # Magic variable that references the current function
+        env["$if"] = n
+
+        # Visitar n.cons (consecuente)
+        for stmt in n.then_branch:
+            stmt.accept(self, env)
+
+        # Visitar n.alt (alterno)
+        if n.else_branch:
+            for stmt in n.else_branch:
+                stmt.accept(self, env)
+
+        env["$if"] = None
 
     #     def visit(self, n: ForStmt, env: Symtab):
     #         # Visitar n.init
@@ -198,8 +223,6 @@ class Check(Visitor):
             )
         else:
             func = env.get("$func")
-
-            print(n.expr is None, func.return_type != SimpleTypes.VOID.value)
 
             if isinstance(n.expr, VarLoc) and not n.expr.name in env:
                 self._error(
@@ -496,7 +519,6 @@ class Check(Visitor):
         )
 
         # Crear una nueva symtab (local) para Function
-        # env = Symtab("function " + n.name, env)
         env = Symtab("function " + n.name, env)
         n.env = env
 
@@ -582,9 +604,20 @@ class Check(Visitor):
 
         n.left.accept(self, env)
         n.right.accept(self, env)
+        n.type = SimpleTypes.UNDEFINED
 
         # Verificar compatibilidad de tipos
         try:
+            if isinstance(n.left.type, ArrayType) or isinstance(
+                n.right.type, ArrayType
+            ):
+                self._error(
+                    f"Array types not supported in binary operations",
+                    n.lineno,
+                    SemanticError.BINARY_ARRAY_OP,
+                )
+                return
+
             n.type = check_binop(n.oper, n.left.type.name, n.right.type.name)
         except CheckError as e:
             self._error(str(e), n.lineno, SemanticError.INVALID_BINARY_OP)
@@ -606,6 +639,7 @@ class Check(Visitor):
         """
 
         n.expr.accept(self, env)
+        n.type = SimpleTypes.UNDEFINED
 
         # Validar si es un operador unario valido
         try:
