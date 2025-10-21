@@ -128,14 +128,26 @@ class Check(Visitor):
 
         if n.location.type != n.value.type:
             name = None
+            loc_type = None
+            value_type = None
 
             if isinstance(n.location, VarLoc):
                 name = "variable " + n.location.name
             elif isinstance(n.location, ArrayLoc):
                 name = "array " + n.location.array.name
 
+            if isinstance(n.location.type, ArrayType):
+                loc_type = "array"
+            else:
+                loc_type = n.location.type
+
+            if isinstance(n.value.type, ArrayType):
+                value_type = "array"
+            else:
+                value_type = n.value.type
+
             self._error(
-                f"Assignment {n.location.type} != {n.value.type} in {name}",
+                f"Assignment {loc_type} != {value_type} in {name!r}",
                 n.lineno,
                 SemanticError.MISMATCH_ASSIGNMENT,
             )
@@ -207,18 +219,46 @@ class Check(Visitor):
 
         env["$if"] = None
 
-    #     def visit(self, n: ForStmt, env: Symtab):
-    #         # Visitar n.init
-    #         if n.init:
-    #             n.init.accept(self, env)
-    #         if n.cond:
-    #             n.cond.accept(self, env)
+    def visit(self, n: ForStmt, env: Symtab):
+        # Visitar n.init
+        if n.init:
+            n.init.accept(self, env)
+        if n.condition:
+            n.condition.accept(self, env)
 
-    #             if n.cond.type == '<infer>':
-    #                 n.cond.type = 'boolean'
-    #             if n.cond.type != 'boolean':
-    #                 error(
-    #                     f"test en ForStmt debe ser 'boolean'. Se obtuvo {n.cond.type}", n.lineno)
+            if isinstance(n.condition.type, ArrayType):
+                self._error(
+                    f"Loop condition must be boolean. Got array type",
+                    n.lineno,
+                    SemanticError.LOOP_CONDITION_MUST_BE_BOOLEAN,
+                )
+                return
+            if n.condition.type != SimpleTypes.BOOLEAN.value:
+                self._error(
+                    f"Loop condition must be boolean no {n.condition.type.name}",
+                    n.lineno,
+                    SemanticError.LOOP_CONDITION_MUST_BE_BOOLEAN,
+                )
+                return
+        if n.update:
+            n.update.accept(self, env)
+
+        # Crear una nueva symtab (local) para for
+        env = Symtab(f"for line {n.lineno}", env)
+        n.env = env
+
+        # Magic variable that references the current function
+        env["$loop"] = n
+
+        # Visitar n.body
+        for stmt in n.body:
+            if isinstance(stmt, list):
+                self._visit_scope(stmt, env, n)
+                continue
+
+            stmt.accept(self, env)
+
+        env["$loop"] = None
 
     #     def visit(self, n: WhileStmt, env: Symtab):
     #         # Visitar n.cond (validar tipos)

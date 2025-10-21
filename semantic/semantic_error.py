@@ -75,3 +75,5 @@ class SemanticError(Enum):
     IF_CONDITION_MUST_BE_BOOLEAN = "If condition must be boolean"
 
     BINARY_ARRAY_OP = "Binary array operator"
+
+    LOOP_CONDITION_MUST_BE_BOOLEAN = "Loop condition must be boolean"
