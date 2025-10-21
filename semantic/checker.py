@@ -291,7 +291,11 @@ class Check(Visitor):
             )
             return
 
-        # Marcar que se esta dentro de un While
+        # Nueva symtab (local) para while
+        env = Symtab(f"while line {n.lineno}", env)
+        n.env = env
+
+        # Magic variable that references the current function
         env["$loop"] = True
 
         # Visitar n.body

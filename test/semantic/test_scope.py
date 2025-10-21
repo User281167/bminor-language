@@ -157,3 +157,18 @@ class TestScope(unittest.TestCase):
         }
         """
         self.assertValid(code)
+
+    def test_scope_func_inside_scope(self):
+        code = """
+        main: function void() = {
+            {
+                my_func: function void() = {
+                    x: integer = 5;
+                    print;
+                }
+
+                my_func();
+            }
+        }
+        """
+        self.assertValid(code)
