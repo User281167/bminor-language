@@ -305,6 +305,39 @@ class Check(Visitor):
         # Deshabilitar marca del While
         env["$loop"] = False
 
+    def visit(self, n: DoWhileStmt, env: Symtab):
+        n.condition.accept(self, env)
+
+        if isinstance(n.condition.type, ArrayType):
+            self._error(
+                f"Loop condition must be boolean. Got array type",
+                n.lineno,
+                SemanticError.LOOP_CONDITION_MUST_BE_BOOLEAN,
+            )
+            return
+        if n.condition.type != SimpleTypes.BOOLEAN.value:
+            self._error(
+                f"Loop condition must be boolean. Got {n.condition.type.name}",
+                n.lineno,
+                SemanticError.LOOP_CONDITION_MUST_BE_BOOLEAN,
+            )
+            return
+
+        # Crear una nueva symtab (local) para do-while
+        env = Symtab(f"do-while line {n.lineno}", env)
+        n.env = env
+        env["$loop"] = n
+
+        for stmt in n.body:
+            if isinstance(stmt, list):
+                self._visit_scope(stmt, env, n)
+                continue
+
+            stmt.accept(self, env)
+
+        # Marcar que se esta dentro de un While
+        env["$loop"] = True
+
     #     '''
     # 	def visit(self, n: Union[Break, Continue], env: Symtab):
     # 		# Verificar que esta dentro de un ciclo while
