@@ -56,9 +56,7 @@ class Check(Visitor):
                 f"{dec_type} '{n.name!r}' is already defined", n.lineno, defined
             )
 
-    def _visit_scope(
-        self, scope: List[Statement], env: Symtab, parent: Node, deep: int = 1
-    ):
+    def _visit_scope(self, scope: list, env: Symtab, parent: Node, deep: int = 1):
         """
         Validar scopes de tipo {} que no son body de funciones, if, o bucles, sino que son aislados
 
@@ -81,9 +79,16 @@ class Check(Visitor):
         if not hasattr(parent, "name"):
             parent.name = str(parent.__class__.__name__)
 
+        lineno = 0
+
+        if hasattr(scope[0], "lineno"):
+            lineno = scope[0].lineno
+        else:
+            lineno = parent.lineno
+
         # Crear una nueva symtab (local) para el scope
         env = Symtab(
-            f"scope {parent.name} line {scope[0].lineno} - level {deep}",
+            f"scope {parent.name} line {lineno} - level {deep}",
             env,
         )
         parent.env = env
@@ -346,7 +351,7 @@ class Check(Visitor):
         # Marcar que se esta dentro de un While
         env["$loop"] = True
 
-    def _search_env_name(self, env: Symtab, env_name: str) -> Symtab:
+    def _search_env_name(self, env: Symtab, env_name: str) -> bool:
         parent = env
 
         while env and env_name not in env:
@@ -388,7 +393,7 @@ class Check(Visitor):
             n.expr.accept(self, env)
 
         # Obtener la función actual
-        if "$func" not in env:
+        if "$func" not in self._search_env_name(env, "$func"):
             self._error(
                 f"'Return' is outside a function",
                 n.lineno,
@@ -397,7 +402,7 @@ class Check(Visitor):
         else:
             func = env.get("$func")
 
-            if isinstance(n.expr, VarLoc) and not n.expr.name in env:
+            if isinstance(n.expr, VarLoc) and not env.get(n.expr.name):
                 self._error(
                     f"Variable {n.expr.name!r} not defined in current scope",
                     n.lineno,
