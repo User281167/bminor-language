@@ -78,6 +78,8 @@ class Lexer(sly.Lexer):
     ID["void"] = VOID
     ID["while"] = WHILE
     ID["do"] = DO
+    ID["continue"] = CONTINUE
+    ID["break"] = BREAK
 
     @_(r"[a-zA-Z_][a-zA-Z0-9_]*")
     def ID(self, t):

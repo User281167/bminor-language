@@ -25,6 +25,8 @@ class TokenType(Enum):
     VOID = "VOID"
     WHILE = "WHILE"
     DO = "DO"
+    CONTINUE = "CONTINUE"
+    BREAK = "BREAK"
 
 
 class OperatorType(Enum):

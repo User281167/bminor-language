@@ -227,6 +227,8 @@ class Parser(sly.Parser):
 
     @_("print_stmt")
     @_("return_stmt")
+    @_("continue_stmt")
+    @_("break_stmt")
     @_("block_stmt")
     @_("decl")
     @_("expr ';'")
@@ -240,6 +242,14 @@ class Parser(sly.Parser):
     @_("RETURN opt_expr ';'")
     def return_stmt(self, p):
         return _L(ReturnStmt(p.opt_expr), p)
+
+    @_("CONTINUE ';'")
+    def continue_stmt(self, p):
+        return _L(ContinueStmt(), p)
+
+    @_("BREAK ';'")
+    def break_stmt(self, p):
+        return _L(BreakStmt(), p)
 
     @_("'{' stmt_list '}'")
     def block_stmt(self, p):

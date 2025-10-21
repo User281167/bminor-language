@@ -8,7 +8,7 @@ class TestKeywords(unittest.TestCase):
         self.lexer = Lexer()
 
     def test_keywords_and_numbers_and_symbols(self):
-        test_input = "array auto boolean char else false float for function if integer print return string true void while     // this is a comment"
+        test_input = "array auto boolean char else false float for function if integer print return string true void while continue break     // this is a comment"
         tokens = list(self.lexer.tokenize(test_input))
         expected = [
             TokenType.ARRAY.value,
@@ -28,6 +28,8 @@ class TestKeywords(unittest.TestCase):
             TokenType.TRUE.value,
             TokenType.VOID.value,
             TokenType.WHILE.value,
+            TokenType.CONTINUE.value,
+            TokenType.BREAK.value,
         ]
         # Check token types
         self.assertEqual([t.type for t in tokens], expected)
@@ -96,6 +98,16 @@ class TestKeywords(unittest.TestCase):
         tokens = list(self.lexer.tokenize("return"))
         self.assertEqual(len(tokens), 1)
         self.assertEqual(tokens[0].type, TokenType.RETURN.value)
+
+    def test_continue_keyword(self):
+        tokens = list(self.lexer.tokenize("continue"))
+        self.assertEqual(len(tokens), 1)
+        self.assertEqual(tokens[0].type, TokenType.CONTINUE.value)
+
+    def test_break_keyword(self):
+        tokens = list(self.lexer.tokenize("break"))
+        self.assertEqual(len(tokens), 1)
+        self.assertEqual(tokens[0].type, TokenType.BREAK.value)
 
     def test_string_keyword(self):
         tokens = list(self.lexer.tokenize("string"))

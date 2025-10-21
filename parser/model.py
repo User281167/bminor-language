@@ -175,6 +175,16 @@ class ReturnStmt(Statement):
 
 
 @dataclass
+class ContinueStmt(Statement):
+    pass
+
+
+@dataclass
+class BreakStmt(Statement):
+    pass
+
+
+@dataclass
 class IfStmt(Statement):
     condition: Expression
     then_branch: List[Statement]
@@ -233,6 +243,10 @@ class Assignment(Statement):
 @dataclass
 class PrintStmt(Statement):
     expr: List[Expression] = field(default_factory=list)
+
+    def __post_init__(self):
+        if not isinstance(self.expr, list):
+            self.expr = [self.expr]
 
 
 """

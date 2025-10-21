@@ -346,13 +346,32 @@ class Check(Visitor):
         # Marcar que se esta dentro de un While
         env["$loop"] = True
 
-    #     '''
-    # 	def visit(self, n: Union[Break, Continue], env: Symtab):
-    # 		# Verificar que esta dentro de un ciclo while
-    # 		name = n.__class__.__name__.lower()
-    # 		if '$loop' not in env:
-    # 			error(f"'{name}' por fuera de un loop", n.lineno)
-    # 	'''
+    def _search_env_name(self, env: Symtab, env_name: str) -> Symtab:
+        parent = env
+
+        while env and env_name not in env:
+            env = env.parent
+
+        # env = None si no encontramos la etiqueta, devolvemos parent
+        return env or parent
+
+    def visit(self, n: ContinueStmt, env: Symtab):
+        # Verificar que esta dentro de un ciclo
+        if "$loop" not in self._search_env_name(env, "$loop"):
+            self._error(
+                f"'Continue' is outside a loop",
+                n.lineno,
+                SemanticError.CONTINUE_OUT_OF_LOOP,
+            )
+
+    def visit(self, n: BreakStmt, env: Symtab):
+        # Verificar que esta dentro de un ciclo
+        if "$loop" not in self._search_env_name(env, "$loop"):
+            self._error(
+                f"'Break' is outside a loop",
+                n.lineno,
+                SemanticError.BREAK_OUT_OF_LOOP,
+            )
 
     def visit(self, n: ReturnStmt, env: Symtab):
         """
