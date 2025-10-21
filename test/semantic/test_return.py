@@ -4,8 +4,7 @@ from parser.model import *
 
 from scanner import Lexer
 from semantic.checker import Check
-from utils import errors_detected
-from utils.errors import clear_errors
+from utils import clear_errors, errors_detected
 
 
 class TestReturn(unittest.TestCase):
@@ -26,6 +25,7 @@ class TestReturn(unittest.TestCase):
         }
         """
         env = self.semantic(code)
+        self.assertFalse(errors_detected())
         func = env.get("sum")
         self.assertEqual(func.return_type.name, "integer")
 
@@ -36,6 +36,7 @@ class TestReturn(unittest.TestCase):
         }
         """
         env = self.semantic(code)
+        self.assertFalse(errors_detected())
         func = env.get("pi")
         self.assertEqual(func.return_type.name, "float")
 
@@ -46,6 +47,7 @@ class TestReturn(unittest.TestCase):
         }
         """
         env = self.semantic(code)
+        self.assertFalse(errors_detected())
         func = env.get("is_ready")
         self.assertEqual(func.return_type.name, "boolean")
 
@@ -56,6 +58,7 @@ class TestReturn(unittest.TestCase):
         }
         """
         env = self.semantic(code)
+        self.assertFalse(errors_detected())
         func = env.get("get_letter")
         self.assertEqual(func.return_type.name, "char")
 
@@ -66,6 +69,7 @@ class TestReturn(unittest.TestCase):
         }
         """
         env = self.semantic(code)
+        self.assertFalse(errors_detected())
         func = env.get("greet")
         self.assertEqual(func.return_type.name, "string")
 
@@ -76,6 +80,7 @@ class TestReturn(unittest.TestCase):
         }
         """
         env = self.semantic(code)
+        self.assertFalse(errors_detected())
         func = env.get("double")
         self.assertEqual(func.return_type.name, "integer")
 
@@ -86,6 +91,7 @@ class TestReturn(unittest.TestCase):
         }
         """
         env = self.semantic(code)
+        self.assertFalse(errors_detected())
         func = env.get("negate")
         self.assertEqual(func.return_type.name, "integer")
 
@@ -97,6 +103,7 @@ class TestReturn(unittest.TestCase):
         }
         """
         env = self.semantic(code)
+        self.assertFalse(errors_detected())
         func = env.get("get_value")
         self.assertEqual(func.return_type.name, "float")
 
@@ -109,6 +116,7 @@ class TestReturn(unittest.TestCase):
         }
         """
         env = self.semantic(code)
+        self.assertFalse(errors_detected())
         func = env.get("get_value")
         self.assertEqual(func.return_type.name, "float")
 
@@ -121,5 +129,6 @@ class TestReturn(unittest.TestCase):
         """
 
         env = self.semantic(code)
+        self.assertFalse(errors_detected())
         func = env.get("get_value")
         self.assertEqual(func.return_type.name, "integer")
