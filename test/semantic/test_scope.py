@@ -117,3 +117,23 @@ class TestScope(unittest.TestCase):
         }
         """
         self.assertValid(code)
+
+    def test_scope_while(self):
+        code = """
+        main: function void () = {
+            i: integer = 0;
+            while (i < 10) {
+                print;
+                i = i + 1;
+
+                {
+                    j: integer = 0;
+                    while (j < 10) {
+                        print;
+                        j = j + 1;
+                    }
+                }
+            }
+        }
+        """
+        self.assertValid(code)

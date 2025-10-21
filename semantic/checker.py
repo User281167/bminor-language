@@ -204,7 +204,7 @@ class Check(Visitor):
         # Magic variable that references the current function
         env["$if"] = n
 
-        # Visitar n.cons (consecuente)
+        # Visitar then (branch)
         for stmt in n.then_branch:
             if isinstance(stmt, list):
                 self._visit_scope(stmt, env, n)
@@ -212,7 +212,7 @@ class Check(Visitor):
 
             stmt.accept(self, env)
 
-        # Visitar n.alt (alterno)
+        # Visitar n.else (alterno)
         if n.else_branch:
             for stmt in n.else_branch:
                 stmt.accept(self, env)
@@ -221,6 +221,18 @@ class Check(Visitor):
 
     def visit(self, n: ForStmt, env: Symtab):
         # Visitar n.init
+        """
+        Validar n.init, n.condition y n.update
+
+        Primero se llama a accept() sobre n.init, n.condition y n.update
+        para que realicen sus respectivas verificaciones.
+
+        Luego se verifica que n.condition.type sea booleano, de lo
+        contrario se lanza un SemanticError.LOOP_CONDITION_MUST_BE_BOOLEAN
+
+        Finalmente se crea una nueva tabla de símbolos local para el
+        loop y se visita n.body
+        """
         if n.init:
             n.init.accept(self, env)
         if n.condition:
@@ -260,25 +272,38 @@ class Check(Visitor):
 
         env["$loop"] = None
 
-    #     def visit(self, n: WhileStmt, env: Symtab):
-    #         # Visitar n.cond (validar tipos)
-    #         n.cond.accept(self, env)
+    def visit(self, n: WhileStmt, env: Symtab):
+        if n.condition:
+            n.condition.accept(self, env)
 
-    #         if n.cond.type == '<infer>':
-    #             n.cond.type = 'bool'
-    #         if n.cond.type != 'bool':
-    #             error(
-    #                 f"test en While debe ser 'bool'. Se obtuvo {n.cond.type}", n.lineno)
+        if isinstance(n.condition.type, ArrayType):
+            self._error(
+                f"Loop condition must be boolean. Got array type",
+                n.lineno,
+                SemanticError.LOOP_CONDITION_MUST_BE_BOOLEAN,
+            )
+            return
+        if n.condition.type != SimpleTypes.BOOLEAN.value:
+            self._error(
+                f"Loop condition must be boolean. Got {n.condition.type.name}",
+                n.lineno,
+                SemanticError.LOOP_CONDITION_MUST_BE_BOOLEAN,
+            )
+            return
 
-    #         # Marcar que se esta dentro de un While
-    #         env['$loop'] = True
+        # Marcar que se esta dentro de un While
+        env["$loop"] = True
 
-    #         # Visitar n.body
-    #         for b in n.body:
-    #             b.accept(self, env)
+        # Visitar n.body
+        for stm in n.body:
+            if isinstance(stm, list):
+                self._visit_scope(stm, env, n)
+                continue
 
-    #         # Deshabilitar marca del While
-    #         env['$loop'] = False
+            stm.accept(self, env)
+
+        # Deshabilitar marca del While
+        env["$loop"] = False
 
     #     '''
     # 	def visit(self, n: Union[Break, Continue], env: Symtab):
