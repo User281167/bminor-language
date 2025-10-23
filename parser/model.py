@@ -110,6 +110,16 @@ class Program(Statement):
 
 
 @dataclass
+class BlockStmt(Statement):
+    body: List[Statement]
+    deep = 1
+
+    def __post_init__(self):
+        if not isinstance(self.body, list):
+            self.body = [self.body]
+
+
+@dataclass
 class Declaration(Statement):
     pass
 
@@ -134,6 +144,12 @@ class SimpleType(Type):
 class ArrayType(Type):
     base: Type  # tipo simple o array
     size: Expression = None  # tamaño del array o None = []
+
+    def __str__(self):
+        return f"{self.base}[{self.size}]"
+
+    def __repr__(self):
+        return f"{self.base}[f{self.size}]"
 
 
 @dataclass
@@ -191,6 +207,11 @@ class IfStmt(Statement):
     else_branch: List[Statement] = None
 
     def __post_init__(self):
+        if isinstance(self.then_branch, BlockStmt):
+            self.then_branch = self.then_branch.body
+        if self.else_branch is not None and isinstance(self.else_branch, BlockStmt):
+            self.else_branch = self.else_branch.body
+
         if not isinstance(self.then_branch, list):
             self.then_branch = [self.then_branch]
         if self.else_branch is not None and not isinstance(self.else_branch, list):
@@ -203,6 +224,8 @@ class WhileStmt(Statement):
     body: List[Statement]
 
     def __post_init__(self):
+        if isinstance(self.body, BlockStmt):
+            self.body = self.body.body
         if not isinstance(self.body, list):
             self.body = [self.body]
 
@@ -213,6 +236,8 @@ class DoWhileStmt(Statement):
     condition: Expression
 
     def __post_init__(self):
+        if isinstance(self.body, BlockStmt):
+            self.body = self.body.body
         if not isinstance(self.body, list):
             self.body = [self.body]
 
@@ -225,6 +250,8 @@ class ForStmt(Statement):
     body: List[Statement]
 
     def __post_init__(self):
+        if isinstance(self.body, BlockStmt):
+            self.body = self.body.body
         if not isinstance(self.body, list):
             self.body = [self.body]
 
@@ -265,6 +292,12 @@ class ArrayDecl(Declaration):
     name: str
     type: ArrayType  # tipo de arreglo multi-dimensional
     value: List[Expression] = field(default_factory=list)  # valores iniciales
+
+    def __str__(self):
+        return f"Array(size={self.size}, base={self.base})"
+
+    def __repr__(self):
+        return super().__repr__()
 
 
 @dataclass
@@ -322,6 +355,12 @@ class Literal(Expression):
     value: Union[int, float, str, bool]
     # type: str = None
     type: SimpleType = field(init=False)
+
+    def __str__(self):
+        return str(self.value)
+
+    def __repr__(self):
+        return str(self.value)
 
 
 @dataclass

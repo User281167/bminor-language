@@ -102,6 +102,7 @@ class Parser(sly.Parser):
     @_("stmt")
     def stmt_list(self, p):
         return [p.stmt]
+        # return _L(BlockStmt([p.stmt]), p)
 
     @_("open_stmt")
     @_("closed_stmt")
@@ -253,7 +254,8 @@ class Parser(sly.Parser):
 
     @_("'{' stmt_list '}'")
     def block_stmt(self, p):
-        return p.stmt_list  # ya que stmt_list devuelve una lista de Statement
+        return _L(BlockStmt(p.stmt_list), p)
+        # return p.stmt_list  # ya que stmt_list devuelve una lista de Statement
 
     # Expressions
 

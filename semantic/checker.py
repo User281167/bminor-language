@@ -56,7 +56,7 @@ class Check(Visitor):
                 f"{dec_type} '{n.name!r}' is already defined", n.lineno, defined
             )
 
-    def _visit_scope(self, scope: list, env: Symtab, parent: Node, deep: int = 1):
+    def visit(self, n: BlockStmt, env: Symtab, deep: int = 1):
         """
         Validar scopes de tipo {} que no son body de funciones, if, o bucles, sino que son aislados
 
@@ -76,30 +76,19 @@ class Check(Visitor):
         }
         """
 
-        if not hasattr(parent, "name"):
-            parent.name = str(parent.__class__.__name__)
-
-        lineno = 0
-
-        if hasattr(scope[0], "lineno"):
-            lineno = scope[0].lineno
-        else:
-            lineno = parent.lineno
-
         # Crear una nueva symtab (local) para el scope
         env = Symtab(
-            f"scope {parent.name} line {lineno} - level {deep}",
+            f"scope line {n.lineno} - level {n.deep}",
             env,
         )
-        parent.env = env
+        n.env = env
 
         # Magic variable that references the current scope
-        env["$scope"] = parent
+        env["$scope"] = n
 
-        for stmt in scope:
-            if isinstance(stmt, list):
-                self._visit_scope(stmt, env, parent, deep + 1)
-                continue
+        for stmt in n.body:
+            if isinstance(stmt, BlockStmt):
+                stmt.deep = n.deep + 1
 
             stmt.accept(self, env)
 
@@ -215,9 +204,6 @@ class Check(Visitor):
 
         # Visitar then (branch)
         for stmt in n.then_branch:
-            if isinstance(stmt, list):
-                self._visit_scope(stmt, env, n)
-                continue
 
             stmt.accept(self, env)
 
@@ -273,10 +259,6 @@ class Check(Visitor):
 
         # Visitar n.body
         for stmt in n.body:
-            if isinstance(stmt, list):
-                self._visit_scope(stmt, env, n)
-                continue
-
             stmt.accept(self, env)
 
         env["$loop"] = None
@@ -309,10 +291,6 @@ class Check(Visitor):
 
         # Visitar n.body
         for stm in n.body:
-            if isinstance(stm, list):
-                self._visit_scope(stm, env, n)
-                continue
-
             stm.accept(self, env)
 
         # Deshabilitar marca del While
@@ -342,10 +320,6 @@ class Check(Visitor):
         env["$loop"] = n
 
         for stmt in n.body:
-            if isinstance(stmt, list):
-                self._visit_scope(stmt, env, n)
-                continue
-
             stmt.accept(self, env)
 
         # Marcar que se esta dentro de un While
@@ -432,6 +406,7 @@ class Check(Visitor):
             if func.return_type == SimpleTypes.VOID.value:
                 pass
             elif func.return_type != n.expr.type:
+                print(func.return_type, n.expr.type)
                 self._error(
                     f"Error type. return {func.return_type} != {n.expr.type}",
                     n.lineno,
@@ -710,10 +685,12 @@ class Check(Visitor):
         # Visitar n.stmts
         if n.body:
             for stmt in n.body:
-                if isinstance(stmt, list):
-                    self._visit_scope(stmt, env, n)
-                    continue
                 stmt.accept(self, env)
+
+        if n.return_type.type != SimpleTypes.VOID.value:
+            # buscar si hay retorno return expr;
+            # para verificar su tipo
+            pass
 
         env["$func"] = None
 
@@ -752,6 +729,7 @@ class Check(Visitor):
         # No hay nada que hacer. Los tipos simples son
         # primitivos básicos. Ya tienen un tipo
         # definido en el archivo model.py.
+        n.type = n.name
         pass
 
     def visit(self, n: ArrayType, env: Symtab):
@@ -762,6 +740,7 @@ class Check(Visitor):
         """
 
         n.base.accept(self, env)
+        n.type = n.base
 
         if isinstance(n.base, ArrayType):
             self._error(
@@ -774,6 +753,28 @@ class Check(Visitor):
                 f"Array not supported size in function parameters or return type",
                 n.lineno,
                 SemanticError.ARRAY_NOT_SUPPORTED_SIZE,
+            )
+
+    def visit(self, n: Increment, env: Symtab):
+        n.location.accept(self, env)
+        n.type = n.location.type
+
+        if n.location.type != SimpleTypes.INTEGER.value:
+            self._error(
+                f"Only integers can be incremented",
+                n.lineno,
+                SemanticError.INVALID_INCREMENT,
+            )
+
+    def visit(self, n: Decrement, env: Symtab):
+        n.location.accept(self, env)
+        n.type = n.location.type
+
+        if n.location.type != SimpleTypes.INTEGER.value:
+            self._error(
+                f"Only integers can be decremented",
+                n.lineno,
+                SemanticError.INVALID_DECREMENT,
             )
 
     def visit(self, n: BinOper, env: Symtab):
