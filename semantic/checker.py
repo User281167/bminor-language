@@ -911,6 +911,13 @@ class Check(Visitor):
                 SemanticError.UNDECLARED_VARIABLE,
             )
             return
+        elif isinstance(decl, FuncDecl):
+            self._error(
+                f"Function '{n.name}' used without invocation",
+                n.lineno,
+                SemanticError.FUNCTION_USED_AS_VALUE,
+            )
+            return
 
         # Propaga informacion sobre tipo
         n.type = decl.type

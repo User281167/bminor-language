@@ -80,3 +80,4 @@ class SemanticError(Enum):
 
     INVALID_INCREMENT = "Invalid increment"
     INVALID_DECREMENT = "Invalid decrement"
+    FUNCTION_USED_AS_VALUE = "Function used as value"

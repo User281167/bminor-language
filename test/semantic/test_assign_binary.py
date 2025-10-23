@@ -92,3 +92,6 @@ class TestAssignmentBinary(unittest.TestCase):
         self.assertIsNotNone(decl)
         self.assertIsInstance(decl.value, BinOper)
         self.assertFalse(errors_detected())
+
+    def test_pow(self):
+        self.assertBinary("x: integer = 2 ^ 3;", "integer", "^", Integer, Integer)

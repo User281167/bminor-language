@@ -33,6 +33,7 @@ _bin_ops = {
     ("integer", "*", "integer"): "integer",
     ("integer", "/", "integer"): "integer",
     ("integer", "%", "integer"): "integer",
+    ("integer", "^", "integer"): "integer",
     # ('integer', '=', 'integer'): 'integer',
     ("integer", "<", "integer"): "boolean",
     ("integer", "<=", "integer"): "boolean",
@@ -74,7 +75,7 @@ _bin_ops = {
 _unary_ops = {
     ("+", "integer"): "integer",
     ("-", "integer"): "integer",
-    # ('^', 'integer'): 'integer',
+    # ("^", "integer"): "integer",
     ("+", "float"): "float",
     ("-", "float"): "float",
     ("!", "boolean"): "boolean",

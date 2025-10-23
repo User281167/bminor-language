@@ -49,7 +49,7 @@ class TestPrintErrors(unittest.TestCase):
         }
 
         main: function void() = {
-            print doSomething;
+            print doSomething();
         }
         """
         self.assertError(code, SemanticError.PRINT_VOID_EXPRESSION)
