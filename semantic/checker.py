@@ -10,13 +10,12 @@
 # A medida que agregue código, piense en cómo podría probarlo.
 # '''
 from parser.model import *
-from typing import List, Union
 
 from utils import error
 
 from .semantic_error import SemanticError
 from .symtab import Symtab
-from .typesys import CheckError, check_binop, check_unaryop, typenames
+from .typesys import CheckError, check_binop, check_unaryop
 
 
 class Check(Visitor):
@@ -52,7 +51,7 @@ class Check(Visitor):
         except Symtab.SymbolDefinedError as ex:
             self._error(f"{dec_type} {n.name!r} is already defined", n.lineno, defined)
 
-    def visit(self, n: BlockStmt, env: Symtab, deep: int = 1):
+    def visit(self, n: BlockStmt, env: Symtab):
         """
         Validar scopes de tipo {} que no son body de funciones, if, o bucles, sino que son aislados
 
@@ -732,7 +731,7 @@ class Check(Visitor):
         """ "
         ArrayDecl y ArrayLoc verifican inicialización o index
         ArrayTpe verifica tipos de parámetros o retorno en funciones
-        No se acepta que tenga un tamaño especifico en el parámetro o retorno
+        Se acepta que tenga un tamaño especifico en el parámetro o retorno
         """
 
         n.base.accept(self, env)
@@ -744,12 +743,12 @@ class Check(Visitor):
                 n.lineno,
                 SemanticError.MULTI_DIMENSIONAL_ARRAYS,
             )
-        if n.size:
-            self._error(
-                f"Array not supported size in function parameters or return type",
-                n.lineno,
-                SemanticError.ARRAY_NOT_SUPPORTED_SIZE,
-            )
+        # if n.size:
+        #     self._error(
+        #         f"Array not supported size in function parameters or return type",
+        #         n.lineno,
+        #         SemanticError.ARRAY_NOT_SUPPORTED_SIZE,
+        #     )
 
     def visit(self, n: Increment, env: Symtab):
         n.location.accept(self, env)

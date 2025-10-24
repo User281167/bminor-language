@@ -28,16 +28,6 @@ class TestFunctionDeclarationErrors(unittest.TestCase):
         code = "main: function void(a: void);"
         self.assertSemanticError(code, SemanticError.VOID_PARAMETER)
 
-    # ❌ Array con tamaño como parámetro
-    def test_array_param_with_size(self):
-        code = "main: function void(a: array [10] integer);"
-        self.assertSemanticError(code, SemanticError.ARRAY_NOT_SUPPORTED_SIZE)
-
-    # ❌ Array con tamaño como retorno
-    def test_array_return_with_size(self):
-        code = "main: function array [5] integer();"
-        self.assertSemanticError(code, SemanticError.ARRAY_NOT_SUPPORTED_SIZE)
-
     # ❌ Array multidimensional como parámetro
     def test_multidimensional_array_param(self):
         code = "main: function void(a: array [] array [] integer);"
@@ -58,11 +48,6 @@ class TestFunctionDeclarationErrors(unittest.TestCase):
     def test_void_param_and_array_return(self):
         code = "main: function array [] integer(a: void);"
         self.assertSemanticError(code, SemanticError.VOID_PARAMETER)
-
-    # ❌ Array con tamaño como parámetro y retorno
-    def test_array_size_param_and_return(self):
-        code = "main: function array [4] integer(a: array [2] integer);"
-        self.assertSemanticError(code, SemanticError.ARRAY_NOT_SUPPORTED_SIZE)
 
     # ❌ Array multidimensional como parámetro y retorno
     def test_array_nested_param_and_return(self):

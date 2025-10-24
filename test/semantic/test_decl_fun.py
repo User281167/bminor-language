@@ -3,8 +3,8 @@ from parser import Parser
 from parser.model import *
 
 from scanner import Lexer
-from semantic.checker import Check, SemanticError
-from utils import clear_errors, error, errors_detected, has_error
+from semantic.checker import Check
+from utils import clear_errors, errors_detected
 
 
 class TestFunctionDeclarations(unittest.TestCase):
@@ -98,4 +98,19 @@ class TestFunctionDeclarations(unittest.TestCase):
         self.assertIsInstance(param.type, ArrayType)
         self.assertEqual(param.type.base.name, "integer")
         self.assertIn("arr", func.env)
+        self.assertFalse(errors_detected())
+
+    def test_array_size_param_and_return(self):
+        code = "main: function array [4] integer(a: array [2] integer);"
+        self.semantic(code)
+        self.assertFalse(errors_detected())
+
+    def test_array_return_with_size(self):
+        code = "main: function array [5] integer();"
+        self.semantic(code)
+        self.assertFalse(errors_detected())
+
+    def test_array_param_with_size(self):
+        code = "main: function void(a: array [10] integer);"
+        self.semantic(code)
         self.assertFalse(errors_detected())
