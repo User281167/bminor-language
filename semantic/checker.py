@@ -48,13 +48,9 @@ class Check(Visitor):
         try:
             env.add(n.name, n)
         except Symtab.SymbolConflictError as ex:
-            self._error(
-                f"{dec_type} '{n.name!r}' is already defined", n.lineno, conflict
-            )
+            self._error(f"{dec_type} {n.name!r} is already defined", n.lineno, conflict)
         except Symtab.SymbolDefinedError as ex:
-            self._error(
-                f"{dec_type} '{n.name!r}' is already defined", n.lineno, defined
-            )
+            self._error(f"{dec_type} {n.name!r} is already defined", n.lineno, defined)
 
     def visit(self, n: BlockStmt, env: Symtab, deep: int = 1):
         """
@@ -438,7 +434,7 @@ class Check(Visitor):
 
         if n.type == SimpleTypes.VOID.value:
             self._error(
-                f"Variable '{n.name!r}' has void type",
+                f"Variable {n.name!r} has void type",
                 n.lineno,
                 SemanticError.VOID_VARIABLE,
             )
@@ -492,19 +488,19 @@ class Check(Visitor):
 
         if not value_decl:
             self._error(
-                f"{msg} '{n.name!r}' is not declared",
+                f"{msg} {n.name!r} is not declared",
                 n.lineno,
                 SemanticError.UNDECLARED_VARIABLE,
             )
         elif isinstance(value_decl, ArrayType):
             self._error(
-                f"{msg} '{n.name!r}' must be integer no array type",
+                f"{msg} {n.name!r} must be integer no array type",
                 n.lineno,
                 SemanticError.ARRAY_SIZE_MUST_BE_INTEGER,
             )
         elif value_decl.type != SimpleTypes.INTEGER.value:
             self._error(
-                f"{msg} '{n.name!r}' must be integer no '{value_decl.type.name}'",
+                f"{msg} {n.name!r} must be integer no '{value_decl.type.name}'",
                 n.lineno,
                 SemanticError.ARRAY_SIZE_MUST_BE_INTEGER,
             )
@@ -563,14 +559,14 @@ class Check(Visitor):
         # Multi-dimencionales o void no soportados
         if isinstance(n.type.base, ArrayType):
             self._error(
-                f"Multi-dimensional arrays are not supported '{n.name!r}'",
+                f"Multi-dimensional arrays are not supported {n.name!r}",
                 n.lineno,
                 SemanticError.MULTI_DIMENSIONAL_ARRAYS,
             )
             return
         elif n.type.base == SimpleTypes.VOID.value:
             self._error(
-                f"Array '{n.name!r}' has void type", n.lineno, SemanticError.VOID_ARRAY
+                f"Array {n.name!r} has void type", n.lineno, SemanticError.VOID_ARRAY
             )
             return
 
@@ -582,7 +578,7 @@ class Check(Visitor):
 
             if not loc:
                 self._error(
-                    f"Array size '{n.type.size.name}' is not defined in '{n.name!r}'",
+                    f"Array size '{n.type.size.name}' is not defined in {n.name!r}",
                     n.lineno,
                     SemanticError.UNDECLARED_VARIABLE,
                 )
@@ -590,14 +586,14 @@ class Check(Visitor):
         # Verificar tipo base y size
         if isinstance(n.type.size.type, ArrayType):
             self._error(
-                f"Array size must be integer no array type '{n.name!r}'",
+                f"Array size must be integer no array type {n.name!r}",
                 n.lineno,
                 SemanticError.ARRAY_SIZE_MUST_BE_INTEGER,
             )
             return
         elif n.type.size.type != SimpleTypes.INTEGER.value:
             self._error(
-                f"Array size must be integer no '{n.type.size.type.name}' '{n.name!r}'",
+                f"Array size must be integer no '{n.type.size.type.name}' {n.name!r}",
                 n.lineno,
                 SemanticError.ARRAY_SIZE_MUST_BE_INTEGER,
             )
@@ -617,13 +613,13 @@ class Check(Visitor):
         if size_value is not None:
             if size_value < 0:
                 self._error(
-                    f"Array size for '{n.name!r}' must be positive no '{size_value}'",
+                    f"Array size for {n.name!r} must be positive no '{size_value}'",
                     n.lineno,
                     SemanticError.ARRAY_SIZE_MUST_BE_POSITIVE,
                 )
             elif size_value != len(n.value) and n.value:
                 self._error(
-                    f"Array size in '{n.name!r}' is {size_value} != {len(n.value)}",
+                    f"Array size in {n.name!r} is {size_value} != {len(n.value)}",
                     n.lineno,
                     SemanticError.ARRAY_SIZE_MISMATCH,
                 )
@@ -703,7 +699,7 @@ class Check(Visitor):
 
         if n.type == SimpleTypes.VOID.value:
             self._error(
-                f"Parameter '{n.name!r}' has void type",
+                f"Parameter {n.name!r} has void type",
                 n.lineno,
                 SemanticError.VOID_PARAMETER,
             )
