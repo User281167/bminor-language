@@ -9,3 +9,5 @@ class LexerError(Enum):
     MALFORMED_STRING = "Malformed string"
     MALFORMED_CHAR = "Malformed character literal"
     INVALID_ID = "Invalid identifier"
+
+    TOO_LONG_STRING = "String literal too long"

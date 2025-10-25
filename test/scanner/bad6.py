@@ -192,6 +192,4 @@ Line 2";"""
         """Test string literals exceeding maximum length (255 chars)"""
         long_string = '"' + "a" * 300 + '"'
         log, tokens = self.capture_lexer_log(long_string)
-        self.assertTrue(
-            any(t.type == LexerError.MALFORMED_STRING.value for t in tokens)
-        )
+        self.assertTrue(any(t.type == LexerError.TOO_LONG_STRING.value for t in tokens))

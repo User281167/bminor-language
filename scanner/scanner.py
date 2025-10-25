@@ -16,6 +16,7 @@ Convenciones:
 import logging
 
 import sly
+from rich import print
 
 from .lexer_errors import LexerError
 from .lexer_type import LiteralType, OperatorType, TokenType
@@ -35,14 +36,26 @@ class Lexer(sly.Lexer):
         self.logger = logging.getLogger("lexer")
 
     def log_error(self, error_type, token, message=None):
-        value = token.value[0:5]
+        if not hasattr(self, "_has_lexer_error"):
+            self._has_lexer_error = True
+            print("\n[bold red]Lexer Errors:[/bold red]")
 
-        if "\n" in value:
-            value = value[: value.index("\n")]
-
+        value = token.value[:5].split("\n")[0]
         column = token.index - self.text.rfind("\n", 0, token.index) + 1
-        msg = f"{error_type.value}: {value} {message or ''} at line {token.lineno} column {column}"
+        msg = f"{error_type.value}: '{value}' {message or ''} at line {token.lineno}, column {column}"
         self.logger.error(msg)
+
+        hints = {
+            LexerError.MALFORMED_STRING: "Did you forget to close the string?",
+            LexerError.ILLEGAL_CHARACTER: "Check for unsupported symbols or typos. Only ASCII accepted",
+            LexerError.MALFORMED_CHAR: "Use valid escape sequences or ASCII characters.",
+            LexerError.INVALID_ID: f"Reduce the length of the identifier maximum of {MAX_ID_LENGTH} characters.",
+            LexerError.TOO_LONG_STRING: f"Reduce the length of the string literal maximum of {MAX_ID_LENGTH} characters.",
+        }
+
+        if error_type in hints:
+            print(f"[yellow]Hint:[/yellow] {hints[error_type]}\n")
+
         token.type = error_type.value
         token.value = token.value[0]
         self.index += 1
@@ -115,7 +128,7 @@ class Lexer(sly.Lexer):
     def STRING_LITERAL(self, t):
         if len(t.value) - 2 > MAX_ID_LENGTH:
             return self.log_error(
-                LexerError.MALFORMED_STRING, t, f"exceeds max length of {MAX_ID_LENGTH}"
+                LexerError.TOO_LONG_STRING, t, f"exceeds max length of {MAX_ID_LENGTH}"
             )
         return t
 
@@ -144,18 +157,15 @@ class Lexer(sly.Lexer):
         t.value = int(t.value)
         return t
 
-    def error(self, t):
-        char = t.value[0]
-
+    def classify_lexer_error(self, char):
         if char in [lit.value for lit in LiteralType] or char == ".":
-            error_type = LexerError.UNEXPECTED_TOKEN
-        elif char == "'":
-            error_type = LexerError.MALFORMED_CHAR
-        elif char == "\\":
-            error_type = LexerError.MALFORMED_CHAR
-        elif char == '"':
-            error_type = LexerError.MALFORMED_STRING
-        else:
-            error_type = LexerError.ILLEGAL_CHARACTER
+            return LexerError.UNEXPECTED_TOKEN
+        if char in ("'", "\\"):
+            return LexerError.MALFORMED_CHAR
+        if char == '"':
+            return LexerError.MALFORMED_STRING
+        return LexerError.ILLEGAL_CHARACTER
 
+    def error(self, t):
+        error_type = self.classify_lexer_error(t.value[0])
         return self.log_error(error_type, t)
