@@ -24,9 +24,9 @@ def error(message, lineno=None, error_type=None):
     if error_type:
         _errors.append(error_type)
     if lineno:
-        print(f"{lineno}: [red]{message}[/red]")
+        print(f"  {lineno}: [red]{message}[/red]")
     else:
-        print(f"[red]{message}[/red]")
+        print(f"  [red]{message}[/red]")
 
     _errors_detected += 1
 

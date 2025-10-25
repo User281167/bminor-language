@@ -11,6 +11,8 @@
 # '''
 from parser.model import *
 
+from rich import print
+
 from utils import error
 
 from .semantic_error import SemanticError
@@ -33,7 +35,15 @@ class Check(Visitor):
         return env
 
     def _error(self, msg: str, lineno: int, error_type: SemanticError = None):
-        error(f"{error_type or SemanticError.UNKNOWN}: {msg}", lineno, error_type)
+        if not hasattr(self, "_has_semantic_error"):
+            self._has_semantic_error = True
+            print("\n[bold red]Semantic Errors:[/bold red]")
+
+        error(
+            f"{(error_type or SemanticError.UNKNOWN).value}{':' if msg else ''} {msg}",
+            lineno,
+            error_type,
+        )
 
     def _add_to_env(
         self,
@@ -159,7 +169,7 @@ class Check(Visitor):
                 )
             elif isinstance(expr.type, ArrayType):
                 self._error(
-                    f"Cannot print array type",
+                    f"Arrays not allowed in print",
                     n.lineno,
                     SemanticError.PRINT_ARRAY_NOT_ALLOWED,
                 )
@@ -170,21 +180,21 @@ class Check(Visitor):
 
         if isinstance(n.condition, ArrayType):
             self._error(
-                f"Condition must be boolean. Got {n.condition.type.name}",
+                f"Got {n.condition.type.name}",
                 n.lineno,
                 SemanticError.IF_CONDITION_MUST_BE_BOOLEAN,
             )
             return
         elif isinstance(n.condition.type, ArrayType):
             self._error(
-                f"Condition must be boolean. Got array type",
+                f"Got array type",
                 n.lineno,
                 SemanticError.IF_CONDITION_MUST_BE_BOOLEAN,
             )
             return
         elif n.condition.type != SimpleTypes.BOOLEAN.value:
             self._error(
-                f"Condition must be boolean. Got {n.condition.type.name}",
+                f"Got {n.condition.type.name}",
                 n.lineno,
                 SemanticError.IF_CONDITION_MUST_BE_BOOLEAN,
             )
@@ -209,6 +219,29 @@ class Check(Visitor):
 
         env["$if"] = None
 
+    def _check_loop_condition(self, n, env) -> bool:
+        if n is None or n.condition is None:
+            return True
+
+        n.condition.accept(self, env)
+
+        if isinstance(n.condition.type, ArrayType):
+            self._error(
+                f"Got array type",
+                n.lineno,
+                SemanticError.LOOP_CONDITION_MUST_BE_BOOLEAN,
+            )
+            return False
+        if n.condition.type != SimpleTypes.BOOLEAN.value:
+            self._error(
+                f"Got {n.condition.type.name}",
+                n.lineno,
+                SemanticError.LOOP_CONDITION_MUST_BE_BOOLEAN,
+            )
+            return False
+
+        return True
+
     def visit(self, n: ForStmt, env: Symtab):
         # Visitar n.init
         """
@@ -225,23 +258,8 @@ class Check(Visitor):
         """
         if n.init:
             n.init.accept(self, env)
-        if n.condition:
-            n.condition.accept(self, env)
-
-            if isinstance(n.condition.type, ArrayType):
-                self._error(
-                    f"Loop condition must be boolean. Got array type",
-                    n.lineno,
-                    SemanticError.LOOP_CONDITION_MUST_BE_BOOLEAN,
-                )
-                return
-            if n.condition.type != SimpleTypes.BOOLEAN.value:
-                self._error(
-                    f"Loop condition must be boolean no {n.condition.type.name}",
-                    n.lineno,
-                    SemanticError.LOOP_CONDITION_MUST_BE_BOOLEAN,
-                )
-                return
+        if not self._check_loop_condition(n, env):
+            return
         if n.update:
             n.update.accept(self, env)
 
@@ -262,19 +280,7 @@ class Check(Visitor):
         if n.condition:
             n.condition.accept(self, env)
 
-        if isinstance(n.condition.type, ArrayType):
-            self._error(
-                f"Loop condition must be boolean. Got array type",
-                n.lineno,
-                SemanticError.LOOP_CONDITION_MUST_BE_BOOLEAN,
-            )
-            return
-        if n.condition.type != SimpleTypes.BOOLEAN.value:
-            self._error(
-                f"Loop condition must be boolean. Got {n.condition.type.name}",
-                n.lineno,
-                SemanticError.LOOP_CONDITION_MUST_BE_BOOLEAN,
-            )
+        if not self._check_loop_condition(n, env):
             return
 
         # Nueva symtab (local) para while
@@ -294,19 +300,7 @@ class Check(Visitor):
     def visit(self, n: DoWhileStmt, env: Symtab):
         n.condition.accept(self, env)
 
-        if isinstance(n.condition.type, ArrayType):
-            self._error(
-                f"Loop condition must be boolean. Got array type",
-                n.lineno,
-                SemanticError.LOOP_CONDITION_MUST_BE_BOOLEAN,
-            )
-            return
-        if n.condition.type != SimpleTypes.BOOLEAN.value:
-            self._error(
-                f"Loop condition must be boolean. Got {n.condition.type.name}",
-                n.lineno,
-                SemanticError.LOOP_CONDITION_MUST_BE_BOOLEAN,
-            )
+        if not self._check_loop_condition(n, env):
             return
 
         # Crear una nueva symtab (local) para do-while
@@ -333,7 +327,7 @@ class Check(Visitor):
         # Verificar que esta dentro de un ciclo
         if "$loop" not in self._search_env_name(env, "$loop"):
             self._error(
-                f"'Continue' is outside a loop",
+                f"",
                 n.lineno,
                 SemanticError.CONTINUE_OUT_OF_LOOP,
             )
@@ -342,7 +336,7 @@ class Check(Visitor):
         # Verificar que esta dentro de un ciclo
         if "$loop" not in self._search_env_name(env, "$loop"):
             self._error(
-                f"'Break' is outside a loop",
+                f"",
                 n.lineno,
                 SemanticError.BREAK_OUT_OF_LOOP,
             )
@@ -370,7 +364,7 @@ class Check(Visitor):
         # Obtener la función actual
         if "$func" not in self._search_env_name(env, "$func"):
             self._error(
-                f"'Return' is outside a function",
+                f"",
                 n.lineno,
                 SemanticError.RETURN_OUT_OF_FUNCTION,
             )
@@ -379,14 +373,14 @@ class Check(Visitor):
 
             if isinstance(n.expr, VarLoc) and not env.get(n.expr.name):
                 self._error(
-                    f"Variable {n.expr.name!r} not defined in current scope",
+                    f"Variable {n.expr.name!r} not defined in current scope {env.name!r}",
                     n.lineno,
                     SemanticError.UNDECLARED_VARIABLE,
                 )
                 return
             elif n.expr is None and func.return_type != SimpleTypes.VOID.value:
                 self._error(
-                    f"'Return' void function must return a value of type {func.return_type!r}",
+                    f"Must return a value of type {func.return_type} in function '{func.name}'",
                     n.lineno,
                     SemanticError.RETURN_IN_VOID_FUNCTION,
                 )
@@ -399,7 +393,7 @@ class Check(Visitor):
                 and n.expr.type != SimpleTypes.VOID.value
             ):
                 self._error(
-                    f"'Return' in void function",
+                    f"Expected 'return;' got 'return {n.expr.type}'",
                     n.lineno,
                     SemanticError.RETURN_IN_VOID_FUNCTION,
                 )
@@ -415,7 +409,7 @@ class Check(Visitor):
                 pass
             elif func.return_type != n.expr.type:
                 self._error(
-                    f"Error type. return {func.return_type} != {n.expr.type}",
+                    f"return {func.return_type} != {n.expr.type}",
                     n.lineno,
                     SemanticError.RETURN_TYPE_MISMATCH,
                 )
@@ -570,7 +564,7 @@ class Check(Visitor):
         # Multi-dimencionales o void no soportados
         if isinstance(n.type.base, ArrayType):
             self._error(
-                f"Multi-dimensional arrays are not supported {n.name!r}",
+                f"{n.name!r}",
                 n.lineno,
                 SemanticError.MULTI_DIMENSIONAL_ARRAYS,
             )
@@ -597,14 +591,14 @@ class Check(Visitor):
         # Verificar tipo base y size
         if isinstance(n.type.size.type, ArrayType):
             self._error(
-                f"Array size must be integer no array type {n.name!r}",
+                f"No array type {n.name!r}",
                 n.lineno,
                 SemanticError.ARRAY_SIZE_MUST_BE_INTEGER,
             )
             return
         elif n.type.size.type != SimpleTypes.INTEGER.value:
             self._error(
-                f"Array size must be integer no '{n.type.size.type.name}' {n.name!r}",
+                f"No '{n.type.size.type.name}' {n.name!r}",
                 n.lineno,
                 SemanticError.ARRAY_SIZE_MUST_BE_INTEGER,
             )
@@ -624,13 +618,13 @@ class Check(Visitor):
         if size_value is not None:
             if size_value < 0:
                 self._error(
-                    f"Array size for {n.name!r} must be positive no '{size_value}'",
+                    f"Size for {n.name!r} is '{size_value}'",
                     n.lineno,
                     SemanticError.ARRAY_SIZE_MUST_BE_POSITIVE,
                 )
             elif size_value != len(n.value) and n.value:
                 self._error(
-                    f"Array size in {n.name!r} is {size_value} != {len(n.value)}",
+                    f"Size in {n.name!r} is {size_value} != {len(n.value)}",
                     n.lineno,
                     SemanticError.ARRAY_SIZE_MISMATCH,
                 )
@@ -751,7 +745,7 @@ class Check(Visitor):
 
         if isinstance(n.base, ArrayType):
             self._error(
-                f"Multidimensional arrays are not supported in function parameters or return type",
+                f"In function parameters or return type",
                 n.lineno,
                 SemanticError.MULTI_DIMENSIONAL_ARRAYS,
             )
@@ -759,7 +753,7 @@ class Check(Visitor):
             n.size and n.size.type != SimpleTypes.INTEGER.value
         ):
             self._error(
-                f"Array size must be integer literal in function parameters or return type",
+                f"Must be integer literal in function parameters or return type",
                 n.lineno,
                 SemanticError.ARRAY_SIZE_MUST_BE_INTEGER,
             )
@@ -1010,14 +1004,14 @@ class Check(Visitor):
 
         if isinstance(n.index.type, ArrayType):
             self._error(
-                f"Array index must be integer, not another array in '{load_arr.name}'",
+                f"Not another array in '{load_arr.name}'",
                 n.lineno,
                 SemanticError.ARRAY_INDEX_MUST_BE_INTEGER,
             )
             return
         if n.index.type != SimpleTypes.INTEGER.value:
             self._error(
-                f"Array index must be integer, not {n.index.type} for array '{load_arr.name}'",
+                f"Not {n.index.type} for array '{load_arr.name}'",
                 n.lineno,
                 SemanticError.ARRAY_INDEX_MUST_BE_INTEGER,
             )
@@ -1039,7 +1033,7 @@ class Check(Visitor):
         if index_value is not None:
             if index_value < 0:
                 self._error(
-                    f"Index {index_value} cannot be negative for array '{load_arr.name}'",
+                    f"Index {index_value} in '{load_arr.name}'",
                     n.lineno,
                     SemanticError.INDEX_MUST_BE_POSITIVE,
                 )
@@ -1092,4 +1086,5 @@ if __name__ == "__main__":
         env = Check.checker(top)
 
         if not errors_detected():
+            env.print()
             env.print()
