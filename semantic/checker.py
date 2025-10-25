@@ -356,6 +356,12 @@ class Check(Visitor):
 
         Si la función retorna void y return no es void entonces se
         produce un error.
+
+        Permitir return de func que retorna array sin tamaño
+            example: function array [] integer(){
+                array [N] integer;
+                return a;
+            }
         """
 
         if not n.expr is None:
@@ -400,8 +406,14 @@ class Check(Visitor):
 
             if func.return_type == SimpleTypes.VOID.value:
                 pass
+            # Permitir cualquier tamaño si return array no tiene tamaño fijo
+            elif (
+                isinstance(func.return_type, ArrayType)
+                and isinstance(n.expr.type, ArrayType)
+                and not func.return_type.size
+            ):
+                pass
             elif func.return_type != n.expr.type:
-                print(func.return_type, n.expr.type)
                 self._error(
                     f"Error type. return {func.return_type} != {n.expr.type}",
                     n.lineno,
@@ -730,7 +742,7 @@ class Check(Visitor):
     def visit(self, n: ArrayType, env: Symtab):
         """ "
         ArrayDecl y ArrayLoc verifican inicialización o index
-        ArrayTpe verifica tipos de parámetros o retorno en funciones
+        ArrayType verifica tipos de parámetros o retorno en funciones
         Se acepta que tenga un tamaño especifico en el parámetro o retorno
         """
 
@@ -742,6 +754,14 @@ class Check(Visitor):
                 f"Multidimensional arrays are not supported in function parameters or return type",
                 n.lineno,
                 SemanticError.MULTI_DIMENSIONAL_ARRAYS,
+            )
+        elif isinstance(n.size, VarLoc) or (
+            n.size and n.size.type != SimpleTypes.INTEGER.value
+        ):
+            self._error(
+                f"Array size must be integer literal in function parameters or return type",
+                n.lineno,
+                SemanticError.ARRAY_SIZE_MUST_BE_INTEGER,
             )
         # if n.size:
         #     self._error(
@@ -848,6 +868,22 @@ class Check(Visitor):
     # 	'''
 
     def visit(self, n: FuncCall, env: Symtab):
+        """
+        Visitar una llamada a función.
+
+        Verificar si la función existe y tiene el tipo de retorno
+        correcto. Luego, verificar si el número de argumentos y
+        sus tipos coinciden con los parámetros de la función.
+
+        si un parámetro es array [] se le puede pasar un array [N]
+
+        Si la función no existe, se produce un error.
+        Si el número de argumentos no coincide con el número
+        de parámetros, se produce un error.
+        Si los tipos de argumentos no coinciden con los tipos
+        de parámetros, se produce un error.
+        """
+
         func = env.get(n.name)
 
         if func is None:
@@ -881,7 +917,14 @@ class Check(Visitor):
         for pos, (parm, arg) in enumerate(zip(func.params, n.args), 1):
             arg.accept(self, env)
 
-            if parm.type != arg.type:
+            if (
+                isinstance(arg.type, ArrayType)
+                and isinstance(parm.type, ArrayType)
+                and not parm.type.size
+                and arg.type.base == parm.type.base
+            ):
+                continue
+            elif parm.type != arg.type:
                 self._error(
                     f"Function {n.name!r} parameter {pos}. expected {parm.type} given {arg.type}",
                     arg.lineno,

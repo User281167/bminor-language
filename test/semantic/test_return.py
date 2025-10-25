@@ -132,3 +132,25 @@ class TestReturn(unittest.TestCase):
         self.assertFalse(errors_detected())
         func = env.get("get_value")
         self.assertEqual(func.return_type.name, "integer")
+
+    def test_return_array_without_size(self):
+        code = """
+        main: function array[] integer() = {
+            x: array[3] integer = {1, 2, 3};
+            return x;
+        }
+        """
+
+        self.semantic(code)
+        self.assertFalse(errors_detected())
+
+    def test_return_array_with_size(self):
+        code = """
+        main: function array[3] integer() = {
+            x: array[3] integer = {1, 2, 3};
+            return x;
+        }
+        """
+
+        self.semantic(code)
+        self.assertFalse(errors_detected())

@@ -3,14 +3,15 @@ from parser import Parser
 from parser.model import *
 
 from scanner import Lexer
-from semantic.checker import Check, SemanticError
-from utils import clear_errors, errors_detected, has_error
+from semantic.checker import Check
+from utils import clear_errors, errors_detected
 
 
 class TestFuncCall(unittest.TestCase):
     def setUp(self):
         self.lexer = Lexer()
         self.parser = Parser()
+        clear_errors()
 
     def semantic(self, code):
         tokens = self.lexer.tokenize(code)
@@ -77,3 +78,17 @@ class TestFuncCall(unittest.TestCase):
         env = self.semantic(code)
         decl = env.get("a")
         self.assertEqual(decl.type.name, "integer")
+
+    def test_func_call_array_size(self):
+        code = """
+        SIZE: integer = 1;
+        numbers: array [SIZE] integer = {0};
+
+        find_max: function integer (arr: array [] integer, size: integer);
+
+        main: function integer () = {
+            max: integer = find_max(numbers, SIZE);
+        }
+        """
+        self.semantic(code)
+        self.assertFalse(errors_detected())

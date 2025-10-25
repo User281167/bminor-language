@@ -53,3 +53,7 @@ class TestFunctionDeclarationErrors(unittest.TestCase):
     def test_array_nested_param_and_return(self):
         code = "main: function array [] array [] integer(a: array [] array [] integer);"
         self.assertSemanticError(code, SemanticError.MULTI_DIMENSIONAL_ARRAYS)
+
+    def test_array_size_with_var(self):
+        code = "x: integer; main: function void(a: array [x] integer);"
+        self.assertSemanticError(code, SemanticError.ARRAY_SIZE_MUST_BE_INTEGER)
