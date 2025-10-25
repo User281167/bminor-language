@@ -5,7 +5,7 @@ import sly
 from rich import print
 
 from scanner import Lexer
-from utils import error, errors_detected
+from utils import error
 
 from .model import *
 from .parser_errors import ParserError
@@ -448,13 +448,7 @@ class Parser(sly.Parser):
     @_("STRING")
     @_("VOID")
     def type_simple(self, p):
-        # return p[0]
         return _L(SimpleType(p[0].lower()), p)
-
-    # @_("ARRAY '[' ']' type_simple")
-    # @_("ARRAY '[' ']' type_array")
-    # def type_array(self, p):
-    #     ...
 
     @_("ARRAY index type_simple")
     def type_array_sized(self, p):
@@ -511,6 +505,10 @@ class Parser(sly.Parser):
         return None
 
     def error(self, p):
+        if not hasattr(self, "_has_parser_error"):
+            self._has_parser_error = True
+            print("\n[bold red]Syntax Errors:[/bold red]")
+
         lineno = p.lineno if p else "EOF"
         value = repr(p.value) if p else "EOF"
 
@@ -531,7 +529,7 @@ class Parser(sly.Parser):
             error(message, lineno, error_type)
             return
 
-        from scanner import Lexer, TokenType
+        from scanner import Lexer
 
         # Clasificación de errores
         if p.value in "&|~":
@@ -595,15 +593,14 @@ class Parser(sly.Parser):
             message = f"{error_type.value} near {value}"
         elif p.value in [t.lower() for t in Lexer.tokens]:
             error_type = ParserError.UNEXPECTED_TOKEN
-            message = f"{error_type.value} near {value}"
+            message = f"{error_type.value} {value}"
         elif p.type == "ID":
             error_type = ParserError.UNEXPECTED_IDENTIFIER
-            message = f"{error_type.value} near {value}"
+            message = f"{error_type.value} {value}"
         else:
             error_type = ParserError.SYNTAX_ERROR
-            message = f"at {value}"
+            message = f"Unexpected {error_type.value} at {value}"
 
-        message = f"Syntax error: {message} at line {lineno}"
         error(message, lineno, error_type)
 
 
