@@ -12,27 +12,57 @@ from parser import Parser
 
 from scanner import Lexer
 from semantic import Check
-from utils import errors_detected
+from utils import clear_errors, errors_detected
 
 print("Ejecutando run_bminor_test.py...")
 
 # Ruta absoluta relativa al script
 base_dir = os.path.dirname(__file__)
-pattern = os.path.join(base_dir, "typechecker", "good*.bminor")
-files = glob.glob(pattern)
 
-print("Archivos encontrados:", len(files))
 
-for file in files:
-    print("Ejecutando", file)
+def run_good():
+    pattern = os.path.join(base_dir, "typechecker", "good*.bminor")
+    files = glob.glob(pattern)
 
-    with open(file) as f:
-        code = f.read()
+    print("Archivos encontrados:", len(files))
 
-    tokens = Lexer().tokenize(code)
-    ast = Parser().parse(tokens)
-    env = Check.checker(ast)
+    for file in files:
+        print("Ejecutando", file)
 
-    if errors_detected():
-        print("Errores detectados en", file)
-        sys.exit(1)
+        with open(file) as f:
+            code = f.read()
+
+        tokens = Lexer().tokenize(code)
+        ast = Parser().parse(tokens)
+        env = Check.checker(ast)
+
+        if errors_detected():
+            print("Errores detectados en", file)
+            sys.exit(1)
+
+
+def run_bad():
+    pattern = os.path.join(base_dir, "typechecker", "bad*.bminor")
+    files = glob.glob(pattern)
+
+    print("Archivos encontrados:", len(files))
+
+    for file in files:
+        print("Ejecutando", file)
+
+        with open(file) as f:
+            code = f.read()
+
+        tokens = Lexer().tokenize(code)
+        ast = Parser().parse(tokens)
+        env = Check.checker(ast)
+
+        if not errors_detected():
+            print("Errores detectados en", file)
+            sys.exit(1)
+
+        clear_errors()
+
+
+run_good()
+run_bad()
