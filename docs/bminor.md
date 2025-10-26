@@ -276,6 +276,8 @@ for_stmt_closed ::= for_header closed_stmt
 /* Simple statements are not recursive */
 simple_stmt ::= print_stmt
     | return_stmt
+    | break_stmt
+    | continue_stmt
     | block_stmt
     | decl
     | expr ';'
@@ -283,6 +285,10 @@ simple_stmt ::= print_stmt
 print_stmt ::= 'PRINT' opt_expr_list ';'
 
 return_stmt ::= 'RETURN' opt_expr ';'
+
+break_stmt ::= 'BREAK' ';'
+
+continue_stmt ::= 'CONTINUE' ';'
 
 block_stmt ::= '{' stmt_list '}'
 

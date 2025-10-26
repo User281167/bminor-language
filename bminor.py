@@ -3,14 +3,14 @@ import os
 import re
 import sys
 import unittest
-from parser import Parser
+from parser import ASTPrinter, Parser
 
 import rich
 from rich.table import Table
 
 from scanner import Lexer
 from semantic import Check
-from utils import print_json, save_ast_to_json
+from utils import print_json
 
 
 def run_scan(filename):
@@ -68,6 +68,15 @@ def run_parser(filename):
                 print(ast)
             if "--pretty" in sys.argv:
                 ast.pretty()
+            if "--graph" in sys.argv:
+                dot = ASTPrinter.render(ast)
+
+                if "-svg" in sys.argv:
+                    dot.format = "svg"
+                else:
+                    dot.format = "png"
+
+                dot.render(filename + "_ast", view=False)
         except Exception as e:
             print(e)
             sys.exit(1)
@@ -130,7 +139,7 @@ if __name__ == "__main__":
             "Usage: bminor.py --scan|--parser|--semantic [test | filename.bminor | test/.../*.py]"
         )
         print("Example: bminor.py --scan test/scanner/good1.bminor")
-        print("\nparser flags: --print | --pretty | --json")
+        print("\nparser flags: --print | --pretty | --json | --graph")
         print("Example: bminor.py --parser code.bminor --json")
         print("\nscan flags: --table")
         print("Example: bminor.py --scan code.bminor --table")

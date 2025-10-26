@@ -48,6 +48,15 @@ class ASTPrinter(Visitor):
         self.dot.node(name, label=f"type:{n.name}")
         return name
 
+    def visit(self, n: BlockStmt):
+        name = self.name
+        self.dot.node(name, label=f"Block")
+
+        for value in n.body:
+            self.dot.edge(name, value.accept(self))
+
+        return name
+
     def visit(self, n: VarDecl):
         name = self.name
         self.dot.node(name, label=f"VarDecl\n{n.name}")
@@ -194,6 +203,16 @@ class ASTPrinter(Visitor):
         for expr in n.expr:
             self.dot.edge(name, expr.accept(self), label="arg")
 
+        return name
+
+    def visit(self, n: ContinueStmt):
+        name = self.name
+        self.dot.node(name, label="Continue")
+        return name
+
+    def visit(self, n: BreakStmt):
+        name = self.name
+        self.dot.node(name, label="Break")
         return name
 
     def visit(self, n: ForStmt):

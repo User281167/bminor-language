@@ -1,9 +1,8 @@
-from parser import Parser
-from parser.model import *
-
-from astprint import ASTPrinter
-
 from scanner import Lexer
+
+from .astprint import ASTPrinter
+from .model import *
+from .parser import Parser
 
 
 def save_graph_svg(code: str, path: str):
