@@ -131,23 +131,14 @@ class Check(Visitor):
 
         if n.location.type != n.value.type:
             name = None
-            loc_type = None
-            value_type = None
 
             if isinstance(n.location, VarLoc):
                 name = "variable " + n.location.name
             elif isinstance(n.location, ArrayLoc):
                 name = "array " + n.location.array.name
 
-            if isinstance(n.location.type, ArrayType):
-                loc_type = "array"
-            else:
-                loc_type = n.location.type
-
-            if isinstance(n.value.type, ArrayType):
-                value_type = "array"
-            else:
-                value_type = n.value.type
+            loc_type = n.location.type
+            value_type = n.value.type
 
             self._error(
                 f"Assignment {loc_type} != {value_type} in {name!r}",
