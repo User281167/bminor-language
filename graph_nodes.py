@@ -1,8 +1,8 @@
-from scanner import Lexer
+from parser.astprint import ASTPrinter
+from parser.model import *
+from parser.parser import Parser
 
-from .astprint import ASTPrinter
-from .model import *
-from .parser import Parser
+from scanner import Lexer
 
 
 def save_graph_svg(code: str, path: str):
@@ -118,6 +118,9 @@ if __name__ == "__main__":
     save_graph_svg(
         "x: integer = !1 + -2 * 3 / 4 % 5 - 6;", UnaryOper.__name__ + "_unary"
     )
+
+    # auto
+    save_graph_svg("x: auto = 1;", AutoDecl.__name__ + "_auto")
 
     # sieve
     with open("./bminor-examples/sieve.bminor", encoding="utf-8") as f:
