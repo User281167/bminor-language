@@ -66,6 +66,28 @@ class Parser(sly.Parser):
     def decl_init(self, p):
         return _L(VarDecl(name=p.ID, type=p.type_simple, value=p.expr), p)
 
+    @_("ID ':' AUTO '=' expr ';'")
+    def decl_init(self, p):
+        return _L(
+            AutoDecl(name=p.ID, type=SimpleTypes.UNDEFINED.value, value=p.expr), p
+        )
+
+    @_("ID ':' AUTO error")
+    def decl_init(self, p):
+        error(
+            f"Auto need to be initialized with a value",
+            p.lineno,
+            ParserError.UNEXPECTED_TOKEN,
+        )
+        return _L(
+            AutoDecl(
+                name=p.ID,
+                type=SimpleTypes.UNDEFINED.value,
+                value=SimpleTypes.UNDEFINED.value,
+            ),
+            p,
+        )
+
     @_("ID ':' type_array_sized '=' '{' opt_expr_list '}' ';'")
     def decl_init(self, p):
         # type_array_sized.size ya contiene la expresión del índice en el modelo ArrayType

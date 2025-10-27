@@ -137,6 +137,9 @@ class Check(Visitor):
             elif isinstance(n.location, ArrayLoc):
                 name = "array " + n.location.array.name
 
+            if isinstance(n, AutoDecl):
+                name = "auto " + n.name
+
             loc_type = n.location.type
             value_type = n.value.type
 
@@ -723,6 +726,28 @@ class Check(Visitor):
         # definido en el archivo model.py.
         n.type = n.name
         pass
+
+    def visit(self, n: AutoDecl, env: Symtab):
+        # visitar primero la expresión para obtener el tipo
+        n.value.accept(self, env)
+        n.type = n.value.type
+        self._add_to_env(
+            n,
+            env,
+            "VarDecl",
+            SemanticError.REDEFINE_VARIABLE_TYPE,
+            SemanticError.REDEFINE_VARIABLE,
+        )
+
+        if (
+            n.value.type == SimpleTypes.UNDEFINED.value
+            or n.value.type == SimpleTypes.VOID.value
+        ):
+            self._error(
+                f"Variable {n.name!r} has undefined or void type",
+                n.lineno,
+                SemanticError.UNDEFINED_FUNCTION,
+            )
 
     def visit(self, n: ArrayType, env: Symtab):
         """ "

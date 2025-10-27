@@ -238,6 +238,7 @@ decl ::= 'ID' ':' type_simple ';'
 decl_init ::= 'ID' ':' type_simple '=' expr ';'
     | 'ID' ':' type_array_sized '=' '{' opt_expr_list '}' ';'
     | 'ID' ':' type_func '=' '{' opt_stmt_list '}'
+    | 'ID' ':' 'AUTO' '=' expr ';'
 
 /* Statements */
 

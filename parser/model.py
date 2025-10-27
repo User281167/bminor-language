@@ -165,6 +165,11 @@ class VarDecl(Declaration):
     value: Optional[Expression] = None
 
 
+@dataclass
+class AutoDecl(VarDecl):
+    pass
+
+
 """
 Statement
     -- VarParm
