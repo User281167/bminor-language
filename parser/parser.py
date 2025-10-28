@@ -68,9 +68,14 @@ class Parser(sly.Parser):
 
     @_("ID ':' AUTO '=' expr ';'")
     def decl_init(self, p):
-        return _L(
-            AutoDecl(name=p.ID, type=SimpleTypes.UNDEFINED.value, value=p.expr), p
-        )
+        return _L(AutoDecl(name=p.ID, value=p.expr), p)
+
+    @_("ID ':' AUTO '=' '{' opt_expr_list '}' ';'")
+    def decl_init(self, p):
+        # return _L(
+        #     ArrayDecl(name=p.ID, type=p.opt_expr_list[0].type, value=p.opt_expr_list), p
+        # )
+        return _L(AutoDecl(name=p.ID, value=p.opt_expr_list), p)
 
     @_("ID ':' AUTO error")
     def decl_init(self, p):
@@ -82,7 +87,6 @@ class Parser(sly.Parser):
         return _L(
             AutoDecl(
                 name=p.ID,
-                type=SimpleTypes.UNDEFINED.value,
                 value=SimpleTypes.UNDEFINED.value,
             ),
             p,

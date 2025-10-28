@@ -127,6 +127,12 @@ class Check(Visitor):
             and isinstance(n.value.type, ArrayType)
             and not n.value.type.size
         ):
+            if n.location.type.base != n.value.type.base:
+                self._error(
+                    f"Assignment {n.location.type} != {n.value.type} in {n.location.name!r}",
+                    n.lineno,
+                    SemanticError.MISMATCH_ASSIGNMENT,
+                )
             return
 
         if n.location.type != n.value.type:
@@ -729,8 +735,40 @@ class Check(Visitor):
 
     def visit(self, n: AutoDecl, env: Symtab):
         # visitar primero la expresión para obtener el tipo
-        n.value.accept(self, env)
-        n.type = n.value.type
+        if isinstance(n.value, list):
+            for item in n.value:
+                item.accept(self, env)
+
+                if item.type in (SimpleTypes.UNDEFINED.value, SimpleTypes.VOID.value):
+                    self._error(
+                        f"Declaration {n.name!r} has undefined or void type",
+                        n.lineno,
+                        SemanticError.UNDEFINED_FUNCTION,
+                    )
+                    break
+                elif n.type == SimpleTypes.UNDEFINED.value:
+                    n.type = ArrayType(item.type, len(n.value))
+                elif n.type.base != item.type:
+                    self._error(
+                        f"Declaration array {n.name!r} has type {n.type.base} != {item.type}",
+                        n.lineno,
+                        SemanticError.MISMATCH_ARRAY_ASSIGNMENT,
+                    )
+                    break
+        else:
+            n.value.accept(self, env)
+            n.type = n.value.type
+
+            if (
+                n.value.type == SimpleTypes.UNDEFINED.value
+                or n.value.type == SimpleTypes.VOID.value
+            ):
+                self._error(
+                    f"Variable {n.name!r} has undefined or void type",
+                    n.lineno,
+                    SemanticError.UNDEFINED_FUNCTION,
+                )
+
         self._add_to_env(
             n,
             env,
@@ -738,16 +776,6 @@ class Check(Visitor):
             SemanticError.REDEFINE_VARIABLE_TYPE,
             SemanticError.REDEFINE_VARIABLE,
         )
-
-        if (
-            n.value.type == SimpleTypes.UNDEFINED.value
-            or n.value.type == SimpleTypes.VOID.value
-        ):
-            self._error(
-                f"Variable {n.name!r} has undefined or void type",
-                n.lineno,
-                SemanticError.UNDEFINED_FUNCTION,
-            )
 
     def visit(self, n: ArrayType, env: Symtab):
         """ "
@@ -950,7 +978,7 @@ class Check(Visitor):
     def check(self, n: VarLoc, env: Symtab):
         # Verificar si n.name existe symtab
         decl = env.get(n.name)
-        n.type = SimpleTypes.UNDEFINED
+        n.type = SimpleTypes.UNDEFINED.value
 
         if not decl:
             self._error(
@@ -1102,5 +1130,4 @@ if __name__ == "__main__":
         env = Check.checker(top)
 
         if not errors_detected():
-            env.print()
             env.print()
