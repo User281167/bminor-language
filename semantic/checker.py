@@ -688,11 +688,22 @@ class Check(Visitor):
             for stmt in n.body:
                 stmt.accept(self, env)
 
-        if n.return_type.type != SimpleTypes.VOID.value:
+        if n.return_type != SimpleTypes.VOID.value and not n.body is None:
             # buscar si hay retorno return expr;
-            # para verificar su tipo
-            pass
+            # alerta si no hay o hay más de un return por defecto
+            stms = filter(lambda stmt: isinstance(stmt, ReturnStmt), n.body)
+            stms = list(stms)
 
+            if not stms:
+                print(
+                    f"\n[bold yellow]Warning: Function {n.name!r} has no an default return statement[/bold yellow]"
+                )
+            elif len(stms) > 1:
+                print(
+                    f"\n[bold yellow]Warning: Function {n.name!r} has more than one default return statement[/bold yellow]"
+                )
+
+        # Eliminar la referencia a la función actual
         env["$func"] = None
 
     def visit(self, n: Param, env: Symtab):
