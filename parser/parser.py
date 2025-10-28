@@ -53,7 +53,7 @@ class Parser(sly.Parser):
                 name=p.ID,
                 return_type=p.type_func.return_type,
                 params=p.type_func.param_types,
-                body=[],
+                body=None,
             ),
             p,
         )

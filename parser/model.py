@@ -337,7 +337,8 @@ class FuncDecl(Declaration):
     name: str
     return_type: Type
     params: List[Param] = field(default_factory=list)
-    body: List[Statement] = field(default_factory=list)
+    # body: List[Statement] = field(default_factory=list)
+    body: Optional[List[Statement]] = None
 
 
 # Expresiones
