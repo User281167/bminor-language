@@ -27,12 +27,57 @@ class Check(Visitor):
 
         # Crear una nueva tabla de simbolos
         env = Symtab("global")
+        checker._inject_fun_builtins(env)
 
         # Visitar todas las declaraciones
         for decl in n.body:
             decl.accept(checker, env)
 
         return env
+
+    def _inject_fun_builtins(self, env: Symtab):
+        """
+        Inyectar las funciones predefinidas por el lenguaje en la tabla de
+        símbolos.  Esto es para no tener que hacer nuevos tokens y redefinir
+        la gramática. Las funciones
+        """
+
+        array_length = FuncDecl(
+            name="array_length",
+            return_type=SimpleTypes.INTEGER.value,
+            params=[
+                Param("array", ArrayType(base=SimpleTypes.UNDEFINED.value, size=None))
+            ],
+            body=[],  # para evitar redefinir la función
+        )
+        env.add(array_length.name, array_length)
+
+    def _check_fun_call_builtins(self, n: FuncCall, env: Symtab) -> bool:
+        if n.name != "array_length":
+            return False
+
+        n.type = SimpleTypes.INTEGER.value
+
+        # verificar que tenga solo un parámetro y que sea array de cualquier tipo
+        if len(n.args) != 1:
+            self._error(
+                f"Expected 1 argument, but got {len(n.args)} for function {n.name!r}",
+                n.lineno,
+                SemanticError.WRONG_NUMBER_OF_ARGUMENTS,
+            )
+            return True
+
+        arg = n.args[0]
+        arg.accept(self, env)
+
+        if hasattr(arg, "type") and not isinstance(arg.type, ArrayType):
+            self._error(
+                f"Expected an array for function {n.name!r} but got '{arg.type}'",
+                n.lineno,
+                SemanticError.MISMATCH_ARGUMENT_TYPE,
+            )
+
+        return True
 
     def _error(self, msg: str, lineno: int, error_type: SemanticError = None):
         if not hasattr(self, "_has_semantic_error"):
@@ -932,6 +977,8 @@ class Check(Visitor):
         Si los tipos de argumentos no coinciden con los tipos
         de parámetros, se produce un error.
         """
+        if self._check_fun_call_builtins(n, env):
+            return
 
         func = env.get(n.name)
 
@@ -943,7 +990,6 @@ class Check(Visitor):
             )
             return
 
-        # La funcion debe ser una Function
         if not isinstance(func, FuncDecl):
             self._error(
                 f"{n.name!r} is not a function", n.lineno, SemanticError.IS_NOT_FUNCTION
