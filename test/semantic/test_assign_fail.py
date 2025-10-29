@@ -52,3 +52,17 @@ class TestAssignmentError(unittest.TestCase):
 
     def test_boolean_from_string(self):
         self.assertMismatch('ok: boolean = "true";')
+
+    def test_multiple_assign(self):
+        code = """
+            a: integer;
+            b: float;
+
+            c: integer = (a = b);
+            d: integer = (a = b) + 2;
+
+            z: integer = a = b = c = 2;
+        """
+        self.semantic(code)
+        self.assertTrue(errors_detected())
+        self.assertTrue(has_error(SemanticError.MISMATCH_ASSIGNMENT))

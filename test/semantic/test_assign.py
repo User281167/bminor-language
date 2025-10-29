@@ -4,6 +4,7 @@ from parser.model import *
 
 from scanner import Lexer
 from semantic.checker import Check
+from utils import errors_detected
 
 
 class TestAssignment(unittest.TestCase):
@@ -95,3 +96,16 @@ class TestAssignment(unittest.TestCase):
         self.assertEqual(decl.type.name, "char")
         self.assertIsInstance(decl.value, Char)
         self.assertEqual(decl.value.value, "\\n")
+
+    def test_multiple_assign(self):
+        code = """
+            a: integer;
+            b: integer;
+
+            c: integer = (a = b);
+            d: integer = (a = b) + 2;
+
+            z: integer = a = b = c = 2;
+        """
+        env = self.semantic(code)
+        self.assertFalse(errors_detected())

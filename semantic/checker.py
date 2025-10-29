@@ -159,6 +159,7 @@ class Check(Visitor):
 
         n.location.accept(self, env)
         n.value.accept(self, env)
+        n.type = n.location.type
 
         # si son arrays verificar que la base sea la misma no importa el tamaño
         # get_data: function array[] integer ();
