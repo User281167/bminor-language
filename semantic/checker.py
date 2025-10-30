@@ -13,7 +13,7 @@ from parser.model import *
 
 from rich import print
 
-from utils import error
+from utils import error, warning
 
 from .semantic_error import SemanticError
 from .symtab import Symtab
@@ -795,12 +795,10 @@ class Check(Visitor):
             stms = list(stms)
 
             if not stms:
-                print(
-                    f"\n[bold yellow]Warning: Function {n.name!r} has no an default return statement[/bold yellow]"
-                )
+                warning(f"Function {n.name!r} has no an default return statement")
             elif len(stms) > 1:
-                print(
-                    f"\n[bold yellow]Warning: Function {n.name!r} has more than one default return statement[/bold yellow]"
+                warning(
+                    f"Function {n.name!r} has more than one default return statement"
                 )
 
         # Eliminar la referencia a la función actual
@@ -869,6 +867,11 @@ class Check(Visitor):
         else:
             n.value.accept(self, env)
             n.type = n.value.type
+
+            if isinstance(n.type, ArrayType) and n.type.size is None:
+                warning(
+                    f"Auto {n.name!r} has array type without size, take care with index access"
+                )
 
             if (
                 n.value.type == SimpleTypes.UNDEFINED.value
@@ -1134,6 +1137,8 @@ class Check(Visitor):
                 SemanticError.UNDECLARED_ARRAY,
             )
             return
+        elif isinstance(load_arr, AutoDecl):
+            pass
         # Dentro de una función se puede usar un array como parámetro comprobar que el parámetro es un array
         elif isinstance(load_arr, Param) and not isinstance(load_arr.type, ArrayType):
             self._error(

@@ -88,6 +88,18 @@ class TestAssignment(unittest.TestCase):
         self.assertTrue(errors_detected())
         self.assertTrue(has_error(expected_error))
 
+    def test_arr_auto(self):
+        code = """
+                fn: function array[] integer();
+
+                main: function void() = {
+                    a: auto = fn();
+                    x: integer = a[12];
+                }
+                """
+        self.semantic(code)
+        self.assertFalse(errors_detected())
+
     def test_bad_re_type(self):
         code = "x: auto = 42; main: function void () = {x = false;}"
         self.assertError(code, SemanticError.MISMATCH_ASSIGNMENT)
