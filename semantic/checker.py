@@ -156,7 +156,6 @@ class Check(Visitor):
         Validar que n.loc.type == n.expr.type tanto para
         variables como para arrays
         """
-
         n.location.accept(self, env)
         n.value.accept(self, env)
         n.type = n.location.type
@@ -492,6 +491,9 @@ class Check(Visitor):
 
         if n.value:
             n.value.accept(self, env)
+
+            if not hasattr(n.value, "type"):
+                n.value.type = SimpleTypes.UNDEFINED.value
 
             if n.type != n.value.type:
                 self._error(
