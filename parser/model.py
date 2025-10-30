@@ -1,8 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Union
-from uuid import uuid4
 
-from multimethod import multimeta, multimethod
+from multimethod import multimeta
 from rich.console import Console
 from rich.text import Text
 from rich.tree import Tree
@@ -144,7 +143,7 @@ class SimpleType(Type):
 @dataclass
 class ArrayType(Type):
     base: Type  # tipo simple o array
-    size: Expression = None  # tamaño del array o None = []
+    size: Optional[Expression] = None  # tamaño del array o None = []
 
     def __str__(self):
         return f"{self.base}[{self.size}]"
@@ -339,7 +338,6 @@ class FuncDecl(Declaration):
     return_type: Type
     params: List[Param] = field(default_factory=list)
     body: Optional[List[Statement]] = None
-    uid: str = field(default_factory=lambda: uuid4().hex)
 
 
 # Expresiones

@@ -10,6 +10,7 @@
 # A medida que agregue código, piense en cómo podría probarlo.
 # '''
 from parser.model import *
+from uuid import uuid4
 
 from rich import print
 
@@ -763,6 +764,8 @@ class Check(Visitor):
         n.return_type.accept(self, env)
         n.type = n.return_type
         self._override_func(n, env)
+
+        n.uid = uuid4().hex[:8]  # id de la función
 
         self._add_to_env(
             n,
