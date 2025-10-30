@@ -687,6 +687,57 @@ class Check(Visitor):
                     SemanticError.MISMATCH_ARRAY_ASSIGNMENT,
                 )
 
+    def _override_func(self, n: FuncDecl, env: Symtab):
+        """
+        Verificar si se intenta sobreescribir una función.
+        Si es así, verificar si los parámetros tienen los mismos tipos.
+
+        Solo sobreescribe funciones definidas en el mismo nivel del scope actual
+
+        Ejemplo:
+            fn: function void();
+
+            fn: function void() {...} -> Sobreescrita
+
+            {
+                fn: function void() {...} -> No sobreescrita nuevo scope
+            }
+        """
+
+        old_fun = env.get(n.name, recursive=False)
+
+        if (
+            isinstance(old_fun, FuncDecl)
+            and old_fun
+            and not isinstance(old_fun.body, list)
+            and isinstance(n.body, list)
+        ):
+            # sobreescribir la función
+            # verificar si tienen los mismos parámetros
+            # solo comprueba tipos no nombres
+            if old_fun.type != n.type:
+                self._error(
+                    f"Function {n.name!r} return type {old_fun.type} != {n.type}",
+                    n.lineno,
+                    SemanticError.REDEFINE_FUNCTION_TYPE,
+                )
+
+            old_args_types = [a.type for a in old_fun.params]
+            new_args_types = [a.type for a in n.params]
+
+            if old_args_types != new_args_types:
+                self._error(
+                    f"Function {n.name!r} parameters types "
+                    + str(old_args_types).replace("[", "(").replace("]", ")")
+                    + " != "
+                    + str(new_args_types).replace("[", "(").replace("]", ")"),
+                    n.lineno,
+                    SemanticError.REDEFINE_PARAMETER_TYPE,
+                )
+                return
+
+            del env[n.name]
+
     def check(self, n: FuncDecl, env: Symtab):
         # Guardar la función en symtab actual
         """
@@ -694,7 +745,7 @@ class Check(Visitor):
 
         Primero, se verifica si la función ya existe en el entorno
         actual. Si no existe, se crea una nueva tabla de símbolos
-        local para la función.
+        local para la función, Si existe pero la función no tiene cuerpo se sobreescribe.
 
         Luego se verifica el tipo de retorno y los parámetros de la
         función.
@@ -711,6 +762,7 @@ class Check(Visitor):
         # Visitar n.type
         n.return_type.accept(self, env)
         n.type = n.return_type
+        self._override_func(n, env)
 
         self._add_to_env(
             n,
@@ -721,7 +773,7 @@ class Check(Visitor):
         )
 
         # Crear una nueva symtab (local) para Function
-        env = Symtab("function " + n.name, env)
+        env = Symtab(f"fun {n.name} in {env.name}", env)
         n.env = env
 
         # Magic variable that references the current function

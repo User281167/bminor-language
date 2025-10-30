@@ -172,3 +172,31 @@ class TestScope(unittest.TestCase):
         }
         """
         self.assertValid(code)
+
+    def test_override_func_scopes(self):
+        code = """
+                f: function void(a: integer);
+                main: function void() = {
+                    {
+                        f: function void() = {
+                            print;
+                        }
+                    }
+
+                    f: function void(a: string) = {
+                    }
+
+                    for (;;) {
+                        f: function void(a: string) = {
+                            {
+                                f: function void(a: string) = {
+                                }
+                            }
+                        }
+                    }
+                }
+
+                f: function void(a: integer) = {
+                }
+            """
+        self.assertValid(code)

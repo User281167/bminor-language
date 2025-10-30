@@ -85,7 +85,7 @@ class Symtab:
 
         self.entries[name] = value
 
-    def get(self, name):
+    def get(self, name, recursive=True):
         """
         Recupera el símbolo con el nombre dado de la tabla de
         símbolo, recorriendo hacia arriba a traves de las tablas
@@ -93,7 +93,7 @@ class Symtab:
         """
         if name in self.entries:
             return self.entries[name]
-        elif self.parent:
+        elif self.parent and recursive:
             return self.parent.get(name)
 
         return None

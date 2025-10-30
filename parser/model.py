@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Union
+from uuid import uuid4
 
 from multimethod import multimeta, multimethod
 from rich.console import Console
@@ -337,8 +338,8 @@ class FuncDecl(Declaration):
     name: str
     return_type: Type
     params: List[Param] = field(default_factory=list)
-    # body: List[Statement] = field(default_factory=list)
     body: Optional[List[Statement]] = None
+    uid: str = field(default_factory=lambda: uuid4().hex)
 
 
 # Expresiones
