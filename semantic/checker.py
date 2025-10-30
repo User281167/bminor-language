@@ -677,12 +677,12 @@ class Check(Visitor):
                     SemanticError.ARRAY_SIZE_MISMATCH,
                 )
 
-        for item in n.value or []:
+        for i, item in enumerate(n.value or [], 1):
             item.accept(self, env)
 
             if n.type.base != item.type:
                 self._error(
-                    f"Declaration {n.name!r} has type {n.type.base} != {item.type}",
+                    f"Declaration {n.name!r} has type {n.type.base} != {item.type} at index {i}",
                     n.lineno,
                     SemanticError.MISMATCH_ARRAY_ASSIGNMENT,
                 )
@@ -841,27 +841,27 @@ class Check(Visitor):
         # No hay nada que hacer. Los tipos simples son
         # primitivos básicos. Ya tienen un tipo
         # definido en el archivo model.py.
-        n.type = n.name
+        # n.type = n
         pass
 
     def visit(self, n: AutoDecl, env: Symtab):
         # visitar primero la expresión para obtener el tipo
         if isinstance(n.value, list):
-            for item in n.value:
+            for i, item in enumerate(n.value, 1):
                 item.accept(self, env)
 
                 if item.type in (SimpleTypes.UNDEFINED.value, SimpleTypes.VOID.value):
                     self._error(
-                        f"Declaration {n.name!r} has undefined or void type",
+                        f"Declaration {n.name!r} has undefined or void type at index {i}",
                         n.lineno,
-                        SemanticError.UNDEFINED_FUNCTION,
+                        SemanticError.VOID_ARRAY,
                     )
                     break
                 elif n.type == SimpleTypes.UNDEFINED.value:
                     n.type = ArrayType(item.type, len(n.value))
                 elif n.type.base != item.type:
                     self._error(
-                        f"Declaration array {n.name!r} has type {n.type.base} != {item.type}",
+                        f"Declaration array {n.name!r} has type {n.type.base} != {item.type} at index {i}",
                         n.lineno,
                         SemanticError.MISMATCH_ARRAY_ASSIGNMENT,
                     )
@@ -925,7 +925,7 @@ class Check(Visitor):
 
         if n.location.type != SimpleTypes.INTEGER.value:
             self._error(
-                f"Only integers can be incremented",
+                f"Only literal integers can be incremented",
                 n.lineno,
                 SemanticError.INVALID_INCREMENT,
             )
@@ -936,7 +936,7 @@ class Check(Visitor):
 
         if n.location.type != SimpleTypes.INTEGER.value:
             self._error(
-                f"Only integers can be decremented",
+                f"Only literal integers can be decremented",
                 n.lineno,
                 SemanticError.INVALID_DECREMENT,
             )
@@ -950,7 +950,7 @@ class Check(Visitor):
 
         n.left.accept(self, env)
         n.right.accept(self, env)
-        n.type = SimpleTypes.UNDEFINED
+        n.type = SimpleTypes.UNDEFINED.value
 
         # Verificar compatibilidad de tipos
         try:
@@ -967,7 +967,7 @@ class Check(Visitor):
             n.type = check_binop(n.oper, n.left.type.name, n.right.type.name)
         except CheckError as e:
             self._error(str(e), n.lineno, SemanticError.INVALID_BINARY_OP)
-            n.type = SimpleTypes.UNDEFINED
+            n.type = SimpleTypes.UNDEFINED.value
             return
 
         if not n.type and (n.left.type and n.right.type):
@@ -985,14 +985,14 @@ class Check(Visitor):
         """
 
         n.expr.accept(self, env)
-        n.type = SimpleTypes.UNDEFINED
+        n.type = SimpleTypes.UNDEFINED.value
 
         # Validar si es un operador unario valido
         try:
             n.type = check_unaryop(n.oper, n.expr.type.name)
         except CheckError as e:
             self._error(str(e), n.lineno, SemanticError.INVALID_UNARY_OP)
-            n.type = SimpleTypes.UNDEFINED
+            n.type = SimpleTypes.UNDEFINED.value
             return
 
         if not n.type and n.expr.type:
@@ -1125,7 +1125,7 @@ class Check(Visitor):
 
         # verificar que array que es el ID sea de typo array
         load_arr = env.get(n.array.name)
-        n.type = SimpleTypes.UNDEFINED
+        n.type = SimpleTypes.UNDEFINED.value
 
         if not load_arr:
             self._error(
@@ -1167,7 +1167,7 @@ class Check(Visitor):
             return
         if n.index.type != SimpleTypes.INTEGER.value:
             self._error(
-                f"Not {n.index.type} for array '{load_arr.name}'",
+                f"Got {n.index.type} in '{load_arr.name}'",
                 n.lineno,
                 SemanticError.ARRAY_INDEX_MUST_BE_INTEGER,
             )
