@@ -51,6 +51,7 @@ class Check(Visitor):
             ],
             body=[],  # para evitar redefinir la función
         )
+        array_length.type = SimpleTypes.INTEGER.value
         env.add(array_length.name, array_length)
 
     def _check_fun_call_builtins(self, n: FuncCall, env: Symtab) -> bool:
@@ -73,7 +74,7 @@ class Check(Visitor):
 
         if hasattr(arg, "type") and not isinstance(arg.type, ArrayType):
             self._error(
-                f"Expected an array for function {n.name!r} but got '{arg.type}'",
+                f"Expected an array for function {n.name!r} but got {arg.type}",
                 n.lineno,
                 SemanticError.MISMATCH_ARGUMENT_TYPE,
             )
@@ -181,25 +182,26 @@ class Check(Visitor):
                 )
             return
 
-        if n.location.type != n.value.type:
-            name = None
+        if n.location.type == n.value.type:
+            return
 
-            if isinstance(n.location, VarLoc):
-                name = "variable " + n.location.name
-            elif isinstance(n.location, ArrayLoc):
-                name = "array " + n.location.array.name
+        name = None
 
-            if isinstance(n, AutoDecl):
-                name = "auto " + n.name
+        if isinstance(n.location, VarLoc):
+            name = "variable " + n.location.name
+        elif isinstance(n.location, ArrayLoc):
+            name = "array " + n.location.array.name
+        elif isinstance(n, AutoDecl):
+            name = "auto " + n.name
 
-            loc_type = n.location.type
-            value_type = n.value.type
+        loc_type = n.location.type
+        value_type = n.value.type
 
-            self._error(
-                f"Assignment {loc_type} != {value_type} in {name!r}",
-                n.lineno,
-                SemanticError.MISMATCH_ASSIGNMENT,
-            )
+        self._error(
+            f"Assignment {loc_type} != {value_type} in {name!r}",
+            n.lineno,
+            SemanticError.MISMATCH_ASSIGNMENT,
+        )
 
     def visit(self, n: PrintStmt, env: Symtab):
 
@@ -224,23 +226,9 @@ class Check(Visitor):
         # Visitar n.cond (validar tipos)
         n.condition.accept(self, env)
 
-        if isinstance(n.condition, ArrayType):
+        if n.condition.type != SimpleTypes.BOOLEAN.value:
             self._error(
-                f"Got {n.condition.type.name}",
-                n.lineno,
-                SemanticError.IF_CONDITION_MUST_BE_BOOLEAN,
-            )
-            return
-        elif isinstance(n.condition.type, ArrayType):
-            self._error(
-                f"Got array type",
-                n.lineno,
-                SemanticError.IF_CONDITION_MUST_BE_BOOLEAN,
-            )
-            return
-        elif n.condition.type != SimpleTypes.BOOLEAN.value:
-            self._error(
-                f"Got {n.condition.type.name}",
+                f"Got {n.condition.type}",
                 n.lineno,
                 SemanticError.IF_CONDITION_MUST_BE_BOOLEAN,
             )
@@ -255,13 +243,11 @@ class Check(Visitor):
 
         # Visitar then (branch)
         for stmt in n.then_branch:
-
             stmt.accept(self, env)
 
         # Visitar n.else (alterno)
-        if n.else_branch:
-            for stmt in n.else_branch:
-                stmt.accept(self, env)
+        for stmt in n.else_branch or []:
+            stmt.accept(self, env)
 
         env["$if"] = None
 
@@ -271,16 +257,9 @@ class Check(Visitor):
 
         n.condition.accept(self, env)
 
-        if isinstance(n.condition.type, ArrayType):
-            self._error(
-                f"Got array type",
-                n.lineno,
-                SemanticError.LOOP_CONDITION_MUST_BE_BOOLEAN,
-            )
-            return False
         if n.condition.type != SimpleTypes.BOOLEAN.value:
             self._error(
-                f"Got {n.condition.type.name}",
+                f"Got {n.condition.type}",
                 n.lineno,
                 SemanticError.LOOP_CONDITION_MUST_BE_BOOLEAN,
             )
@@ -361,17 +340,28 @@ class Check(Visitor):
         env["$loop"] = True
 
     def _search_env_name(self, env: Symtab, env_name: str) -> bool:
+        """
+        Busca el nombre de entorno en la tabla de símbolos dada
+        y en sus padres hasta encontrarlo o hasta que no haya más
+        padres.
+
+        Parameters:
+        env (Symtab): La tabla de símbolos en la que se busca
+        env_name (str): El nombre del entorno que se busca
+
+        Returns:
+        bool: True si se encuentra el nombre del entorno, False en caso
+        contrario
+        """
         parent = env
 
         while env and env_name not in env:
             env = env.parent
 
-        # env = None si no encontramos la etiqueta, devolvemos parent
-        return env or parent
+        return env_name in (env or parent or {})
 
     def visit(self, n: ContinueStmt, env: Symtab):
-        # Verificar que esta dentro de un ciclo
-        if "$loop" not in self._search_env_name(env, "$loop"):
+        if not self._search_env_name(env, "$loop"):
             self._error(
                 f"",
                 n.lineno,
@@ -379,8 +369,7 @@ class Check(Visitor):
             )
 
     def visit(self, n: BreakStmt, env: Symtab):
-        # Verificar que esta dentro de un ciclo
-        if "$loop" not in self._search_env_name(env, "$loop"):
+        if not self._search_env_name(env, "$loop"):
             self._error(
                 f"",
                 n.lineno,
@@ -408,57 +397,54 @@ class Check(Visitor):
             n.expr.accept(self, env)
 
         # Obtener la función actual
-        if "$func" not in self._search_env_name(env, "$func"):
+        if not self._search_env_name(env, "$func"):
             self._error(
                 f"",
                 n.lineno,
                 SemanticError.RETURN_OUT_OF_FUNCTION,
             )
-        else:
-            func = env.get("$func")
+            return
 
-            if isinstance(n.expr, VarLoc) and not env.get(n.expr.name):
-                self._error(
-                    f"Variable {n.expr.name!r} not defined in current scope {env.name!r}",
-                    n.lineno,
-                    SemanticError.UNDECLARED_VARIABLE,
-                )
-                return
-            elif n.expr is None and func.return_type != SimpleTypes.VOID.value:
-                self._error(
-                    f"Must return a value of type {func.return_type} in function '{func.name}'",
-                    n.lineno,
-                    SemanticError.RETURN_IN_VOID_FUNCTION,
-                )
-                return
-            elif n.expr is None and func.return_type == SimpleTypes.VOID.value:
-                return
+        func = env.get("$func")
 
-            if (
-                func.return_type == SimpleTypes.VOID.value
-                and n.expr.type != SimpleTypes.VOID.value
-            ):
-                self._error(
-                    f"Expected 'return;' got 'return {n.expr.type}'",
-                    n.lineno,
-                    SemanticError.RETURN_IN_VOID_FUNCTION,
-                )
+        if n.expr is None and func.return_type == SimpleTypes.VOID.value:
+            return
+        # Si return array no tiene tamaño fijo, permitir return de array[]
+        elif (
+            n.expr is not None
+            and isinstance(func.return_type, ArrayType)
+            and isinstance(n.expr.type, ArrayType)
+            and not func.return_type.size
+        ):
+            return
 
-            if func.return_type == SimpleTypes.VOID.value:
-                pass
-            # Permitir cualquier tamaño si return array no tiene tamaño fijo
-            elif (
-                isinstance(func.return_type, ArrayType)
-                and isinstance(n.expr.type, ArrayType)
-                and not func.return_type.size
-            ):
-                pass
-            elif func.return_type != n.expr.type:
-                self._error(
-                    f"return {func.return_type} != {n.expr.type}",
-                    n.lineno,
-                    SemanticError.RETURN_TYPE_MISMATCH,
-                )
+        if isinstance(n.expr, VarLoc) and not env.get(n.expr.name):
+            self._error(
+                f"Variable {n.expr.name!r} not defined in current scope {env.name!r}",
+                n.lineno,
+                SemanticError.UNDECLARED_VARIABLE,
+            )
+        elif n.expr is None and func.return_type != SimpleTypes.VOID.value:
+            self._error(
+                f"Must return a value of type {func.return_type} in function '{func.name}'",
+                n.lineno,
+                SemanticError.RETURN_IN_VOID_FUNCTION,
+            )
+        elif (
+            func.return_type == SimpleTypes.VOID.value
+            and n.expr.type != SimpleTypes.VOID.value
+        ):
+            self._error(
+                f"Expected 'return;' got 'return {n.expr.type};'",
+                n.lineno,
+                SemanticError.RETURN_IN_VOID_FUNCTION,
+            )
+        elif n.expr.type != func.return_type:
+            self._error(
+                f"Return type {n.expr.type} does not match function return type {func.return_type}",
+                n.lineno,
+                SemanticError.RETURN_TYPE_MISMATCH,
+            )
 
     # --- Declaration
 
@@ -546,15 +532,9 @@ class Check(Visitor):
                 n.lineno,
                 SemanticError.UNDECLARED_VARIABLE,
             )
-        elif isinstance(value_decl, ArrayType):
-            self._error(
-                f"{msg} {n.name!r} must be integer no array type",
-                n.lineno,
-                SemanticError.ARRAY_SIZE_MUST_BE_INTEGER,
-            )
         elif value_decl.type != SimpleTypes.INTEGER.value:
             self._error(
-                f"{msg} {n.name!r} must be integer no '{value_decl.type.name}'",
+                f"{msg} {n.name!r} no {value_decl.type}",
                 n.lineno,
                 SemanticError.ARRAY_SIZE_MUST_BE_INTEGER,
             )
@@ -627,43 +607,23 @@ class Check(Visitor):
         # Visitar type
         n.type.size.accept(self, env)
 
-        if isinstance(n.type.size, VarLoc):
-            loc = env.get(n.type.size.name)
-
-            if not loc:
-                self._error(
-                    f"Array size '{n.type.size.name}' is not defined in {n.name!r}",
-                    n.lineno,
-                    SemanticError.UNDECLARED_VARIABLE,
-                )
-                return
-        # Verificar tipo base y size
-        if isinstance(n.type.size.type, ArrayType):
+        if isinstance(n.type.size, VarLoc) and not env.get(n.type.size.name):
             self._error(
-                f"No array type {n.name!r}",
+                f"'{n.type.size.name}' in {n.name!r} size",
                 n.lineno,
-                SemanticError.ARRAY_SIZE_MUST_BE_INTEGER,
+                SemanticError.UNDECLARED_VARIABLE,
             )
             return
         elif n.type.size.type != SimpleTypes.INTEGER.value:
             self._error(
-                f"No '{n.type.size.type.name}' {n.name!r}",
+                f"No {n.type.size.type} in {n.name!r}",
                 n.lineno,
                 SemanticError.ARRAY_SIZE_MUST_BE_INTEGER,
             )
             return
 
-        # Intentar obtener valor del size si es posible
-        size_value = None
+        size_value = self._get_array_size(n.type.size, env)
 
-        if isinstance(n.type.size, Integer):
-            size_value = n.type.size.value
-        elif isinstance(n.type.size, UnaryOper):
-            size_value = self._get_unary_integer(n.type.size)
-        elif isinstance(n.type.size, VarLoc):
-            size_value = self._get_varloc_integer(n.type.size, env, "Array size")
-
-        # Validar valor si lo tenemos
         if size_value is not None:
             if size_value < 0:
                 self._error(
@@ -707,37 +667,38 @@ class Check(Visitor):
 
         old_fun = env.get(n.name, recursive=False)
 
-        if (
+        if not (
             isinstance(old_fun, FuncDecl)
-            and old_fun
             and not isinstance(old_fun.body, list)
             and isinstance(n.body, list)
         ):
-            # sobreescribir la función
-            # verificar si tienen los mismos parámetros
-            # solo comprueba tipos no nombres
-            if old_fun.type != n.type:
-                self._error(
-                    f"Function {n.name!r} return type {old_fun.type} != {n.type}",
-                    n.lineno,
-                    SemanticError.REDEFINE_FUNCTION_TYPE,
-                )
+            return
 
-            old_args_types = [a.type for a in old_fun.params]
-            new_args_types = [a.type for a in n.params]
+        # sobreescribir la función
+        # verificar si tienen los mismos parámetros
+        # solo comprueba tipos no nombres
+        if old_fun.type != n.type:
+            self._error(
+                f"Function {n.name!r} return type {old_fun.type} != {n.type}",
+                n.lineno,
+                SemanticError.REDEFINE_FUNCTION_TYPE,
+            )
 
-            if old_args_types != new_args_types:
-                self._error(
-                    f"Function {n.name!r} parameters types "
-                    + str(old_args_types).replace("[", "(").replace("]", ")")
-                    + " != "
-                    + str(new_args_types).replace("[", "(").replace("]", ")"),
-                    n.lineno,
-                    SemanticError.REDEFINE_PARAMETER_TYPE,
-                )
-                return
+        old_args_types = [a.type for a in old_fun.params]
+        new_args_types = [a.type for a in n.params]
 
-            del env[n.name]
+        if old_args_types != new_args_types:
+            self._error(
+                f"Function {n.name!r} parameters types "
+                + str(old_args_types).replace("[", "(").replace("]", ")")
+                + " != "
+                + str(new_args_types).replace("[", "(").replace("]", ")"),
+                n.lineno,
+                SemanticError.REDEFINE_PARAMETER_TYPE,
+            )
+            return
+
+        del env[n.name]
 
     def check(self, n: FuncDecl, env: Symtab):
         # Guardar la función en symtab actual
@@ -763,9 +724,11 @@ class Check(Visitor):
         # Visitar n.type
         n.return_type.accept(self, env)
         n.type = n.return_type
-        self._override_func(n, env)
+        self._override_func(
+            n, env
+        )  # verificar si la nueva función cumple para sobreescritura
 
-        n.uid = uuid4().hex[:8]  # id de la función
+        n.uid = uuid4().hex[:8]  # id de la función, necesaria en la generación de IR
 
         self._add_to_env(
             n,
@@ -787,9 +750,8 @@ class Check(Visitor):
             p.accept(self, env)
 
         # Visitar n.stmts
-        if n.body:
-            for stmt in n.body:
-                stmt.accept(self, env)
+        for stmt in n.body or []:
+            stmt.accept(self, env)
 
         if n.return_type != SimpleTypes.VOID.value and not n.body is None:
             # buscar si hay retorno return expr;
@@ -857,7 +819,6 @@ class Check(Visitor):
                         n.lineno,
                         SemanticError.VOID_ARRAY,
                     )
-                    break
                 elif n.type == SimpleTypes.UNDEFINED.value:
                     n.type = ArrayType(item.type, len(n.value))
                 elif n.type.base != item.type:
@@ -866,7 +827,6 @@ class Check(Visitor):
                         n.lineno,
                         SemanticError.MISMATCH_ARRAY_ASSIGNMENT,
                     )
-                    break
         else:
             n.value.accept(self, env)
             n.type = n.value.type
@@ -876,14 +836,11 @@ class Check(Visitor):
                     f"Auto {n.name!r} has array type without size, take care with index access"
                 )
 
-            if (
-                n.value.type == SimpleTypes.UNDEFINED.value
-                or n.value.type == SimpleTypes.VOID.value
-            ):
+            if n.value.type in (SimpleTypes.UNDEFINED.value, SimpleTypes.VOID.value):
                 self._error(
-                    f"Variable {n.name!r} has undefined or void type",
+                    f"Variable {n.name!r} has {n.value.type} type",
                     n.lineno,
-                    SemanticError.UNDEFINED_FUNCTION,
+                    SemanticError.VOID_VARIABLE,
                 )
 
         self._add_to_env(
@@ -958,30 +915,21 @@ class Check(Visitor):
         n.right.accept(self, env)
         n.type = SimpleTypes.UNDEFINED.value
 
+        if isinstance(n.left.type, ArrayType) or isinstance(n.right.type, ArrayType):
+            self._error(
+                f"Array types not supported in binary operations",
+                n.lineno,
+                SemanticError.BINARY_ARRAY_OP,
+            )
+            return
+
         # Verificar compatibilidad de tipos
         try:
-            if isinstance(n.left.type, ArrayType) or isinstance(
-                n.right.type, ArrayType
-            ):
-                self._error(
-                    f"Array types not supported in binary operations",
-                    n.lineno,
-                    SemanticError.BINARY_ARRAY_OP,
-                )
-                return
-
             n.type = check_binop(n.oper, n.left.type.name, n.right.type.name)
         except CheckError as e:
             self._error(str(e), n.lineno, SemanticError.INVALID_BINARY_OP)
             n.type = SimpleTypes.UNDEFINED.value
             return
-
-        if not n.type and (n.left.type and n.right.type):
-            self._error(
-                f"{n.left.type} {n.oper} {n.right.type}",
-                n.lineno,
-                SemanticError.BINARY_OP_TYPE,
-            )
 
     def visit(self, n: UnaryOper, env: Symtab):
         """
@@ -991,7 +939,6 @@ class Check(Visitor):
         """
 
         n.expr.accept(self, env)
-        n.type = SimpleTypes.UNDEFINED.value
 
         # Validar si es un operador unario valido
         try:
@@ -1000,11 +947,6 @@ class Check(Visitor):
             self._error(str(e), n.lineno, SemanticError.INVALID_UNARY_OP)
             n.type = SimpleTypes.UNDEFINED.value
             return
-
-        if not n.type and n.expr.type:
-            self._error(
-                f"{n.oper} {n.expr.type}", n.lineno, SemanticError.UNARY_OP_TYPE
-            )
 
     #     '''
     # 	def visit(self, n:TypeCast, env:Symtab):
@@ -1073,6 +1015,8 @@ class Check(Visitor):
         for pos, (parm, arg) in enumerate(zip(func.params, n.args), 1):
             arg.accept(self, env)
 
+            # Verificar si el parámetro es un array y el argumento es un array
+            # Verificar si el parámetro es Array de tamaño variable
             if (
                 isinstance(arg.type, ArrayType)
                 and isinstance(parm.type, ArrayType)
@@ -1155,13 +1099,6 @@ class Check(Visitor):
         index_value = None
         n.index.accept(self, env)
 
-        if isinstance(n.index.type, ArrayType):
-            self._error(
-                f"Not another array in '{load_arr.name}'",
-                n.lineno,
-                SemanticError.ARRAY_INDEX_MUST_BE_INTEGER,
-            )
-            return
         if n.index.type != SimpleTypes.INTEGER.value:
             self._error(
                 f"Got {n.index.type} in '{load_arr.name}'",
@@ -1208,35 +1145,3 @@ class Check(Visitor):
     # 		n.type = '<infer>'
     # 		n.mutable = True
     # 	'''
-
-
-if __name__ == "__main__":
-    import sys
-
-    if sys.platform != "ios":
-        if len(sys.argv) != 2:
-            raise SystemExit("Usage: python gcheck.py <filename>")
-
-        filename = sys.argv[1]
-
-    else:
-        from File_Picker import file_picker_dialog
-
-        filename = file_picker_dialog(
-            title="Seleccionar una archivo",
-            root_dir="./test",
-            file_pattern="^.*[.]bminor",
-        )
-
-    if filename:
-        from parser import Parser
-
-        from scanner import Lexer
-
-        txt = open(filename, encoding="utf-8").read()
-        tokens = Lexer.tokenize(code)
-        top = Parser.parse(tokens)
-        env = Check.checker(top)
-
-        if not errors_detected():
-            env.print()
