@@ -162,6 +162,28 @@ class Check(Visitor):
         n.value.accept(self, env)
         n.type = n.location.type
 
+        name = None
+        load_loc = n.location
+
+        if isinstance(n.location, VarLoc):
+            load_loc = env.get(n.location.name)
+            name = "variable " + n.location.name
+        elif isinstance(n.location, ArrayLoc):
+            name = "array " + n.location.array.name
+
+        print(name)
+
+        if isinstance(load_loc, ConstantDecl):
+            # Evaluar primero constant ya que internamente es un AutoDecl -> VarDecl
+            self._error(
+                f"{load_loc.name!r} is a constant of type {load_loc.type}",
+                n.lineno,
+                SemanticError.CONSTANT_ASSIGNMENT,
+            )
+            return
+        elif isinstance(load_loc, AutoDecl):
+            name = "auto " + load_loc.name
+
         # si son arrays verificar que la base sea la misma no importa el tamaño
         # get_data: function array[] integer ();
         # data: array [5] integer;
@@ -184,15 +206,6 @@ class Check(Visitor):
 
         if n.location.type == n.value.type:
             return
-
-        name = None
-
-        if isinstance(n.location, VarLoc):
-            name = "variable " + n.location.name
-        elif isinstance(n.location, ArrayLoc):
-            name = "array " + n.location.array.name
-        elif isinstance(n, AutoDecl):
-            name = "auto " + n.name
 
         loc_type = n.location.type
         value_type = n.value.type

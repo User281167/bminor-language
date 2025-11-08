@@ -7,6 +7,8 @@ class SemanticError(Enum):
     MISMATCH_ASSIGNMENT = "Mismatch assignment"
     MISMATCH_DECLARATION = "Mismatch declaration"
 
+    CONSTANT_ASSIGNMENT = "Cannot assign to constant"
+
     UNDECLARED_VARIABLE = "Undeclared variable"
     UNDECLARED_ARRAY = "Undeclared array"
 
