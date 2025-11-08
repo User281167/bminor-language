@@ -33,7 +33,7 @@ i x mystr fog123 BigLongName55
 Las siguientes cadenas son palabras clave en B-Minor (o reservadas para una futura expansión) y no pueden usarse como identificadores:
 
 ```c
-array auto boolean char else false float for function if integer print return string true void while
+array auto boolean char else false float for function if integer print return string true void while constant
 ```
 
 ## Tipos

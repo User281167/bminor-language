@@ -65,6 +65,7 @@ class TestBadKeywords(unittest.TestCase):
             "fals",
             "whil",
             "functon",
+            "constan",
         ]:
             tokens = list(self.lexer.tokenize(kw))
             self.assertEqual(len(tokens), 1)

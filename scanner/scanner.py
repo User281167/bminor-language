@@ -93,6 +93,7 @@ class Lexer(sly.Lexer):
     ID["do"] = DO
     ID["continue"] = CONTINUE
     ID["break"] = BREAK
+    ID["constant"] = CONSTANT
 
     @_(r"[a-zA-Z_][a-zA-Z0-9_]*")
     def ID(self, t):

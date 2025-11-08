@@ -125,6 +125,10 @@ Rule 121   param -> ID : type_array
 Rule 122   param -> ID : type_simple
 Rule 123   empty -> <empty>
 
+Unused terminals:
+
+    CONSTANT
+
 Terminals, with rules where they appear:
 
 !                    : 83
@@ -145,6 +149,7 @@ BOOLEAN              : 106
 BREAK                : 49
 CHAR                 : 105
 CHAR_LITERAL         : 99
+CONSTANT             : 
 CONTINUE             : 48
 DEC                  : 87 88
 DO                   : 37

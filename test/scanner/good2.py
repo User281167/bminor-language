@@ -8,7 +8,7 @@ class TestKeywords(unittest.TestCase):
         self.lexer = Lexer()
 
     def test_keywords_and_numbers_and_symbols(self):
-        test_input = "array auto boolean char else false float for function if integer print return string true void while continue break     // this is a comment"
+        test_input = "array auto boolean char else false float for function if integer print return string true void while continue break constant     // this is a comment"
         tokens = list(self.lexer.tokenize(test_input))
         expected = [
             TokenType.ARRAY.value,
@@ -30,6 +30,7 @@ class TestKeywords(unittest.TestCase):
             TokenType.WHILE.value,
             TokenType.CONTINUE.value,
             TokenType.BREAK.value,
+            TokenType.CONSTANT.value,
         ]
         # Check token types
         self.assertEqual([t.type for t in tokens], expected)

@@ -27,6 +27,7 @@ class TokenType(Enum):
     DO = "DO"
     CONTINUE = "CONTINUE"
     BREAK = "BREAK"
+    CONSTANT = "CONSTANT"
 
 
 class OperatorType(Enum):
