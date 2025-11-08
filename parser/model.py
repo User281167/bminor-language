@@ -167,8 +167,14 @@ class VarDecl(Declaration):
 
 @dataclass
 class AutoDecl(VarDecl):
-    def __init__(self, name: str, value: Optional[Expression] = None):
+    def __init__(self, name: str, value: Expression):
         super().__init__(name, SimpleTypes.UNDEFINED.value, value)
+
+
+@dataclass
+class ConstantDecl(AutoDecl):
+    def __init__(self, name: str, value: Expression):
+        super().__init__(name, value)
 
 
 """

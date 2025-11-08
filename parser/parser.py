@@ -89,6 +89,29 @@ class Parser(sly.Parser):
             p,
         )
 
+    @_("ID ':' CONSTANT '=' expr ';'")
+    def decl_init(self, p):
+        return _L(ConstantDecl(name=p.ID, value=p.expr), p)
+
+    @_("ID ':' CONSTANT '=' '{' opt_expr_list '}' ';'")
+    def decl_init(self, p):
+        return _L(ConstantDecl(name=p.ID, value=p.opt_expr_list), p)
+
+    @_("ID ':' CONSTANT error")
+    def decl_init(self, p):
+        error(
+            f"Constant need to be initialized with a value. Multidimensional arrays are not supported",
+            p.lineno,
+            ParserError.UNEXPECTED_TOKEN,
+        )
+        return _L(
+            ConstantDecl(
+                name=p.ID,
+                value=SimpleTypes.UNDEFINED.value,
+            ),
+            p,
+        )
+
     @_("ID ':' type_array_sized '=' '{' opt_expr_list '}' ';'")
     def decl_init(self, p):
         # type_array_sized.size ya contiene la expresión del índice en el modelo ArrayType
