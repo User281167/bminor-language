@@ -67,6 +67,32 @@ class ASTPrinter(Visitor):
 
         return name
 
+    def visit(self, n: AutoDecl):
+        name = self.name
+        self.dot.node(name, label=f"AutoDecl\n{n.name}")
+        self.dot.edge(name, n.type.accept(self))
+
+        if n.value and not isinstance(n.value, list):
+            self.dot.edge(name, n.value.accept(self))
+        elif n.value and isinstance(n.value, list):
+            for value in n.value:
+                self.dot.edge(name, value.accept(self))
+
+        return name
+
+    def visit(self, n: ConstantDecl):
+        name = self.name
+        self.dot.node(name, label=f"ConstantDecl\n{n.name}")
+        self.dot.edge(name, n.type.accept(self))
+
+        if n.value and not isinstance(n.value, list):
+            self.dot.edge(name, n.value.accept(self))
+        elif n.value and isinstance(n.value, list):
+            for value in n.value:
+                self.dot.edge(name, value.accept(self))
+
+        return name
+
     def visit(self, n: Literal):
         name = self.name
         self.dot.node(name, label=f"value:{n.value}")
