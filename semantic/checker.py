@@ -23,7 +23,7 @@ from .typesys import CheckError, check_binop, check_unaryop
 
 class Check(Visitor):
     @classmethod
-    def checker(cls, n: Program):
+    def checker(cls, n: Program, return_ast=False):
         checker = cls()
 
         # Crear una nueva tabla de simbolos
@@ -33,6 +33,9 @@ class Check(Visitor):
         # Visitar todas las declaraciones
         for decl in n.body:
             decl.accept(checker, env)
+
+        if return_ast:
+            return env, n
 
         return env
 
@@ -170,8 +173,6 @@ class Check(Visitor):
             name = "variable " + n.location.name
         elif isinstance(n.location, ArrayLoc):
             name = "array " + n.location.array.name
-
-        print(name)
 
         if isinstance(load_loc, ConstantDecl):
             # Evaluar primero constant ya que internamente es un AutoDecl -> VarDecl
