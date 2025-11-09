@@ -5,6 +5,7 @@ código intermedio que pueda ser ejecutado por la maquina virtual de
 LLVMite.
 """
 
+import codecs
 from parser.model import *
 from uuid import uuid4
 
@@ -110,15 +111,32 @@ class IRGenerator(Visitor):
         pass
 
     def visit(self, n: VarDecl, env: Symtab, module: ir.Module):
+        if n.value:
+            n.value.accept(self, env, module)
+
         if env.name == "global":
-            var = ir.GlobalVariable(module, IrTypes.get_type(n.type), n.name)
-            var.initializer = ir.Constant(IrTypes.get_type(n.type), 0)
+            llvm_type = IrTypes.get_type(n.type)
+            var = ir.GlobalVariable(module, llvm_type, n.name)
             var.linkage = "dso_local"
 
             if n.type in (SimpleTypes.INTEGER.value, SimpleTypes.FLOAT.value):
                 var.align = 4
             elif n.type == SimpleTypes.CHAR.value:
                 var.align = 1
+
+            # Asignar el valor
+            if not n.value:
+                var.initializer = ir.Constant(llvm_type, 0)
+            elif isinstance(n.value, Literal):
+                if llvm_type == ir.FloatType():
+                    var.initializer = ir.Constant(llvm_type, float(n.value.value))
+                elif llvm_type == ir.IntType(8):  # char
+                    val = n.value.value
+                    decoded = codecs.decode(val, "unicode_escape")  # '\\n' -> '\n'
+                    ascii_val = ord(decoded)
+                    var.initializer = ir.Constant(llvm_type, ascii_val)
+                else:
+                    var.initializer = ir.Constant(llvm_type, int(n.value.value))
 
         pass
 
@@ -133,7 +151,7 @@ class IRGenerator(Visitor):
 
     # --- Expressions
 
-    def visit(self, n: Literal, env: Symtab):
+    def visit(self, n: Literal, env: Symtab, module: ir.Module):
         pass
 
     def visit(self, n: SimpleType, env: Symtab):

@@ -137,6 +137,8 @@ def run_ir(filename):
         try:
             gen = IRGenerator().generate_from_code(open(filename).read())
 
+            if "--print" in sys.argv:
+                print(str(gen))
             if "--lli" in sys.argv:
                 run_llvm_ir(gen)
         except Exception as e:
