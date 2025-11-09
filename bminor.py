@@ -8,6 +8,7 @@ from parser import ASTPrinter, Parser
 import rich
 from rich.table import Table
 
+from ir import IRGenerator, run_llvm_ir
 from scanner import Lexer
 from semantic import Check
 from utils import print_json
@@ -131,6 +132,34 @@ def run_semantic(filename):
         sys.exit(1)
 
 
+def run_ir(filename):
+    if filename.endswith(".bminor"):
+        try:
+            gen = IRGenerator().generate_from_code(open(filename).read())
+
+            if "--lli" in sys.argv:
+                run_llvm_ir(gen)
+        except Exception as e:
+            print(e)
+            sys.exit(1)
+    elif filename.endswith(".py"):
+        path = os.path.abspath(filename)
+        spec = importlib.util.spec_from_file_location("dynamic_test", path)
+        test_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(test_module)
+
+        unittest.TextTestRunner(verbosity=2).run(
+            unittest.TestLoader().loadTestsFromModule(test_module)
+        )
+    elif filename == "test":
+        test_dir = os.path.join(os.path.dirname(__file__), "test", "ir")
+        suite = unittest.TestLoader().discover(test_dir, pattern="*.py")
+        unittest.TextTestRunner(verbosity=2).run(suite)
+    else:
+        print("Invalid file type for parser. Use .bminor or .py files")
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
@@ -156,6 +185,8 @@ if __name__ == "__main__":
         run_parser(filename)
     elif mode == "--semantic":
         run_semantic(filename)
+    elif mode == "--ir":
+        run_ir(filename)
     else:
         print("Invalid mode. Use --scan, --parser or --semantic")
         sys.exit(1)

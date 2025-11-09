@@ -1,22 +1,18 @@
-# # checker.py
-# '''
-# Este archivo contendrá la parte de verificación/validación de tipos
-# del compilador.  Hay varios aspectos que deben gestionarse para
-# que esto funcione. Primero, debe tener una noción de "tipo" en su compilador.
-# Segundo, debe administrar los entornos y el alcance para manejar los
-# nombres de las definiciones (variables, funciones, etc.).
+"""
+Este archivo contiene la parte de generación de código intermedio con LLVMite.
+El objetivo es tomar el AST generado por el parser y transformarlo en
+código intermedio que pueda ser ejecutado por la maquina virtual de
+LLVMite.
+"""
 
-# Una clave para esta parte del proyecto es realizar pruebas adecuadas.
-# A medida que agregue código, piense en cómo podría probarlo.
-# '''
 from parser.model import *
 from uuid import uuid4
 
 from llvmlite import ir
-from rich import print
 
 from semantic import Symtab
-from utils import error, warning
+
+from .ir_type import IrTypes
 
 
 class IRGenerator(Visitor):
@@ -35,16 +31,32 @@ class IRGenerator(Visitor):
 
     @classmethod
     def Generate(cls, n: Program, env: Symtab, module_name: str | None) -> ir.Module:
-        checker = cls()
+        """
+        Genera un módulo de IR a partir del AST y la tabla de símbolos.
+        Visita todas las declaraciones y llama a accept() para cada una.
+        Si hay un error en alguna de las declaraciones, imprime el error y sigue adelante.
+        Devuelve el módulo de IR generado.
+
+        args:
+            n (Program): AST del programa, el ast generado por el analizador semántico ya que este inyecta los tipos en cada nodo
+            env (Symtab): Tabla de símbolos
+            module_name (str | None): Nombre del módulo de IR
+        """
+
+        gen = cls()
 
         if module_name is None:
             module_name = str(uuid4())
 
         module = ir.Module(name=module_name)
 
-        # # Visitar todas las declaraciones
+        # Visitar todas las declaraciones
         for decl in n.body:
-            decl.accept(checker, env)
+            try:
+                decl.accept(gen, env, module)
+            except Exception as e:
+                print("Error decl = ", decl)
+                print(e)
 
         return module
 
@@ -97,10 +109,17 @@ class IRGenerator(Visitor):
     def visit(self, n: Declaration, env: Symtab):
         pass
 
-    def visit(self, n: VarDecl, env: Symtab):
-        print(n)
+    def visit(self, n: VarDecl, env: Symtab, module: ir.Module):
         if env.name == "global":
-            print("global")
+            var = ir.GlobalVariable(module, IrTypes.get_type(n.type), n.name)
+            var.initializer = ir.Constant(IrTypes.get_type(n.type), 0)
+            var.linkage = "dso_local"
+
+            if n.type in (SimpleTypes.INTEGER.value, SimpleTypes.FLOAT.value):
+                var.align = 4
+            elif n.type == SimpleTypes.CHAR.value:
+                var.align = 1
+
         pass
 
     def check(self, n: ArrayDecl, env: Symtab):
