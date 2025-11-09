@@ -119,6 +119,8 @@ class IRGenerator(Visitor):
             var = ir.GlobalVariable(module, llvm_type, n.name)
             var.linkage = "dso_local"
 
+            var.global_constant = isinstance(n, ConstantDecl)
+
             if n.type in (SimpleTypes.INTEGER.value, SimpleTypes.FLOAT.value):
                 var.align = 4
             elif n.type == SimpleTypes.CHAR.value:

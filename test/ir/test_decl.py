@@ -64,3 +64,59 @@ class TestBasicDecl(unittest.TestCase):
 
         self.assertIn('@"z" = dso_local global i8 97, align 1', code)
         self.assertIn('@"w" = dso_local global i8 10, align 1', code)
+
+    def test_global_basic_auto(self):
+        gen, _ = self.get_ir(
+            """
+            x: auto = 1;
+            y: auto = 1.0;
+            z: auto = 'a';
+            w: auto = '\\n';
+            """
+        )
+
+        x = gen.get_global("x")
+        self.assertEqual(x.name, "x")
+
+        y = gen.get_global("y")
+        self.assertEqual(y.name, "y")
+
+        z = gen.get_global("z")
+        self.assertEqual(z.name, "z")
+
+        code = str(gen)
+        self.assertIn('@"x" = dso_local global i32 1, align 4', code)
+
+        self.assertIn('@"y" = dso_local global float 0x3ff0000000000000, align 4', code)
+
+        self.assertIn('@"z" = dso_local global i8 97, align 1', code)
+        self.assertIn('@"w" = dso_local global i8 10, align 1', code)
+
+    def test_global_constant(self):
+        gen, _ = self.get_ir(
+            """
+            x: constant = 1;
+            y: constant = 1.0;
+            z: constant = 'a';
+            w: constant = '\\n';
+            """
+        )
+
+        x = gen.get_global("x")
+        self.assertEqual(x.name, "x")
+
+        y = gen.get_global("y")
+        self.assertEqual(y.name, "y")
+
+        z = gen.get_global("z")
+        self.assertEqual(z.name, "z")
+
+        code = str(gen)
+        self.assertIn('@"x" = dso_local constant i32 1, align 4', code)
+
+        self.assertIn(
+            '@"y" = dso_local constant float 0x3ff0000000000000, align 4', code
+        )
+
+        self.assertIn('@"z" = dso_local constant i8 97, align 1', code)
+        self.assertIn('@"w" = dso_local constant i8 10, align 1', code)
