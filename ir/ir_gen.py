@@ -182,7 +182,7 @@ class IRGenerator(Visitor):
                 return left >= right
             elif n.oper == "<=":
                 return left <= right
-            elif n.oper == "&&":
+            elif n.oper == "LAND":
                 return left and right
             elif n.oper == "||":
                 return left or right
@@ -201,6 +201,8 @@ class IRGenerator(Visitor):
             return float(val)
         elif n.type == SimpleTypes.CHAR.value:
             return ord(val)
+        elif n.type == SimpleTypes.BOOLEAN.value:
+            return bool(val)
 
         return val
 
@@ -216,6 +218,8 @@ class IRGenerator(Visitor):
                 var.align = 4
             elif n.type == SimpleTypes.CHAR.value:
                 var.align = 1
+            elif n.type == SimpleTypes.BOOLEAN.value:
+                var.align = 1
 
             # Asignar el valor
             if not n.value:
@@ -228,6 +232,8 @@ class IRGenerator(Visitor):
                     decoded = codecs.decode(val, "unicode_escape")  # '\\n' -> '\n'
                     ascii_val = ord(decoded)
                     var.initializer = ir.Constant(llvm_type, ascii_val)
+                elif llvm_type == ir.IntType(1):  # boolean
+                    var.initializer = ir.Constant(llvm_type, bool(n.value.value))
                 else:
                     var.initializer = ir.Constant(llvm_type, int(n.value.value))
             else:
