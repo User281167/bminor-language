@@ -129,10 +129,20 @@ class IRGenerator(Visitor):
             block = self._init_func.append_basic_block(name="entry")
             self._init_builder = ir.IRBuilder(block)
 
+        self.in_globals = True
         builder = self._init_builder
-        n.value.accept(self, builder)
 
-    def __get_literal_value(self, n: Literal | UnaryOper | BinOper):
+        # var = val
+        val = n.value.accept(self, builder)
+        var_ptr = self.module.get_global(n.name)
+        builder.store(val, var_ptr)
+
+        self.in_globals = False
+
+    def __get_literal_value(self, n):
+        if not isinstance(n, (Literal, UnaryOper, BinOper)):
+            return
+
         if isinstance(n, Literal):
             return n.value
         elif isinstance(n, UnaryOper):
@@ -189,7 +199,7 @@ class IRGenerator(Visitor):
 
         return None
 
-    def _get_literal_value(self, n: Literal | UnaryOper | BinOper):
+    def _get_literal_value(self, n):
         val = self.__get_literal_value(n)
 
         if val is None:
@@ -243,8 +253,8 @@ class IRGenerator(Visitor):
                     var.initializer = ir.Constant(llvm_type, val)
                 else:
                     # inicializa con cero y calcular valor en __init_globals
+                    var.initializer = ir.Constant(llvm_type, 0)
                     self._calc_init(n)
-        pass
 
     def check(self, n: ArrayDecl, builder: ir.IRBuilder):
         pass
@@ -276,8 +286,11 @@ class IRGenerator(Visitor):
         pass
 
     def visit(self, n: UnaryOper, builder: ir.IRBuilder):
-        print(n)
-        pass
+        print(type(n))
+        n.expr.accept(self, builder)
+
+        if n.oper == "-":
+            builder.neg(n.expr.name, name=n.name)
 
     def visit(self, n: FuncCall, builder: ir.IRBuilder):
         pass
@@ -287,8 +300,18 @@ class IRGenerator(Visitor):
         pass
 
     def visit(self, n: VarLoc, builder: ir.IRBuilder):
-        # self.check(n, env)
-        pass
+        """
+        Asigna memoria para un nodo VarLoc.
+          -Si el nodo se encuentra dentro de un ámbito global, obtiene la variable global del módulo.
+          -De lo contrario, asigna memoria con el tipo y nombre especificados.
+          -Devuelve el puntero cargado de la memoria asignada.
+        """
+        if self.in_globals:
+            var_ptr = self.module.get_global("x")
+        else:
+            var_ptr = builder.alloca(IrTypes.get_type(n.type), name=n.name)
+
+        return builder.load(var_ptr, name=n.name)
 
     def check(self, n: VarLoc, builder: ir.IRBuilder):
         pass
