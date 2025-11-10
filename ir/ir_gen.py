@@ -282,10 +282,31 @@ class IRGenerator(Visitor):
                 val = n.value.accept(self, builder, alloca, env)
                 builder.store(val, var)
 
-    def check(
+    def visit(
         self, n: ArrayDecl, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
     ):
-        pass
+        val = self._get_literal_value(n.type.size)
+
+        if val is None:
+            val = n.type.size.accept(self, builder, alloca, env)
+
+        arr = ir.ArrayType(IrTypes.get_type(n.type.base), val)
+        content = []
+
+        for v in n.value:
+            item = self._get_literal_value(v)
+
+            if item is None:
+                item = v.accept(self, builder, alloca, env)
+
+            content.append(item)
+
+        if not content:
+            ptr = alloca.alloca(arr, name=n.name)
+        else:
+            const_array = ir.Constant(arr, content or [])
+            ptr = alloca.alloca(arr, name=n.name)
+            builder.store(const_array, ptr)
 
     def visit(
         self, n: FuncDecl, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
