@@ -2,7 +2,7 @@ import unittest
 from parser.model import *
 
 from ir import IRGenerator, run_llvm_ir
-from utils import clear_errors
+from utils import clear_errors, errors_detected
 
 
 class TestBasicDecl(unittest.TestCase):
@@ -12,6 +12,7 @@ class TestBasicDecl(unittest.TestCase):
     def get_ir(self, code, run=False):
         gen = IRGenerator().generate_from_code(code)
         out = ""
+        self.assertFalse(errors_detected())
 
         if run:
             out = run_llvm_ir(str(gen))
@@ -120,3 +121,24 @@ class TestBasicDecl(unittest.TestCase):
 
         self.assertIn('@"z" = dso_local constant i8 97, align 1', code)
         self.assertIn('@"w" = dso_local constant i8 10, align 1', code)
+
+    def test_global_literal_expr(self):
+        gen, _ = self.get_ir(
+            """
+            x: integer = 1 + 2 / 30 * 10; // 1
+            y: constant = -1.0 + 2.0;
+            """
+        )
+
+        x = gen.get_global("x")
+        self.assertEqual(x.name, "x")
+
+        y = gen.get_global("y")
+        self.assertEqual(y.name, "y")
+
+        code = str(gen)
+        self.assertIn('@"x" = dso_local global i32 1, align 4', code)
+
+        self.assertIn(
+            '@"y" = dso_local constant float 0x3ff0000000000000, align 4', code
+        )
