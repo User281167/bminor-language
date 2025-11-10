@@ -22,27 +22,19 @@ class TestBasicDecl(unittest.TestCase):
     def test_global_basic(self):
         gen, _ = self.get_ir("x: integer; y: float; z: char; b: boolean;")
 
-        x = gen.get_global("x")
-        self.assertEqual(x.name, "x")
-
-        y = gen.get_global("y")
-        self.assertEqual(y.name, "y")
-
-        z = gen.get_global("z")
-        self.assertEqual(z.name, "z")
-
-        b = gen.get_global("b")
-        self.assertEqual(b.name, "b")
-
+        # Verifica que las variables están en el entorno
         code = str(gen)
-        self.assertIn('@"x" = dso_local global i32 0, align 4', code)
 
-        self.assertIn('@"y" = dso_local global float', code)
-        self.assertIn("0x0, align 4", code)
-
-        self.assertIn('@"z" = dso_local global i8 0, align 1', code)
-
-        self.assertIn('@"b" = dso_local global i1 0, align 1', code)
+        # Verifica que las variables están alocadas en run()
+        self.assertIn('%"x" = alloca i32, align 4', code)
+        self.assertIn('store i32 0, i32* %"x"', code)
+        self.assertIn('%"y" = alloca float, align 4', code)
+        self.assertIn("store float", code)
+        self.assertIn('0x0, float* %"y"', code)
+        self.assertIn('%"z" = alloca i8, align 1', code)
+        self.assertIn('store i8 0, i8* %"z"', code)
+        self.assertIn('%"b" = alloca i1, align 1', code)
+        self.assertIn('store i1 0, i1* %"b"', code)
 
     def test_global_basic_value(self):
         gen, _ = self.get_ir(
@@ -55,22 +47,22 @@ class TestBasicDecl(unittest.TestCase):
             """
         )
 
-        x = gen.get_global("x")
-        self.assertEqual(x.name, "x")
-
-        y = gen.get_global("y")
-        self.assertEqual(y.name, "y")
-
-        z = gen.get_global("z")
-        self.assertEqual(z.name, "z")
-
         code = str(gen)
-        self.assertIn('@"x" = dso_local global i32 1, align 4', code)
 
-        self.assertIn('@"y" = dso_local global float 0x3ff0000000000000, align 4', code)
-        self.assertIn('@"z" = dso_local global i8 97, align 1', code)
-        self.assertIn('@"w" = dso_local global i8 10, align 1', code)
-        self.assertIn('@"b" = dso_local global i1 true, align 1', code)
+        self.assertIn('%"x" = alloca i32, align 4', code)
+        self.assertIn('store i32 1, i32* %"x"', code)
+
+        self.assertIn('%"y" = alloca float, align 4', code)
+        self.assertIn('store float 0x3ff0000000000000, float* %"y"', code)
+
+        self.assertIn('%"z" = alloca i8, align 1', code)
+        self.assertIn('store i8 97, i8* %"z"', code)
+
+        self.assertIn('%"w" = alloca i8, align 1', code)
+        self.assertIn('store i8 10, i8* %"w"', code)
+
+        self.assertIn('%"b" = alloca i1, align 1', code)
+        self.assertIn('store i1 true, i1* %"b"', code)
 
     def test_global_basic_auto(self):
         gen, _ = self.get_ir(
@@ -83,22 +75,22 @@ class TestBasicDecl(unittest.TestCase):
             """
         )
 
-        x = gen.get_global("x")
-        self.assertEqual(x.name, "x")
-
-        y = gen.get_global("y")
-        self.assertEqual(y.name, "y")
-
-        z = gen.get_global("z")
-        self.assertEqual(z.name, "z")
-
         code = str(gen)
-        self.assertIn('@"x" = dso_local global i32 1, align 4', code)
 
-        self.assertIn('@"y" = dso_local global float 0x3ff0000000000000, align 4', code)
-        self.assertIn('@"z" = dso_local global i8 97, align 1', code)
-        self.assertIn('@"w" = dso_local global i8 10, align 1', code)
-        self.assertIn('@"b" = dso_local global i1 false, align 1', code)
+        self.assertIn('%"x" = alloca i32, align 4', code)
+        self.assertIn('store i32 1, i32* %"x"', code)
+
+        self.assertIn('%"y" = alloca float, align 4', code)
+        self.assertIn('store float 0x3ff0000000000000, float* %"y"', code)
+
+        self.assertIn('%"z" = alloca i8, align 1', code)
+        self.assertIn('store i8 97, i8* %"z"', code)
+
+        self.assertIn('%"w" = alloca i8, align 1', code)
+        self.assertIn('store i8 10, i8* %"w"', code)
+
+        self.assertIn('%"b" = alloca i1, align 1', code)
+        self.assertIn('store i1 false, i1* %"b"', code)
 
     def test_global_constant(self):
         gen, _ = self.get_ir(
@@ -111,25 +103,22 @@ class TestBasicDecl(unittest.TestCase):
             """
         )
 
-        x = gen.get_global("x")
-        self.assertEqual(x.name, "x")
-
-        y = gen.get_global("y")
-        self.assertEqual(y.name, "y")
-
-        z = gen.get_global("z")
-        self.assertEqual(z.name, "z")
-
         code = str(gen)
-        self.assertIn('@"x" = dso_local constant i32 1, align 4', code)
 
-        self.assertIn(
-            '@"y" = dso_local constant float 0x3ff0000000000000, align 4', code
-        )
+        self.assertIn('%"x" = alloca i32, align 4', code)
+        self.assertIn('store i32 1, i32* %"x"', code)
 
-        self.assertIn('@"z" = dso_local constant i8 97, align 1', code)
-        self.assertIn('@"w" = dso_local constant i8 10, align 1', code)
-        self.assertIn('@"b" = dso_local constant i1 false, align 1', code)
+        self.assertIn('%"y" = alloca float, align 4', code)
+        self.assertIn('store float 0x3ff0000000000000, float* %"y"', code)
+
+        self.assertIn('%"z" = alloca i8, align 1', code)
+        self.assertIn('store i8 97, i8* %"z"', code)
+
+        self.assertIn('%"w" = alloca i8, align 1', code)
+        self.assertIn('store i8 10, i8* %"w"', code)
+
+        self.assertIn('%"b" = alloca i1, align 1', code)
+        self.assertIn('store i1 false, i1* %"b"', code)
 
     def test_global_literal_expr(self):
         gen, _ = self.get_ir(
@@ -140,17 +129,27 @@ class TestBasicDecl(unittest.TestCase):
             """
         )
 
-        x = gen.get_global("x")
-        self.assertEqual(x.name, "x")
+        code = str(gen)
 
-        y = gen.get_global("y")
-        self.assertEqual(y.name, "y")
+        self.assertIn('%"x" = alloca i32, align 4', code)
+        self.assertIn('store i32 1, i32* %"x"', code)
+
+        self.assertIn('%"y" = alloca float, align 4', code)
+        self.assertIn('store float 0x3ff0000000000000, float* %"y"', code)
+
+        self.assertIn('%"b" = alloca i1, align 1', code)
+        self.assertIn('store i1 false, i1* %"b"', code)
+
+    def test_copy_auto(self):
+        gen, _ = self.get_ir("x: auto = 'a'; y: auto = x;")
 
         code = str(gen)
-        self.assertIn('@"x" = dso_local global i32 1, align 4', code)
 
-        self.assertIn(
-            '@"y" = dso_local constant float 0x3ff0000000000000, align 4', code
-        )
+        self.assertIn('%"x" = alloca i8, align 1', code)
+        self.assertIn('store i8 97, i8* %"x"', code)
+        self.assertIn('%"y" = alloca i8, align 1', code)
 
-        self.assertIn('@"b" = dso_local global i1 false, align 1', code)
+        import re
+
+        match = re.search(r'store i8 %"(.*?)\.1", i8\* %"y"', code)
+        self.assertIsNotNone(match)
