@@ -142,7 +142,7 @@ def run_ir(filename):
             if "--lli" in sys.argv:
                 run_llvm_ir(gen)
         except Exception as e:
-            print(e)
+            print("Error: " + str(e))
             sys.exit(1)
     elif filename.endswith(".py"):
         path = os.path.abspath(filename)

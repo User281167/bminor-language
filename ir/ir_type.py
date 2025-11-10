@@ -1,3 +1,4 @@
+import struct
 from dataclasses import dataclass
 from parser.model import SimpleType
 
@@ -11,9 +12,7 @@ class IrTypes:
     char8 = ir.IntType(8)
     void = ir.VoidType()
     bool1 = ir.IntType(1)
-    pointer = ir.PointerType(ir.IntType(8))
-    array_type = ir.ArrayType(ir.IntType(8), 10)
-    array_structure = ir.LiteralStructType([ir.IntType(8), ir.IntType(32)], True)
+    pointer = ir.PointerType(ir.IntType(struct.calcsize("P")))
 
     @classmethod
     def get_type(cls, name: str | SimpleType) -> ir.Type:
@@ -25,10 +24,32 @@ class IrTypes:
             "float": cls.float32,
             "char": cls.char8,
             "string": cls.pointer,
-            "void": cls.void,
             "boolean": cls.bool1,
+            "void": cls.void,
             "pointer": cls.pointer,
-            "array": cls.array_type,
+            "array": cls.pointer,
+        }
+
+        return types[name]
+
+    @classmethod
+    def get_align(cls, t: str | SimpleType) -> int:
+        if isinstance(t, SimpleType):
+            name = t.name
+        else:
+            name = t
+
+        arq = struct.calcsize("P") * 8
+
+        types = {
+            "integer": 4,
+            "float": 4,
+            "char": 1,
+            "boolean": 1,
+            "string": arq,
+            "array": arq,
+            "pointer": arq,
+            "void": 0,
         }
 
         return types[name]

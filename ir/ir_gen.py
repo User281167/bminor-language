@@ -31,7 +31,9 @@ class IRGenerator(Visitor):
         return cls.Generate(ast, env, None)
 
     @classmethod
-    def Generate(cls, n: Program, env: Symtab, module_name: str | None) -> ir.Module:
+    def Generate(
+        cls, n: Program, semantic_env: Symtab, module_name: str | None
+    ) -> ir.Module:
         """
         Genera un módulo de IR a partir del AST y la tabla de símbolos.
         Visita todas las declaraciones y llama a accept() para cada una.
@@ -40,7 +42,7 @@ class IRGenerator(Visitor):
 
         args:
             n (Program): AST del programa, el ast generado por el analizador semántico ya que este inyecta los tipos en cada nodo
-            env (Symtab): Tabla de símbolos
+            semantic_env (Symtab): Tabla de símbolos
             module_name (str | None): Nombre del módulo de IR
         """
 
@@ -66,6 +68,13 @@ class IRGenerator(Visitor):
         # Builder para instrucciones normales
         run_builder = ir.IRBuilder(entry_block)
 
+        setattr(gen, "module", module)
+        setattr(gen, "run_func", run_func)
+        setattr(gen, "run_builder", run_builder)
+        setattr(gen, "alloca_builder", alloca_builder)
+        setattr(gen, "entry_block", entry_block)
+        setattr(gen, "semantic_env", semantic_env)
+
         # Entorno de símbolos
         env = Symtab("global")
 
@@ -76,18 +85,21 @@ class IRGenerator(Visitor):
             except Exception as e:
                 print("Error decl = ")
                 decl.pretty()
-                print(e)
+                print(repr(e))
 
         # Posicionar run_builder al final del bloque antes de emitir ret
         run_builder.position_at_end(entry_block)
 
-        # si existe una función main, llamarla y retornar su valor si no return 0
-        main_func = module.get_global("main") if "main" in module.globals else None
+        main_env = semantic_env.get("main", recursive=False)
 
-        if main_func and isinstance(main_func, ir.Function):
-            # Llamar a main y retornar su resultado
-            result = run_builder.call(main_func, [])
-            run_builder.ret(result)
+        if main_env:
+            # si existe una función main, llamarla y retornar su valor si no return 0
+            main_func = module.get_global(main_env.name + "_" + main_env.uid)
+
+            if main_func and isinstance(main_func, ir.Function):
+                # Llamar a main y retornar su resultado
+                result = run_builder.call(main_func, [])
+                run_builder.ret(result)
         else:
             # No hay main, retornar 0
             run_builder.ret(ir.Constant(IrTypes.int32, 0))
@@ -255,14 +267,8 @@ class IRGenerator(Visitor):
         llvm_type = IrTypes.get_type(n.type)
         # var = builder.alloca(llvm_type, name=n.name)
         var = alloca.alloca(llvm_type, name=n.name)
+        var.align = IrTypes.get_align(n.type) or 0
         env.add(n.name, var)
-
-        if n.type in (SimpleTypes.INTEGER.value, SimpleTypes.FLOAT.value):
-            var.align = 4
-        elif n.type == SimpleTypes.CHAR.value:
-            var.align = 1
-        elif n.type == SimpleTypes.BOOLEAN.value:
-            var.align = 1
 
         # Asignar el valor
         if not n.value:
@@ -281,10 +287,52 @@ class IRGenerator(Visitor):
     ):
         pass
 
-    def check(
+    def visit(
         self, n: FuncDecl, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
     ):
-        pass
+        # 1. Obtener tipo de retorno
+        ret_type = IrTypes.get_type(n.return_type)
+
+        # 2. Obtener tipos de parámetros
+        param_types = [IrTypes.get_type(p.type) for p in n.params]
+
+        # 3. Crear función LLVM
+        func_type = ir.FunctionType(ret_type, param_types)
+        func = ir.Function(
+            builder.module, func_type, name=n.name + "_" + n.uid
+        )  # para evitar conflictos de nombres
+
+        # 4. Crear bloques, alloca-entry
+        alloca_block = func.append_basic_block(name="alloca")
+        entry_block = func.append_basic_block(name="entry")
+
+        alloca_builder = ir.IRBuilder(alloca_block)
+        alloca_builder.branch(entry_block)
+        body_builder = ir.IRBuilder(entry_block)
+
+        # 5. Crear entorno local
+        local_env = Symtab(n.name + "_" + n.uid, parent=env)
+
+        # 6. Asignar parámetros a variables locales
+        for i, param in enumerate(n.params):
+            llvm_type = param_types[i]
+            ptr = alloca_builder.alloca(llvm_type, name=param.name)
+            ptr.align = IrTypes.get_align(param.type)
+
+            body_builder.store(func.args[i], ptr)
+            local_env.add(param.name, ptr)
+
+        # 7. Visitar cuerpo
+        for stmt in n.body or []:
+            stmt.accept(self, body_builder, alloca_builder, local_env)
+
+        # 8. Si no hay return explícito, retornar 0 o equivalente
+        if ret_type == ir.IntType(32):
+            body_builder.ret(ir.Constant(ir.IntType(32), 0))
+        elif ret_type == ir.VoidType():
+            body_builder.ret_void()
+        else:
+            body_builder.ret(ir.Constant(ret_type, 0))
 
     def visit(self, n: Param, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab):
         pass
