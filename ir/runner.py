@@ -1,9 +1,10 @@
+import platform
 import subprocess
 import tempfile
 from pathlib import Path
 
 
-def run_llvm_ir(ir_code: str, use_lli=True) -> str:
+def run_llvm_ir(ir_code: str, use_lli=True, add_runtime=False) -> str:
     def run_cmd(cmd, **kwargs):
         return subprocess.run(cmd, capture_output=True, text=True, check=True, **kwargs)
 
@@ -12,15 +13,30 @@ def run_llvm_ir(ir_code: str, use_lli=True) -> str:
         ir_path = tmpdir / "temp.ll"
         bc_path = tmpdir / "temp.bc"
         exe_path = tmpdir / "temp_exe"
+        runtime_c = "ir" / Path("runtime.c")
 
         ir_path.write_text(ir_code)
+
+        if add_runtime:
+            if platform.system() == "Windows":
+                print(runtime_c.resolve())
+                runtime_obj = tmpdir / "runtime.obj"
+                run_cmd(["clang", "-c", str(runtime_c), "-o", str(runtime_obj)])
+            else:
+                runtime_obj = tmpdir / "runtime.o"
+                run_cmd(["clang", "-c", str(runtime_c), "-o", str(runtime_obj)])
 
         if use_lli:
             result = run_cmd(["lli", ir_path])
         else:
-            run_cmd(["llvm-as", ir_path, "-o", bc_path])
-            run_cmd(["clang", bc_path, "-fuse-ld=lld", "-o", exe_path])
-            result = run_cmd([exe_path])
+            run_cmd(["llvm-as", str(ir_path), "-o", str(bc_path)])
+            cmd = ["clang", str(bc_path), "-fuse-ld=lld", "-o", str(exe_path)]
+
+            if add_runtime:
+                cmd.append(str(runtime_obj))
+
+            run_cmd(cmd)
+            result = run_cmd([str(exe_path)])
 
         return result.stdout.strip()
 
@@ -41,4 +57,5 @@ if __name__ == "__main__":
     }
     """
     print(run_llvm_ir(ir, use_lli=True))
+    print(run_llvm_ir(ir, use_lli=False))
     print(run_llvm_ir(ir, use_lli=False))

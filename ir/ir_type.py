@@ -61,3 +61,19 @@ class IrTypes:
     @classmethod
     def const_int(cls, value: int) -> ir.Constant:
         return ir.Constant(cls.int32, value)
+
+    @classmethod
+    def const_float(cls, value: float) -> ir.Constant:
+        return ir.Constant(cls.float32, value)
+
+    @classmethod
+    def const_char(cls, value: str) -> ir.Constant:
+        return ir.Constant(cls.char8, ord(value))
+
+    @classmethod
+    def const_bool(cls, value: bool) -> ir.Constant:
+        return ir.Constant(cls.bool1, 1 if value else 0)
+
+    @classmethod
+    def const_pointer(cls, value: int) -> ir.Constant:
+        return ir.Constant(cls.pointer, value)

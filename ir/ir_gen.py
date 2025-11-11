@@ -12,8 +12,10 @@ from uuid import uuid4
 from llvmlite import ir
 
 from semantic import Symtab
+from utils import warning
 
 from .ir_type import IrTypes
+from .print_runtime import PrintRuntime
 
 
 class IRGenerator(Visitor):
@@ -73,6 +75,7 @@ class IRGenerator(Visitor):
         setattr(gen, "alloca_builder", alloca_builder)
         setattr(gen, "entry_block", entry_block)
         setattr(gen, "semantic_env", semantic_env)
+        setattr(gen, "print_runtime", PrintRuntime(module))
 
         # Entorno de símbolos
         env = Symtab("global")
@@ -99,7 +102,12 @@ class IRGenerator(Visitor):
             if main_func and isinstance(main_func, ir.Function):
                 # Llamar a main y retornar su resultado
                 result = run_builder.call(main_func, [])
-                run_builder.ret(result)
+
+                if main_func.type == SimpleTypes.INTEGER.value:
+                    run_builder.ret(result)
+                else:
+                    warning("Main function no return integer type")
+                    run_builder.ret(ir.Constant(IrTypes.int32, 0))
         else:
             # No hay main, retornar 0
             run_builder.ret(ir.Constant(IrTypes.int32, 0))
@@ -134,7 +142,17 @@ class IRGenerator(Visitor):
     def visit(
         self, n: PrintStmt, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
     ):
-        pass
+        fun_call = {
+            str(SimpleTypes.INTEGER.value): self.print_runtime.print_int(),
+            str(SimpleTypes.CHAR.value): self.print_runtime.print_char(),
+            str(SimpleTypes.FLOAT.value): self.print_runtime.print_float(),
+            str(SimpleTypes.BOOLEAN.value): self.print_runtime.print_bool(),
+        }
+
+        for expr in n.expr or []:
+            fn = fun_call[str(expr.type)]
+            val = expr.accept(self, builder, alloca, env)
+            builder.call(fn, [val])
 
     def visit(
         self, n: IfStmt, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
@@ -457,7 +475,18 @@ class IRGenerator(Visitor):
     def visit(
         self, n: Literal, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
     ):
-        pass
+        """
+        Devuelve Constant
+        """
+
+        if n.type == SimpleTypes.INTEGER.value:
+            return IrTypes.const_int(n.value)
+        elif n.type == SimpleTypes.FLOAT.value:
+            return IrTypes.const_float(n.value)
+        elif n.type == SimpleTypes.CHAR.value:
+            return IrTypes.const_char(n.value)
+        elif n.type == SimpleTypes.BOOLEAN.value:
+            return IrTypes.const_bool(n.value)
 
     def visit(
         self, n: SimpleType, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
