@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <math.h>
 
 void print_int(int32_t value) {
     printf("%d", value);
@@ -19,4 +20,8 @@ void print_bool(int8_t value) {
     } else {
         printf("false");
     }
+}
+
+int32_t pow_int(int32_t base, int32_t exponent) {
+    return pow(base, exponent);
 }

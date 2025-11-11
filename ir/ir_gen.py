@@ -15,6 +15,7 @@ from semantic import Symtab
 from utils import warning
 
 from .ir_type import IrTypes
+from .math_runtime import MathRuntime
 from .print_runtime import PrintRuntime
 
 
@@ -77,6 +78,7 @@ class IRGenerator(Visitor):
         setattr(gen, "entry_block", entry_block)
         setattr(gen, "semantic_env", semantic_env)
         setattr(gen, "print_runtime", PrintRuntime(module))
+        setattr(gen, "math_runtime", MathRuntime(module))
 
         # Entorno de símbolos
         env = Symtab("global")
@@ -532,7 +534,46 @@ class IRGenerator(Visitor):
     def visit(
         self, n: BinOper, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
     ):
-        pass
+        left = n.left.accept(self, builder, alloca, env)
+        right = n.right.accept(self, builder, alloca, env)
+        is_int = left.type == ir.IntType(32)
+
+        if n.oper == "^":
+            fn = self.math_runtime.pow_int()
+            return builder.call(fn, [left, right])
+
+        fn = {
+            "+": builder.add if is_int else builder.fadd,
+            "-": builder.sub if is_int else builder.fsub,
+            "*": builder.mul if is_int else builder.fmul,
+            "/": builder.sdiv if is_int else builder.fdiv,
+            "%": builder.srem if is_int else builder.frem,
+        }
+
+        fn_log = {
+            "<=": (builder.icmp_signed if is_int else builder.fcmp_ordered),
+            "<": (
+                builder.icmp_signed
+                if is_int
+                else builder.fcmp_ordered  # ordered para evitar problemas con NaN
+            ),
+            ">=": (builder.icmp_signed if is_int else builder.fcmp_ordered),
+            ">": (builder.icmp_signed if is_int else builder.fcmp_ordered),
+            "==": (builder.icmp_signed if is_int else builder.fcmp_ordered),
+            "!=": (builder.icmp_signed if is_int else builder.fcmp_ordered),
+        }
+
+        fn_bool = {
+            "LAND": builder.and_,
+            "LOR": builder.or_,
+        }
+
+        if n.oper in fn:
+            return fn[n.oper](left, right)
+        elif n.oper in fn_log:
+            return fn_log[n.oper](n.oper, left, right)
+        elif n.oper in fn_bool:
+            return fn_bool[n.oper](left, right)
 
     def visit(
         self, n: UnaryOper, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
