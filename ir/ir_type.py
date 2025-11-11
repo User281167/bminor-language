@@ -1,3 +1,4 @@
+import codecs
 import struct
 from dataclasses import dataclass
 from parser.model import SimpleType
@@ -67,8 +68,14 @@ class IrTypes:
         return ir.Constant(cls.float32, value)
 
     @classmethod
-    def const_char(cls, value: str) -> ir.Constant:
-        return ir.Constant(cls.char8, ord(value))
+    def const_char(cls, value: str | int) -> ir.Constant:
+        if isinstance(value, int):
+            return ir.Constant(cls.char8, value)
+
+        val = value
+        decoded = codecs.decode(val, "unicode_escape")  # '\\n' -> '\n'
+        ascii_val = ord(decoded)
+        return ir.Constant(cls.char8, ascii_val)
 
     @classmethod
     def const_bool(cls, value: bool) -> ir.Constant:
@@ -76,4 +83,5 @@ class IrTypes:
 
     @classmethod
     def const_pointer(cls, value: int) -> ir.Constant:
+        return ir.Constant(cls.pointer, value)
         return ir.Constant(cls.pointer, value)

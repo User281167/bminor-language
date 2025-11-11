@@ -70,6 +70,7 @@ class IRGenerator(Visitor):
         run_builder = ir.IRBuilder(entry_block)
 
         setattr(gen, "module", module)
+        setattr(gen, "global_scope", True)
         setattr(gen, "run_func", run_func)
         setattr(gen, "run_builder", run_builder)
         setattr(gen, "alloca_builder", alloca_builder)
@@ -83,6 +84,7 @@ class IRGenerator(Visitor):
         # Visitar todas las declaraciones
         for decl in n.body:
             try:
+                gen.global_scope = True
                 decl.accept(gen, run_builder, alloca_builder, env)
             except Exception as e:
                 print("Error decl = ")
@@ -283,22 +285,39 @@ class IRGenerator(Visitor):
         self, n: VarDecl, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
     ):
         llvm_type = IrTypes.get_type(n.type)
-        # var = builder.alloca(llvm_type, name=n.name)
-        var = alloca.alloca(llvm_type, name=n.name)
+        val = self._get_literal_value(n.value)
+
+        if self.global_scope:
+            var = ir.GlobalVariable(self.module, llvm_type, n.name)
+
+            if val is None:
+                var.initializer = ir.Constant(llvm_type, 0)
+            elif n.type == SimpleTypes.INTEGER.value:
+                var.initializer = IrTypes.const_int(val)
+            elif n.type == SimpleTypes.FLOAT.value:
+                var.initializer = IrTypes.const_float(val)
+            elif n.type == SimpleTypes.CHAR.value:
+                var.initializer = IrTypes.const_char(val)
+            elif n.type == SimpleTypes.BOOLEAN.value:
+                var.initializer = IrTypes.const_bool(val)
+
+            var.linkage = "dso_local"
+        else:
+            var = alloca.alloca(llvm_type, name=n.name)
+
         var.align = IrTypes.get_align(n.type) or 0
-        env.add(n.name, var)
 
         # Asignar el valor
         if not n.value:
             builder.store(ir.Constant(llvm_type, 0), var)
-        else:
-            val = self._get_literal_value(n.value)
-
-            if not val is None:
+        elif not val is None:
+            if not self.global_scope:
                 builder.store(ir.Constant(llvm_type, val), var)
-            else:
-                val = n.value.accept(self, builder, alloca, env)
-                builder.store(val, var)
+        else:
+            val = n.value.accept(self, builder, alloca, env)
+            builder.store(val, var)
+
+        env.add(n.name, var)
 
     def visit(
         self, n: ArrayDecl, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
@@ -423,6 +442,8 @@ class IRGenerator(Visitor):
     def visit(
         self, n: FuncDecl, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
     ):
+        self.global_scope = False
+
         # 1. Obtener tipo de retorno
         ret_type = IrTypes.get_type(n.return_type)
 
