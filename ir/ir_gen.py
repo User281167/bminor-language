@@ -87,7 +87,7 @@ class IRGenerator(Visitor):
         for decl in n.body:
             try:
                 gen.global_scope = True
-                decl.accept(gen, run_builder, alloca_builder, env)
+                decl.accept(gen, env, run_builder, alloca_builder, run_func)
             except Exception as e:
                 print("Error decl = ")
                 decl.pretty()
@@ -119,7 +119,11 @@ class IRGenerator(Visitor):
         return module
 
     def _inject_fun_builtins(
-        self, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         pass
 
@@ -132,16 +136,26 @@ class IRGenerator(Visitor):
         pass
 
     def visit(
-        self, n: BlockStmt, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: BlockStmt,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         pass
 
     # --- Statements
 
     def visit(
-        self, n: Assignment, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: Assignment,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
-        val = n.value.accept(self, builder, alloca, env)
+        val = n.value.accept(self, env, builder, alloca, func)
 
         if isinstance(n.location, VarLoc):
             loc = env.get(n.location.name)
@@ -151,7 +165,12 @@ class IRGenerator(Visitor):
         builder.store(val, loc)
 
     def visit(
-        self, n: PrintStmt, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: PrintStmt,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         fun_call = {
             str(SimpleTypes.INTEGER.value): self.print_runtime.print_int(),
@@ -162,26 +181,92 @@ class IRGenerator(Visitor):
 
         for expr in n.expr or []:
             fn = fun_call[str(expr.type)]
-            val = expr.accept(self, builder, alloca, env)
+            val = expr.accept(self, env, builder, alloca, func)
             builder.call(fn, [val])
 
+    def unique_block_name(self, prefix="block"):
+        return f"{prefix}_{uuid4().hex[:8]}"
+
     def visit(
-        self, n: IfStmt, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: IfStmt,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
+    ):
+        """
+        Genera LLVM IR para una sentencia 'if' o 'if-else'.
+        """
+        # Crear los bloques básicos necesarios
+        then_block = func.append_basic_block(name=self.unique_block_name("then"))
+
+        else_block = None
+
+        if n.else_branch:
+            else_block = func.append_basic_block(name=self.unique_block_name("else"))
+
+        # El 'merge' block es donde el control se une después del if/else
+        merge_block = func.append_basic_block(name=self.unique_block_name("merge"))
+
+        condition_value = n.condition.accept(self, env, builder, alloca, func)
+
+        # Generar la rama condicional (cbranch)
+        builder.cbranch(
+            condition_value, then_block, else_block if else_block else merge_block
+        )
+
+        builder.position_at_end(then_block)
+
+        # Generar las sentencias dentro del bloque 'then'
+        for stmt in n.then_branch:
+            stmt.accept(self, env, builder, alloca, func)
+
+        # Al final del bloque 'then', siempre debe haber una rama incondicional al 'merge_block'
+        builder.branch(merge_block)
+
+        # Si existe una rama 'else', posicionarse y generar su código
+        if n.else_branch:
+            builder.position_at_end(else_block)
+
+            # Generar las sentencias dentro del bloque 'else'
+            for stmt in n.else_branch:
+                stmt.accept(self, env, builder, alloca, func)
+
+            # Al final del bloque 'else', también hay una rama incondicional al 'merge_block'
+            builder.branch(merge_block)
+
+        # Posicionarse al final del bloque 'merge'
+        # Cualquier código que siga al 'if' comenzará aquí.
+        builder.position_at_end(merge_block)
+
+    def visit(
+        self,
+        n: ForStmt,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         pass
 
     def visit(
-        self, n: ForStmt, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: WhileStmt,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         pass
 
     def visit(
-        self, n: WhileStmt, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
-    ):
-        pass
-
-    def visit(
-        self, n: DoWhileStmt, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: DoWhileStmt,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         pass
 
@@ -191,24 +276,44 @@ class IRGenerator(Visitor):
         pass
 
     def visit(
-        self, n: ContinueStmt, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: ContinueStmt,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         pass
 
     def visit(
-        self, n: BreakStmt, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: BreakStmt,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         pass
 
     def visit(
-        self, n: ReturnStmt, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: ReturnStmt,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         pass
 
     # --- Declaration
 
     def visit(
-        self, n: Declaration, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: Declaration,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         pass
 
@@ -291,7 +396,12 @@ class IRGenerator(Visitor):
         return val
 
     def visit(
-        self, n: VarDecl, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: VarDecl,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         llvm_type = IrTypes.get_type(n.type)
         val = self._get_literal_value(n.value)
@@ -323,13 +433,18 @@ class IRGenerator(Visitor):
             if not self.global_scope:
                 builder.store(ir.Constant(llvm_type, val), var)
         else:
-            val = n.value.accept(self, builder, alloca, env)
+            val = n.value.accept(self, env, builder, alloca, func)
             builder.store(val, var)
 
         env.add(n.name, var)
 
     def visit(
-        self, n: ArrayDecl, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: ArrayDecl,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         """
         Genera el IR para la declaración de un array usando una estructura descriptor.
@@ -368,7 +483,7 @@ class IRGenerator(Visitor):
                 item = self._get_literal_value(v)
 
                 if item is None:
-                    item = v.accept(self, builder, alloca, env)
+                    item = v.accept(self, env, builder, alloca, func)
 
                 content.append(item)
 
@@ -389,7 +504,7 @@ class IRGenerator(Visitor):
 
             # El tamaño es una variable o expresión (ej: [n])
             else:
-                size_val = n.type.size.accept(self, builder, alloca, env)
+                size_val = n.type.size.accept(self, env, builder, alloca, func)
                 # No conocemos array_len en tiempo de compilación
         else:
             # Un array debe tener un tamaño o un inicializador
@@ -449,7 +564,12 @@ class IRGenerator(Visitor):
         return struct_ptr
 
     def visit(
-        self, n: FuncDecl, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: FuncDecl,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         self.global_scope = False
 
@@ -461,13 +581,13 @@ class IRGenerator(Visitor):
 
         # 3. Crear función LLVM
         func_type = ir.FunctionType(ret_type, param_types)
-        func = ir.Function(
+        func_body = ir.Function(
             builder.module, func_type, name=n.name + "_" + n.uid
         )  # para evitar conflictos de nombres
 
         # 4. Crear bloques, alloca-entry
-        alloca_block = func.append_basic_block(name="alloca")
-        entry_block = func.append_basic_block(name="entry")
+        alloca_block = func_body.append_basic_block(name="alloca")
+        entry_block = func_body.append_basic_block(name="entry")
 
         alloca_builder = ir.IRBuilder(alloca_block)
         alloca_builder.branch(entry_block)
@@ -482,12 +602,12 @@ class IRGenerator(Visitor):
             ptr = alloca_builder.alloca(llvm_type, name=param.name)
             ptr.align = IrTypes.get_align(param.type)
 
-            body_builder.store(func.args[i], ptr)
+            body_builder.store(func_body.args[i], ptr)
             local_env.add(param.name, ptr)
 
         # 7. Visitar cuerpo
         for stmt in n.body or []:
-            stmt.accept(self, body_builder, alloca_builder, local_env)
+            stmt.accept(self, local_env, body_builder, alloca_builder, func_body)
 
         # 8. Si no hay return explícito, retornar 0 o equivalente
         if ret_type == ir.IntType(32):
@@ -503,7 +623,12 @@ class IRGenerator(Visitor):
     # --- Expressions
 
     def visit(
-        self, n: Literal, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: Literal,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         """
         Devuelve Constant
@@ -519,22 +644,37 @@ class IRGenerator(Visitor):
             return IrTypes.const_bool(n.value)
 
     def visit(
-        self, n: SimpleType, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: SimpleType,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         pass
 
     def visit(
-        self, n: ArrayType, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: ArrayType,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         pass
 
     def visit(
-        self, n: Increment, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: Increment,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         if isinstance(n.location, VarLoc):
             ptr = env.get(n.location.name)
         else:
-            ptr = n.location.accept(self, builder, alloca, env)
+            ptr = n.location.accept(self, env, builder, alloca, func)
 
         if type(ptr) == type(IrTypes.const_int32) or type(ptr) == ir.Instruction:
             val = ptr
@@ -552,12 +692,17 @@ class IRGenerator(Visitor):
         return incremented  # devuelve el valor incrementado
 
     def visit(
-        self, n: Decrement, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: Decrement,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         if isinstance(n.location, VarLoc):
             ptr = env.get(n.location.name)
         else:
-            ptr = n.location.accept(self, builder, alloca, env)
+            ptr = n.location.accept(self, env, builder, alloca, func)
 
         if type(ptr) == type(IrTypes.const_int32) or type(ptr) == ir.Instruction:
             val = ptr
@@ -575,10 +720,15 @@ class IRGenerator(Visitor):
         return incremented  # devuelve el valor incrementado
 
     def visit(
-        self, n: BinOper, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: BinOper,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
-        left = n.left.accept(self, builder, alloca, env)
-        right = n.right.accept(self, builder, alloca, env)
+        left = n.left.accept(self, env, builder, alloca, func)
+        right = n.right.accept(self, env, builder, alloca, func)
         is_int = left.type in (ir.IntType(32), ir.IntType(8))
 
         if n.oper == "^":
@@ -619,9 +769,14 @@ class IRGenerator(Visitor):
             return fn_bool[n.oper](left, right)
 
     def visit(
-        self, n: UnaryOper, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: UnaryOper,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
-        val = n.expr.accept(self, builder, alloca, env)
+        val = n.expr.accept(self, env, builder, alloca, func)
 
         if n.oper == "+":
             return val
@@ -634,17 +789,32 @@ class IRGenerator(Visitor):
             return builder.not_(val)
 
     def visit(
-        self, n: FuncCall, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: FuncCall,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         pass
 
     def visit(
-        self, n: Location, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: Location,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         pass
 
     def visit(
-        self, n: VarLoc, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: VarLoc,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         """
         Obtener Puntero de la variable
@@ -653,6 +823,11 @@ class IRGenerator(Visitor):
         return builder.load(var, name=n.name)
 
     def check(
-        self, n: ArrayLoc, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
+        self,
+        n: ArrayLoc,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ):
         pass
