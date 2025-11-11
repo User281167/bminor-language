@@ -15,6 +15,11 @@ class IrTypes:
     bool1 = ir.IntType(1)
     pointer = ir.PointerType(ir.IntType(struct.calcsize("P")))
 
+    const_int32 = ir.Constant(int32, 0)
+    const_float32 = ir.Constant(float32, 0.0)
+    const_char8 = ir.Constant(char8, 0)
+    const_bool1 = ir.Constant(bool1, 0)
+
     @classmethod
     def get_type(cls, name: str | SimpleType) -> ir.Type:
         if isinstance(name, SimpleType):

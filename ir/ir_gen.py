@@ -531,12 +531,48 @@ class IRGenerator(Visitor):
     def visit(
         self, n: Increment, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
     ):
-        pass
+        if isinstance(n.location, VarLoc):
+            ptr = env.get(n.location.name)
+        else:
+            ptr = n.location.accept(self, builder, alloca, env)
+
+        if type(ptr) == type(IrTypes.const_int32) or type(ptr) == ir.Instruction:
+            val = ptr
+        else:
+            val = builder.load(ptr)
+
+        incremented = builder.add(val, IrTypes.const_int(1))
+
+        if isinstance(n.location, VarLoc):
+            builder.store(incremented, ptr)
+
+        if n.postfix:
+            return val  # devuelve el valor original
+
+        return incremented  # devuelve el valor incrementado
 
     def visit(
         self, n: Decrement, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
     ):
-        pass
+        if isinstance(n.location, VarLoc):
+            ptr = env.get(n.location.name)
+        else:
+            ptr = n.location.accept(self, builder, alloca, env)
+
+        if type(ptr) == type(IrTypes.const_int32) or type(ptr) == ir.Instruction:
+            val = ptr
+        else:
+            val = builder.load(ptr)
+
+        incremented = builder.sub(val, IrTypes.const_int(1))
+
+        if isinstance(n.location, VarLoc):
+            builder.store(incremented, ptr)
+
+        if n.postfix:
+            return val  # devuelve el valor original
+
+        return incremented  # devuelve el valor incrementado
 
     def visit(
         self, n: BinOper, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
