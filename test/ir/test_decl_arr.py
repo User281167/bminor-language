@@ -19,13 +19,43 @@ class TestArrayDecl(unittest.TestCase):
 
         return gen, out
 
-    def test_array_basic(self):
+    def test_array_int(self):
+        codes = [
+            "x: array [1] integer;",
+            "x: array [1] float;",
+            "x: array [1] char;",
+            "x: array [1] boolean;",
+        ]
+
+        types = ["i32", "float", "i8", "i1"]
+
+        for c, t in zip(codes, types):
+            gen, _ = self.get_ir(c)
+
+            # Verifica que las variables están en el entorno
+            code = str(gen)
+            arr_t = "{i32, " + t + "*}"
+
+            # Verifica que las variables están alocadas en run()
+            self.assertIn(f'%"x.data" = alloca [1 x {t}]', code)
+            self.assertIn(f'%"x" = alloca {arr_t}', code)
+
+            self.assertIn(
+                f'%"x.size_ptr" = getelementptr {arr_t}, {arr_t}* %"x", i32 0, i32 0',
+                code,
+            )
+            self.assertIn(f'store i32 1, i32* %"x.size_ptr"', code)
+            self.assertIn(
+                f'%"x.data_ptr" = getelementptr {arr_t}, {arr_t}* %"x", i32 0, i32 1',
+                code,
+            )
+            self.assertIn(f'%".5" = bitcast [1 x {t}]* %"x.data" to {t}*', code)
+            self.assertIn(f'store {t}* %".5", {t}** %"x.data_ptr"', code)
+
+    def test_array_init(self):
         gen, _ = self.get_ir(
             """
-            x: array [1] integer;
-            y: array [2] float;
-            z: array [3] char;
-            b: array [4] boolean;
+            x: array [2] integer = {100, 200};
             """
         )
 
@@ -33,18 +63,13 @@ class TestArrayDecl(unittest.TestCase):
         code = str(gen)
 
         # Verifica que las variables están alocadas en run()
-        self.assertIn('%"x" = alloca [1 x i32]', code)
-        self.assertIn('%"y" = alloca [2 x float]', code)
-        self.assertIn('%"z" = alloca [3 x i8]', code)
-        self.assertIn('%"b" = alloca [4 x i1]', code)
+        self.assertIn('store [2 x i32] [i32 100, i32 200], [2 x i32]* %"x.data"', code)
 
-    def test_array_basic_val(self):
+    def test_array_var(self):
         gen, _ = self.get_ir(
             """
-            x: array [1] integer = {1};
-            y: array [2] float = {1.0, 2.0};
-            z: array [3] char = {'a', 'b', 'c'};
-            b: array [4] boolean = {true, false, true, false};
+            n: integer;
+            x: array [n] integer = {100, 200};
             """
         )
 
@@ -52,18 +77,4 @@ class TestArrayDecl(unittest.TestCase):
         code = str(gen)
 
         # Verifica que las variables están alocadas en run()
-        self.assertIn('%"x" = alloca [1 x i32]', code)
-        self.assertIn('%"y" = alloca [2 x float]', code)
-        self.assertIn('%"z" = alloca [3 x i8]', code)
-        self.assertIn('%"b" = alloca [4 x i1]', code)
-
-        self.assertIn('store [1 x i32] [i32 1], [1 x i32]* %"x"', code)
-        self.assertIn(
-            'store [2 x float] [float 0x3ff0000000000000, float 0x4000000000000000], [2 x float]* %"y"',
-            code,
-        )
-        self.assertIn('store [3 x i8] [i8 97, i8 98, i8 99], [3 x i8]* %"z"', code)
-        self.assertIn(
-            'store [4 x i1] [i1 true, i1 false, i1 true, i1 false], [4 x i1]* %"b"',
-            code,
-        )
+        self.assertIn('store i32 %"n.1", i32* %"x.size_ptr"', code)

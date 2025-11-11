@@ -53,3 +53,11 @@ class IrTypes:
         }
 
         return types[name]
+
+    @classmethod
+    def get_ptr_size(cls) -> int:
+        return struct.calcsize("P")
+
+    @classmethod
+    def const_int(cls, value: int) -> ir.Constant:
+        return ir.Constant(cls.int32, value)
