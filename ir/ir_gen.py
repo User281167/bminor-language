@@ -537,10 +537,17 @@ class IRGenerator(Visitor):
     def visit(
         self, n: UnaryOper, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
     ):
-        val = n.expr.accept(self, builder, env)
+        val = n.expr.accept(self, builder, alloca, env)
 
-        if n.oper == "-":
-            return builder.neg(val)
+        if n.oper == "+":
+            return val
+        elif n.oper == "-":
+            if n.expr.type == SimpleTypes.INTEGER.value:
+                return builder.neg(val)
+
+            return builder.fsub(IrTypes.const_float(0), val)
+        elif n.oper == "!":
+            return builder.not_(val)
 
     def visit(
         self, n: FuncCall, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
