@@ -55,7 +55,7 @@ class IRGenerator(Visitor):
 
         # Crear función run
         func_type = ir.FunctionType(ir.IntType(32), [])
-        run_func = ir.Function(module, func_type, name="run")
+        run_func = ir.Function(module, func_type, name="main")
 
         # Crear bloques en orden correcto
         alloca_block = run_func.append_basic_block(name="alloca_entry")
@@ -63,7 +63,6 @@ class IRGenerator(Visitor):
 
         # Builder para allocas
         alloca_builder = ir.IRBuilder(alloca_block)
-        alloca_builder.branch(entry_block)  # salto explícito al bloque principal
 
         # Builder para instrucciones normales
         run_builder = ir.IRBuilder(entry_block)
@@ -87,6 +86,7 @@ class IRGenerator(Visitor):
                 decl.pretty()
                 print(repr(e))
 
+        alloca_builder.branch(entry_block)  # salto explícito al bloque principal
         # Posicionar run_builder al final del bloque antes de emitir ret
         run_builder.position_at_end(entry_block)
 
@@ -327,6 +327,8 @@ class IRGenerator(Visitor):
                 content.append(item)
 
             array_len = len(content)
+            # Check problema cuando el array tiene un tamaño variable
+            # size_val = IrTypes.const_int(array_len)  # El tamaño es una constante
             array_ty = ir.ArrayType(base_type, array_len)
             initial_values = ir.Constant(array_ty, content)
 
