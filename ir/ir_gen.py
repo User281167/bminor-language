@@ -141,7 +141,14 @@ class IRGenerator(Visitor):
     def visit(
         self, n: Assignment, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
     ):
-        pass
+        val = n.value.accept(self, builder, alloca, env)
+
+        if isinstance(n.location, VarLoc):
+            loc = env.get(n.location.name)
+        elif isinstance(n.location, ArrayLoc):
+            loc = env.get(n.location.array)
+
+        builder.store(val, loc)
 
     def visit(
         self, n: PrintStmt, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
@@ -598,7 +605,6 @@ class IRGenerator(Visitor):
     def visit(
         self, n: Location, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab
     ):
-        # self.check(n, env)
         pass
 
     def visit(
