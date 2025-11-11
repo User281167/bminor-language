@@ -536,7 +536,7 @@ class IRGenerator(Visitor):
     ):
         left = n.left.accept(self, builder, alloca, env)
         right = n.right.accept(self, builder, alloca, env)
-        is_int = left.type == ir.IntType(32)
+        is_int = left.type in (ir.IntType(32), ir.IntType(8))
 
         if n.oper == "^":
             fn = self.math_runtime.pow_int()

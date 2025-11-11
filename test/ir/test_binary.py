@@ -391,3 +391,95 @@ class TestBinOper(unittest.TestCase):
         _, out = self.get_ir(code)
         self.assertEqual(out, "true")
         self.assertEqual(out, "true")
+
+    # --- Tests para Operaciones de Comparación (Char) ---
+
+    def test_char_lt_literals(self):
+        code = """
+        main: function void () = {
+            print 'a' < 'b';
+        }
+        """
+        _, out = self.get_ir(code)
+        # 'a' tiene un valor ASCII menor que 'b'
+        self.assertEqual(out, "true")
+
+    def test_char_lt_equal_literals(self):
+        code = """
+        main: function void () = {
+            print 'z' <= 'z';
+        }
+        """
+        _, out = self.get_ir(code)
+        # Son iguales
+        self.assertEqual(out, "true")
+
+    def test_char_gt_literals(self):
+        code = """
+        main: function void () = {
+            print 'c' > 'a';
+        }
+        """
+        _, out = self.get_ir(code)
+        # 'c' tiene un valor ASCII mayor que 'a'
+        self.assertEqual(out, "true")
+
+    def test_char_gt_equal_literals(self):
+        code = """
+        main: function void () = {
+            print 'x' >= 'y';
+        }
+        """
+        _, out = self.get_ir(code)
+        # 'x' es menor que 'y', así que esto debe ser falso
+        self.assertEqual(out, "false")
+
+    def test_char_eq_literals(self):
+        code = """
+        main: function void () = {
+            print 'M' == 'M';
+        }
+        """
+        _, out = self.get_ir(code)
+        self.assertEqual(out, "true")
+
+    def test_char_neq_literals(self):
+        code = """
+        main: function void () = {
+            print 'A' != 'B';
+        }
+        """
+        _, out = self.get_ir(code)
+        self.assertEqual(out, "true")
+
+    # --- Tests combinando chars con variables y literales ---
+
+    def test_char_lt_variable_literal(self):
+        code = """
+        char_var: char = 'p';
+        main: function void () = {
+            print char_var < 'q';
+        }
+        """
+        _, out = self.get_ir(code)
+        self.assertEqual(out, "true")
+
+    def test_char_eq_variable_literal(self):
+        code = """
+        char_var: char = 'X';
+        main: function void () = {
+            print char_var == 'Y';
+        }
+        """
+        _, out = self.get_ir(code)
+        self.assertEqual(out, "false")
+
+    def test_char_neq_variable_literal(self):
+        code = """
+        char_var: char = 'm';
+        main: function void () = {
+            print char_var != 'm';
+        }
+        """
+        _, out = self.get_ir(code)
+        self.assertEqual(out, "false")
