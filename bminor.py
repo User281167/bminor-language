@@ -8,7 +8,7 @@ from parser import ASTPrinter, Parser
 import rich
 from rich.table import Table
 
-from ir import IRGenerator, run_llvm_ir
+from ir import IRGenerator, run_llvm_clang_ir
 from scanner import Lexer
 from semantic import Check
 from utils import print_json
@@ -139,8 +139,9 @@ def run_ir(filename):
 
             if "--print" in sys.argv:
                 print(str(gen))
-            if "--lli" in sys.argv:
-                run_llvm_ir(gen)
+            if "--run" in sys.argv:
+                out = run_llvm_clang_ir(str(gen), add_runtime=True)
+                print(out)
         except Exception as e:
             print("Error: " + str(e))
             sys.exit(1)
@@ -167,7 +168,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) < 3:
         print(
-            "Usage: bminor.py --scan|--parser|--semantic [test | filename.bminor | test/.../*.py]"
+            "Usage: bminor.py --scan|--parser|--semantic | ir [test | filename.bminor | test/.../*.py]"
         )
         print("Example: bminor.py --scan test/scanner/good1.bminor")
         print("\nparser flags: --print | --pretty | --json | --graph")
@@ -176,6 +177,7 @@ if __name__ == "__main__":
         print("Example: bminor.py --scan code.bminor --table")
         print("\nsemantic flags: --table")
         print("Example: bminor.py --semantic code.bminor --table")
+        print("\nir flags: --print | --run")
         sys.exit(1)
 
     mode = sys.argv[1]
@@ -190,7 +192,5 @@ if __name__ == "__main__":
     elif mode == "--ir":
         run_ir(filename)
     else:
-        print("Invalid mode. Use --scan, --parser or --semantic")
-        sys.exit(1)
-        print("Invalid mode. Use --scan, --parser or --semantic")
+        print("Invalid mode. Use --scan, --parser, --semantic or --ir")
         sys.exit(1)

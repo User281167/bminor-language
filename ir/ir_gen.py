@@ -89,8 +89,8 @@ class IRGenerator(Visitor):
                 gen.global_scope = True
                 decl.accept(gen, env, run_builder, alloca_builder, run_func)
             except Exception as e:
-                print("Error decl = ")
-                decl.pretty()
+                # print("Error decl = ")
+                # decl.pretty()
                 print(repr(e))
 
         alloca_builder.branch(entry_block)  # salto explícito al bloque principal
@@ -107,7 +107,7 @@ class IRGenerator(Visitor):
                 # Llamar a main y retornar su resultado
                 result = run_builder.call(main_func, [])
 
-                if main_func.type == SimpleTypes.INTEGER.value:
+                if main_env.type == SimpleTypes.INTEGER.value:
                     run_builder.ret(result)
                 else:
                     warning("Main function no return integer type")
@@ -117,6 +117,14 @@ class IRGenerator(Visitor):
             run_builder.ret(ir.Constant(IrTypes.int32, 0))
 
         return module
+
+    def comment(self, builder: ir.IRBuilder, msg: str):
+        builder.comment("-" * len(msg))
+
+        for line in msg.split("\n"):
+            builder.comment(line)
+
+        builder.comment("-" * len(msg))
 
     def _inject_fun_builtins(
         self,
@@ -248,7 +256,41 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
-        pass
+        self.comment(builder, "For loop")
+
+        if n.init:
+            n.init.accept(self, env, builder, alloca, func)
+
+        # Crear los bloques básicos necesarios
+        loop_block = func.append_basic_block(name=self.unique_block_name("for"))
+        condition_block = func.append_basic_block(
+            name=self.unique_block_name("condition")
+        )
+        merge_block = func.append_basic_block(name=self.unique_block_name("merge"))
+
+        # Verificar la condición
+        builder.branch(condition_block)
+        builder.position_at_end(condition_block)
+
+        if n.condition:
+            condition_value = n.condition.accept(self, env, builder, alloca, func)
+            builder.cbranch(condition_value, loop_block, merge_block)
+        else:  # Si no hay condición, el bucle se ejecuta siempre
+            builder.branch(loop_block)
+
+        # Contenido del bucle
+        builder.position_at_end(loop_block)
+
+        for stmt in n.body or []:
+            stmt.accept(self, env, builder, alloca, func)
+
+        if n.update:
+            n.update.accept(self, env, builder, alloca, func)
+
+        builder.branch(condition_block)  # Volver a la condición
+
+        builder.position_at_end(merge_block)
+        self.comment(builder, "End for loop")
 
     def visit(
         self,
@@ -590,7 +632,6 @@ class IRGenerator(Visitor):
         entry_block = func_body.append_basic_block(name="entry")
 
         alloca_builder = ir.IRBuilder(alloca_block)
-        alloca_builder.branch(entry_block)
         body_builder = ir.IRBuilder(entry_block)
 
         # 5. Crear entorno local
@@ -608,6 +649,8 @@ class IRGenerator(Visitor):
         # 7. Visitar cuerpo
         for stmt in n.body or []:
             stmt.accept(self, local_env, body_builder, alloca_builder, func_body)
+
+        alloca_builder.branch(entry_block)
 
         # 8. Si no hay return explícito, retornar 0 o equivalente
         if ret_type == ir.IntType(32):

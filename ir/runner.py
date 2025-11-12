@@ -12,12 +12,8 @@ def run_llvm_ir(ir_code: str) -> str:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
         ir_path = tmpdir / "temp.ll"
-        bc_path = tmpdir / "temp.bc"
-        exe_path = tmpdir / "temp_exe"
-        runtime_c = "ir" / Path("runtime.c")
 
         ir_path.write_text(ir_code)
-
         result = run_cmd(["lli", ir_path])
 
     return ""
@@ -45,7 +41,6 @@ def run_llvm_clang_ir(ir_code: str, add_runtime=False) -> str:
 
         if add_runtime:
             if platform.system() == "Windows":
-                print(runtime_c.resolve())
                 runtime_obj = tmpdir / "runtime.obj"
                 run_cmd(["clang", "-c", str(runtime_c), "-o", str(runtime_obj)])
             else:
@@ -61,7 +56,7 @@ def run_llvm_clang_ir(ir_code: str, add_runtime=False) -> str:
         run_cmd(cmd)
         result = run_cmd([str(exe_path)])
 
-        return result.stdout.strip()
+        return result.stdout
 
     return ""
 
@@ -79,7 +74,5 @@ if __name__ == "__main__":
     ret i32 0
     }
     """
-    print(run_llvm_ir(ir, use_lli=True))
-    print(run_llvm_ir(ir, use_lli=False))
-    print(run_llvm_ir(ir, use_lli=False))
-    print(run_llvm_ir(ir, use_lli=False))
+    print(run_llvm_ir(ir))
+    print(run_llvm_clang_ir(ir))
