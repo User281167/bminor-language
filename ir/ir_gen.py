@@ -232,10 +232,13 @@ class IRGenerator(Visitor):
 
         # Generar las sentencias dentro del bloque 'then'
         for stmt in n.then_branch:
-            stmt.accept(self, then_env, builder, alloca, func)
+            if not builder.block.is_terminated:
+                stmt.accept(self, then_env, builder, alloca, func)
 
         # Al final del bloque 'then', siempre debe haber una rama incondicional al 'merge_block'
-        builder.branch(merge_block)
+        # esto ya que continue o break pueden haber terminado el bloque
+        if not builder.block.is_terminated:
+            builder.branch(merge_block)
 
         # Si existe una rama 'else', posicionarse y generar su código
         if n.else_branch:
@@ -243,15 +246,32 @@ class IRGenerator(Visitor):
 
             # Generar las sentencias dentro del bloque 'else'
             for stmt in n.else_branch:
-                stmt.accept(self, else_env, builder, alloca, func)
+                if not builder.block.is_terminated:
+                    stmt.accept(self, else_env, builder, alloca, func)
 
-            # Al final del bloque 'else', también hay una rama incondicional al 'merge_block'
-            builder.branch(merge_block)
+            # Al final del bloque 'else', siempre debe haber una rama incondicional al 'merge_block'
+            # esto ya que continue o break pueden haber terminado el bloque
+            if not builder.block.is_terminated:
+                builder.branch(merge_block)
 
         # Posicionarse al final del bloque 'merge'
         # Cualquier código que siga al 'if' comenzará aquí.
         builder.position_at_end(merge_block)
         self.comment(builder, "End if statement")
+
+    def add_loop_flags(self, env: Symtab, condition_block, merge_block, continue_block):
+        env.add("loop_condition", condition_block)
+        env.add("loop_merge", merge_block)
+        env.add("loop_continue", continue_block)
+
+    def get_loop_condition(self, env: Symtab):
+        return env.get("loop_condition")
+
+    def get_loop_merge(self, env: Symtab):
+        return env.get("loop_merge")
+
+    def get_loop_continue(self, env: Symtab):
+        return env.get("loop_continue")
 
     def visit(
         self,
@@ -267,11 +287,14 @@ class IRGenerator(Visitor):
             n.init.accept(self, env, builder, alloca, func)
 
         # Crear los bloques básicos necesarios
-        loop_block = func.append_basic_block(name=self.unique_block_name("for"))
         condition_block = func.append_basic_block(
-            name=self.unique_block_name("condition")
+            name=self.unique_block_name("for_cond")
         )
-        merge_block = func.append_basic_block(name=self.unique_block_name("merge"))
+        loop_block = func.append_basic_block(name=self.unique_block_name("for_body"))
+        update_block = func.append_basic_block(
+            name=self.unique_block_name("for_update")
+        )
+        merge_block = func.append_basic_block(name=self.unique_block_name("for_merge"))
 
         # Verificar la condición
         builder.branch(condition_block)
@@ -285,11 +308,17 @@ class IRGenerator(Visitor):
 
         # Contenido del bucle
         builder.position_at_end(loop_block)
-
         local_env = Symtab(f"for_{n.lineno}", parent=env)
+        self.add_loop_flags(local_env, condition_block, merge_block, update_block)
 
         for stmt in n.body or []:
-            stmt.accept(self, local_env, builder, alloca, func)
+            if not builder.block.is_terminated:
+                stmt.accept(self, local_env, builder, alloca, func)
+
+        if not builder.block.is_terminated:
+            builder.branch(update_block)  # Ir al bloque de actualización
+
+        builder.position_at_end(update_block)
 
         if n.update:
             n.update.accept(self, env, builder, alloca, func)
@@ -310,11 +339,11 @@ class IRGenerator(Visitor):
         self.comment(builder, "While loop")
 
         # Crear los bloques básicos necesarios
-        loop_block = func.append_basic_block(name=self.unique_block_name("while"))
         condition_block = func.append_basic_block(
-            name=self.unique_block_name("condition")
+            name=self.unique_block_name("while_cond")
         )
-        merge_block = func.append_basic_block(name=self.unique_block_name("merge"))
+        loop_block = func.append_basic_block(name=self.unique_block_name("while_body"))
+        merge_block = func.append_basic_block(name=self.unique_block_name("while_end"))
 
         # Verificar la condición
         builder.branch(condition_block)
@@ -330,11 +359,15 @@ class IRGenerator(Visitor):
         builder.position_at_end(loop_block)
 
         local_env = Symtab(f"while_{n.lineno}", parent=env)
+        self.add_loop_flags(local_env, condition_block, merge_block, condition_block)
 
         for stmt in n.body or []:
-            stmt.accept(self, local_env, builder, alloca, func)
+            if not builder.block.is_terminated:
+                stmt.accept(self, local_env, builder, alloca, func)
 
-        builder.branch(condition_block)  # Volver a la condición
+        if not builder.block.is_terminated:
+            builder.branch(condition_block)  # Volver a la condición
+
         builder.position_at_end(merge_block)
         self.comment(builder, "End while loop")
 
@@ -351,9 +384,11 @@ class IRGenerator(Visitor):
         # Crear los bloques básicos necesarios
         loop_block = func.append_basic_block(name=self.unique_block_name("do_while"))
         condition_block = func.append_basic_block(
-            name=self.unique_block_name("condition")
+            name=self.unique_block_name("do_while_cond")
         )
-        merge_block = func.append_basic_block(name=self.unique_block_name("merge"))
+        merge_block = func.append_basic_block(
+            name=self.unique_block_name("do_while_end")
+        )
 
         # Ejecutar al menos una vez
         builder.branch(loop_block)
@@ -368,19 +403,18 @@ class IRGenerator(Visitor):
         # Contenido del bucle
         builder.position_at_end(loop_block)
 
-        local_env = Symtab(f"while_{n.lineno}", parent=env)
+        local_env = Symtab(f"do_while_{n.lineno}", parent=env)
+        self.add_loop_flags(local_env, condition_block, merge_block, condition_block)
 
         for stmt in n.body or []:
-            stmt.accept(self, local_env, builder, alloca, func)
+            if not builder.block.is_terminated:
+                stmt.accept(self, local_env, builder, alloca, func)
 
-        builder.branch(condition_block)  # Volver a la condición
+        if not builder.block.is_terminated:
+            builder.branch(condition_block)  # Volver a la condición
+
         builder.position_at_end(merge_block)
         self.comment(builder, "End do while loop")
-
-    def _search_env_name(
-        self, builder: ir.IRBuilder, alloca: ir.IRBuilder, env_name: str
-    ) -> bool:
-        pass
 
     def visit(
         self,
@@ -390,7 +424,9 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
-        pass
+        self.comment(builder, "Continue")
+        continue_block = self.get_loop_continue(env)
+        builder.branch(continue_block)
 
     def visit(
         self,
@@ -401,6 +437,9 @@ class IRGenerator(Visitor):
         func: ir.Function,
     ):
         pass
+        # self.comment(builder, "Break")
+        # block = self.get_loop_merge(env)
+        # builder.branch(block)
 
     def visit(
         self,
