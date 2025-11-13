@@ -152,3 +152,18 @@ class TestForLoop(unittest.TestCase):
         """
         _, out = self.get_ir(code)
         self.assertEqual(out, "01234567")
+
+    def test_for_renew_var(self):
+        code = """
+        main: function void() = {
+            i: integer;
+            x: integer;
+
+            for (i = 0; i < 3; i++) {
+                x: integer = i;
+                print x;
+            }
+        }
+        """
+        _, out = self.get_ir(code)
+        self.assertEqual(out, "012")

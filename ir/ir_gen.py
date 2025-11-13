@@ -286,8 +286,10 @@ class IRGenerator(Visitor):
         # Contenido del bucle
         builder.position_at_end(loop_block)
 
+        local_env = Symtab(f"for_{n.lineno}", parent=env)
+
         for stmt in n.body or []:
-            stmt.accept(self, env, builder, alloca, func)
+            stmt.accept(self, local_env, builder, alloca, func)
 
         if n.update:
             n.update.accept(self, env, builder, alloca, func)
