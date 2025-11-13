@@ -436,10 +436,9 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
-        pass
-        # self.comment(builder, "Break")
-        # block = self.get_loop_merge(env)
-        # builder.branch(block)
+        self.comment(builder, "Break")
+        block = self.get_loop_merge(env)
+        builder.branch(block)
 
     def visit(
         self,
