@@ -7,7 +7,6 @@ LLVMite.
 
 import codecs
 from parser.model import *
-from uuid import uuid4
 
 from llvmlite import ir
 
@@ -52,7 +51,7 @@ class IRGenerator(Visitor):
         gen = cls()
 
         if module_name is None:
-            module_name = str(uuid4())
+            module_name = "main"
 
         module = ir.Module(name=module_name)
 
@@ -192,9 +191,6 @@ class IRGenerator(Visitor):
             val = expr.accept(self, env, builder, alloca, func)
             builder.call(fn, [val])
 
-    def unique_block_name(self, prefix="block"):
-        return f"{prefix}_{uuid4().hex[:8]}"
-
     def visit(
         self,
         n: IfStmt,
@@ -208,18 +204,18 @@ class IRGenerator(Visitor):
         """
         self.comment(builder, "If statement")
         # Crear los bloques básicos necesarios
-        then_block = func.append_basic_block(name=self.unique_block_name("then"))
+        then_block = func.append_basic_block(name="then")
         then_env = Symtab(f"if_{n.lineno}", parent=env)
 
         else_block = None
         else_env = None
 
         if n.else_branch:
-            else_block = func.append_basic_block(name=self.unique_block_name("else"))
+            else_block = func.append_basic_block(name="else")
             else_env = Symtab(f"else_{n.lineno}", parent=env)
 
         # El 'merge' block es donde el control se une después del if/else
-        merge_block = func.append_basic_block(name=self.unique_block_name("merge"))
+        merge_block = func.append_basic_block(name="merge")
 
         condition_value = n.condition.accept(self, env, builder, alloca, func)
 
@@ -287,14 +283,10 @@ class IRGenerator(Visitor):
             n.init.accept(self, env, builder, alloca, func)
 
         # Crear los bloques básicos necesarios
-        condition_block = func.append_basic_block(
-            name=self.unique_block_name("for_cond")
-        )
-        loop_block = func.append_basic_block(name=self.unique_block_name("for_body"))
-        update_block = func.append_basic_block(
-            name=self.unique_block_name("for_update")
-        )
-        merge_block = func.append_basic_block(name=self.unique_block_name("for_merge"))
+        condition_block = func.append_basic_block(name="for_cond")
+        loop_block = func.append_basic_block(name="for_body")
+        update_block = func.append_basic_block(name="for_update")
+        merge_block = func.append_basic_block(name="for_merge")
 
         # Verificar la condición
         builder.branch(condition_block)
@@ -339,11 +331,9 @@ class IRGenerator(Visitor):
         self.comment(builder, "While loop")
 
         # Crear los bloques básicos necesarios
-        condition_block = func.append_basic_block(
-            name=self.unique_block_name("while_cond")
-        )
-        loop_block = func.append_basic_block(name=self.unique_block_name("while_body"))
-        merge_block = func.append_basic_block(name=self.unique_block_name("while_end"))
+        condition_block = func.append_basic_block(name="while_cond")
+        loop_block = func.append_basic_block(name="while_body")
+        merge_block = func.append_basic_block(name="while_end")
 
         # Verificar la condición
         builder.branch(condition_block)
@@ -382,13 +372,9 @@ class IRGenerator(Visitor):
         self.comment(builder, "Do while loop")
 
         # Crear los bloques básicos necesarios
-        loop_block = func.append_basic_block(name=self.unique_block_name("do_while"))
-        condition_block = func.append_basic_block(
-            name=self.unique_block_name("do_while_cond")
-        )
-        merge_block = func.append_basic_block(
-            name=self.unique_block_name("do_while_end")
-        )
+        loop_block = func.append_basic_block(name="do_while")
+        condition_block = func.append_basic_block(name="do_while_cond")
+        merge_block = func.append_basic_block(name="do_while_end")
 
         # Ejecutar al menos una vez
         builder.branch(loop_block)
