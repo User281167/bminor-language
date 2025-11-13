@@ -12,6 +12,7 @@ class PrintRuntime:
         self._declare_print_float()
         self._declare_print_char()
         self._declare_print_bool()
+        self._declare_print_string()
 
     def _declare_print_int(self):
         # Tipo de la función: void print_int(i32)
@@ -44,6 +45,13 @@ class PrintRuntime:
             self.module, f_type, name="print_bool"
         )
 
+    def _declare_print_string(self):
+        # Tipo: void print_string(i8*)
+        f_type = ir.FunctionType(ir.VoidType(), [ir.IntType(8).as_pointer()])
+        self._functions["print_string"] = ir.Function(
+            self.module, f_type, name="print_string"
+        )
+
     def get(self, func_name):
         return self._functions.get(func_name)
 
@@ -55,6 +63,9 @@ class PrintRuntime:
 
     def print_char(self):
         return self._functions["print_char"]
+
+    def print_string(self):
+        return self._functions["print_string"]
 
     def print_bool(self):
         return self._functions["print_bool"]

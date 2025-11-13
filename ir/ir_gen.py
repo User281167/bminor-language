@@ -6,12 +6,12 @@ LLVMite.
 """
 
 import codecs
+import re
 from parser.model import *
 
 from llvmlite import ir
 
 from semantic import Symtab
-from semantic.semantic_error import SemanticError
 from utils import warning
 
 from .ir_type import IrTypes
@@ -79,6 +79,7 @@ class IRGenerator(Visitor):
         setattr(gen, "semantic_env", semantic_env)
         setattr(gen, "print_runtime", PrintRuntime(module))
         setattr(gen, "math_runtime", MathRuntime(module))
+        setattr(gen, "_string_cache", {})
 
         # Entorno de símbolos
         env = Symtab("global")
@@ -187,6 +188,7 @@ class IRGenerator(Visitor):
             str(SimpleTypes.CHAR.value): self.print_runtime.print_char(),
             str(SimpleTypes.FLOAT.value): self.print_runtime.print_float(),
             str(SimpleTypes.BOOLEAN.value): self.print_runtime.print_bool(),
+            str(SimpleTypes.STRING.value): self.print_runtime.print_string(),
         }
 
         for expr in n.expr or []:
@@ -850,61 +852,6 @@ class IRGenerator(Visitor):
         # 8. Si no hay return explícito, retornar 0 o equivalente
         self.default_return(body_builder, ret_type)
 
-    # Funcion para el valor por defecto si no hay return
-    # def default_return(self, builder: ir.IRBuilder, ret_type):
-    #     if not builder.block.is_terminated:
-    #         if ret_type == ir.VoidType():
-    #             builder.ret_void()
-    #         elif ret_type == ir.IntType(32):
-    #             builder.ret(ir.Constant(ir.IntType(32), 0))
-    #         elif ret_type == ir.FloatType():
-    #             builder.ret(ir.Constant(ir.FloatType(), 0.0))
-    #         elif ret_type == ir.IntType(1):  # boolean
-    #             builder.ret(ir.Constant(ir.IntType(1), 0))
-    #         else:
-    #             builder.unreachable()  # tipo no soportado
-
-    # def _override_func(self, n: FuncDecl, env: Symtab):
-    #     """
-    #     Verificar si se intenta sobreescribir una función.
-    #     Si es así, verificar si los parámetros tienen los mismos tipos.
-
-    #     Solo sobreescribe funciones definidas en el mismo nivel del scope actual
-
-    #     Ejemplo:
-    #         fn: function void();
-
-    #         fn: function void() {...} -> Sobreescrita
-
-    #         {
-    #             fn: function void() {...} -> No sobreescrita nuevo scope
-    #         }
-    #     """
-
-    #     old_fun = env.get(n.name, recursive=False)
-
-    #     if old_fun is None:
-    #         return
-
-    #     print(f"Checking override for function {n.name}")
-    #     print(f"Old fun = {old_fun}")
-
-    #     if old_fun and isinstance(old_fun, ir.Function):
-    #         if old_fun.type != n.type:
-    #             print(f"Warning: Function {n.name} redefined with different signature.")
-
-    #     old_args = [old_fun.args[i].type for i in range(len(n.params))]
-    #     new_params = [n.params[i] for i in range(len(n.params))]
-
-    #     if old_args != new_params:
-    #         print(
-    #             f"Warning: Function {n.name} parameters redefined with different types."
-    #         )
-    #         return
-
-    #     # Sobreescribir la función
-    #     del env[n.name]
-
     def visit(
         self,
         n: FuncDecl,
@@ -914,58 +861,6 @@ class IRGenerator(Visitor):
         func: ir.Function,
     ):
         pass
-
-    # def visit(
-    #     self,
-    #     n: FuncDecl,
-    #     env: Symtab,
-    #     builder: ir.IRBuilder,
-    #     alloca: ir.IRBuilder,
-    #     func: ir.Function,
-    # ):
-    #     self.global_scope = False
-
-    #     # 1. Obtener tipo de retorno
-    #     ret_type = IrTypes.get_type(n.return_type)
-
-    #     # 2. Obtener tipos de parámetros
-    #     param_types = [IrTypes.get_type(p.type) for p in n.params]
-
-    #     # 3. Crear función LLVM
-    #     func_type = ir.FunctionType(ret_type, param_types)
-    #     func_body = ir.Function(
-    #         builder.module, func_type, name=n.name + "_" + n.uid
-    #     )  # para evitar conflictos de nombres
-    #     env.add(n.name, func_body)
-
-    #     # 4. Crear bloques, alloca-entry
-    #     alloca_block = func_body.append_basic_block(name="alloca")
-    #     entry_block = func_body.append_basic_block(name="entry")
-
-    #     alloca_builder = ir.IRBuilder(alloca_block)
-    #     body_builder = ir.IRBuilder(entry_block)
-
-    #     # 5. Crear entorno local
-    #     local_env = Symtab(n.name + "_" + n.uid, parent=env)
-
-    #     # 6. Asignar parámetros a variables locales
-    #     for i, param in enumerate(n.params):
-    #         llvm_type = param_types[i]
-    #         ptr = alloca_builder.alloca(llvm_type, name=param.name)
-    #         ptr.align = IrTypes.get_align(param.type)
-
-    #         body_builder.store(func_body.args[i], ptr)
-    #         local_env.add(param.name, ptr)
-
-    #     # 7. Visitar cuerpo
-    #     for stmt in n.body or []:
-    #         if not body_builder.block.is_terminated:
-    #             stmt.accept(self, local_env, body_builder, alloca_builder, func_body)
-
-    #     alloca_builder.branch(entry_block)
-
-    #     # 8. Si no hay return explícito, retornar 0 o equivalente
-    #     self.default_return(body_builder, ret_type)
 
     def visit(self, n: Param, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab):
         pass
@@ -992,6 +887,41 @@ class IRGenerator(Visitor):
             return IrTypes.const_char(n.value)
         elif n.type == SimpleTypes.BOOLEAN.value:
             return IrTypes.const_bool(n.value)
+        elif n.type == SimpleTypes.STRING.value:
+            return self._create_global_string(n.value, builder)
+
+    def _create_global_string(self, py_string: str, builder: ir.IRBuilder) -> ir.Value:
+        """
+        Crea (o recupera de la caché) una constante de string global
+        y devuelve un puntero i8* a ella.
+        """
+        # 1. Comprobar si el string ya está en la caché
+        # str_val = re.sub(r"\\(?!\\)", "", py_string)
+        interpreted_string = py_string.encode("utf-8").decode("unicode_escape")
+        str_val = interpreted_string.encode("utf8") + b"\00"
+
+        if str_val in self._string_cache:
+            global_var = self._string_cache[str_val]
+        else:
+            # 2. Si no está, crear una nueva variable global
+            str_type = ir.ArrayType(ir.IntType(8), len(str_val))
+
+            # Crear un nombre único para la variable global
+            name = f".str.{len(self._string_cache)}"
+
+            global_var = ir.GlobalVariable(self.module, str_type, name=name)
+            global_var.linkage = "internal"  # Solo visible dentro de este módulo
+            global_var.global_constant = True
+            global_var.initializer = ir.Constant(str_type, bytearray(str_val))
+
+            # 3. Guardar la nueva variable en la caché
+            self._string_cache[str_val] = global_var
+
+        # 4. Obtener un puntero al primer elemento (i8*) usando GEP
+        zero = ir.Constant(ir.IntType(32), 0)
+        ptr = builder.gep(global_var, [zero, zero], name=f".str_ptr")
+
+        return ptr
 
     def visit(
         self,
