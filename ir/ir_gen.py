@@ -307,7 +307,36 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
-        pass
+        self.comment(builder, "While loop")
+
+        # Crear los bloques básicos necesarios
+        loop_block = func.append_basic_block(name=self.unique_block_name("while"))
+        condition_block = func.append_basic_block(
+            name=self.unique_block_name("condition")
+        )
+        merge_block = func.append_basic_block(name=self.unique_block_name("merge"))
+
+        # Verificar la condición
+        builder.branch(condition_block)
+        builder.position_at_end(condition_block)
+
+        if n.condition:
+            condition_value = n.condition.accept(self, env, builder, alloca, func)
+            builder.cbranch(condition_value, loop_block, merge_block)
+        else:  # Si no hay condición, el bucle se ejecuta siempre
+            builder.branch(loop_block)
+
+        # Contenido del bucle
+        builder.position_at_end(loop_block)
+
+        local_env = Symtab(f"while_{n.lineno}", parent=env)
+
+        for stmt in n.body or []:
+            stmt.accept(self, local_env, builder, alloca, func)
+
+        builder.branch(condition_block)  # Volver a la condición
+        builder.position_at_end(merge_block)
+        self.comment(builder, "End while loop")
 
     def visit(
         self,
