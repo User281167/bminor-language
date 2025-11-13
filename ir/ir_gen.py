@@ -11,6 +11,7 @@ from parser.model import *
 from llvmlite import ir
 
 from semantic import Symtab
+from semantic.semantic_error import SemanticError
 from utils import warning
 
 from .ir_type import IrTypes
@@ -91,6 +92,8 @@ class IRGenerator(Visitor):
                 # print("Error decl = ")
                 # decl.pretty()
                 print(repr(e))
+
+        gen._add_functions(n.body, env, run_builder, alloca_builder, run_func)
 
         alloca_builder.branch(entry_block)  # salto explícito al bloque principal
         # Posicionar run_builder al final del bloque antes de emitir ret
@@ -226,6 +229,11 @@ class IRGenerator(Visitor):
 
         builder.position_at_end(then_block)
 
+        try:
+            self._add_functions(n.then_branch or [], then_env, builder, alloca, func)
+        except Exception as e:
+            pass
+
         # Generar las sentencias dentro del bloque 'then'
         for stmt in n.then_branch:
             if not builder.block.is_terminated:
@@ -239,6 +247,13 @@ class IRGenerator(Visitor):
         # Si existe una rama 'else', posicionarse y generar su código
         if n.else_branch:
             builder.position_at_end(else_block)
+
+            try:
+                self._add_functions(
+                    n.else_branch or [], else_env, builder, alloca, func
+                )
+            except Exception as e:
+                pass
 
             # Generar las sentencias dentro del bloque 'else'
             for stmt in n.else_branch:
@@ -303,6 +318,11 @@ class IRGenerator(Visitor):
         local_env = Symtab(f"for_{n.lineno}", parent=env)
         self.add_loop_flags(local_env, condition_block, merge_block, update_block)
 
+        try:
+            self._add_functions(n.body or [], local_env, builder, alloca, func)
+        except Exception as e:
+            pass
+
         for stmt in n.body or []:
             if not builder.block.is_terminated:
                 stmt.accept(self, local_env, builder, alloca, func)
@@ -351,6 +371,11 @@ class IRGenerator(Visitor):
         local_env = Symtab(f"while_{n.lineno}", parent=env)
         self.add_loop_flags(local_env, condition_block, merge_block, condition_block)
 
+        try:
+            self._add_functions(n.body or [], local_env, builder, alloca, func)
+        except Exception as e:
+            pass
+
         for stmt in n.body or []:
             if not builder.block.is_terminated:
                 stmt.accept(self, local_env, builder, alloca, func)
@@ -391,6 +416,11 @@ class IRGenerator(Visitor):
 
         local_env = Symtab(f"do_while_{n.lineno}", parent=env)
         self.add_loop_flags(local_env, condition_block, merge_block, condition_block)
+
+        try:
+            self._add_functions(n.body or [], local_env, builder, alloca, func)
+        except Exception as e:
+            pass
 
         for stmt in n.body or []:
             if not builder.block.is_terminated:
@@ -434,7 +464,15 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
-        pass
+        self.comment(builder, "Return")
+
+        if n.expr is None:
+            self.default_return(builder, func.type)
+            return
+
+        if not builder.block.is_terminated:
+            val = n.expr.accept(self, env, builder, alloca, func)
+            builder.ret(val)
 
     # --- Declaration
 
@@ -696,15 +734,46 @@ class IRGenerator(Visitor):
 
         return struct_ptr
 
-    def visit(
+    def default_return(self, builder: ir.IRBuilder, ret_type: ir.Type | None):
+        if not builder.block.is_terminated:
+            if ret_type == ir.VoidType() or ret_type is None:
+                builder.ret_void()
+            elif ret_type == IrTypes.int32:
+                builder.ret(IrTypes.const_int(0))
+            elif ret_type == IrTypes.float32:
+                builder.ret(IrTypes.const_float(0.0))
+            elif ret_type == IrTypes.char8:
+                builder.ret(IrTypes.const_char("\0"))
+            elif ret_type == IrTypes.bool1:
+                builder.ret(IrTypes.const_bool(False))
+
+    def _add_functions(
         self,
-        n: FuncDecl,
+        n: list[Statement],
         env: Symtab,
         builder: ir.IRBuilder,
         alloca: ir.IRBuilder,
-        func: ir.Function,
+        func,
     ):
-        self.global_scope = False
+        """
+        Declara todas las funciones en el módulo antes de generar sus cuerpos.
+
+        n: Lista de declaraciones (Program)
+        """
+
+        # PRIMERA PASADA: Declarar todas las funciones
+        for decl in n:
+            if isinstance(decl, FuncDecl):
+                self.declare_function(decl, env, builder.module)
+
+        # SEGUNDA PASADA: Definir todas las funciones
+        for decl in n:
+            if isinstance(decl, FuncDecl):
+                self.define_function(decl, env)
+
+    def declare_function(
+        self, n: FuncDecl, env: Symtab, module
+    ):  # Funcion para declarar
 
         # 1. Obtener tipo de retorno
         ret_type = IrTypes.get_type(n.return_type)
@@ -712,11 +781,38 @@ class IRGenerator(Visitor):
         # 2. Obtener tipos de parámetros
         param_types = [IrTypes.get_type(p.type) for p in n.params]
 
-        # 3. Crear función LLVM
+        # 3. Crear tipo de función LLVM
         func_type = ir.FunctionType(ret_type, param_types)
-        func_body = ir.Function(
-            builder.module, func_type, name=n.name + "_" + n.uid
-        )  # para evitar conflictos de nombres
+
+        # 4. Crear la función LLVM (pero sin cuerpo)
+        func_body = ir.Function(module, func_type, name=n.name + "_" + n.uid)
+
+        # self._override_func(n, env)
+        existing_entry = env.get(n.name, recursive=False)
+
+        if existing_entry:
+            # La entrada ya existe, comprobar si es una función
+            if isinstance(existing_entry, ir.Function):  # Verificar que sea una función
+                env[n.name] = func_body
+            else:
+                raise Exception(f"Error: {n.name} already declared as a variable")
+        else:
+            env.add(n.name, func_body)
+
+    def define_function(self, n: FuncDecl, env: Symtab):  # Funcion para definir
+        if n.body is None:
+            return
+
+        self.global_scope = False
+
+        # 1. Buscar la función en la tabla de símbolos
+        func_body = env.get(n.name, recursive=False)
+
+        # 2. Obtener tipo de retorno
+        ret_type = IrTypes.get_type(n.return_type)
+
+        # 3. Obtener tipos de parámetros
+        param_types = [IrTypes.get_type(p.type) for p in n.params]
 
         # 4. Crear bloques, alloca-entry
         alloca_block = func_body.append_basic_block(name="alloca")
@@ -737,19 +833,139 @@ class IRGenerator(Visitor):
             body_builder.store(func_body.args[i], ptr)
             local_env.add(param.name, ptr)
 
+        try:
+            self._add_functions(
+                n.body or [], local_env, body_builder, alloca_builder, func_body
+            )
+        except Exception as e:
+            pass
+
         # 7. Visitar cuerpo
         for stmt in n.body or []:
-            stmt.accept(self, local_env, body_builder, alloca_builder, func_body)
+            if not body_builder.block.is_terminated:
+                stmt.accept(self, local_env, body_builder, alloca_builder, func_body)
 
         alloca_builder.branch(entry_block)
 
         # 8. Si no hay return explícito, retornar 0 o equivalente
-        if ret_type == ir.IntType(32):
-            body_builder.ret(ir.Constant(ir.IntType(32), 0))
-        elif ret_type == ir.VoidType():
-            body_builder.ret_void()
-        else:
-            body_builder.ret(ir.Constant(ret_type, 0))
+        self.default_return(body_builder, ret_type)
+
+    # Funcion para el valor por defecto si no hay return
+    # def default_return(self, builder: ir.IRBuilder, ret_type):
+    #     if not builder.block.is_terminated:
+    #         if ret_type == ir.VoidType():
+    #             builder.ret_void()
+    #         elif ret_type == ir.IntType(32):
+    #             builder.ret(ir.Constant(ir.IntType(32), 0))
+    #         elif ret_type == ir.FloatType():
+    #             builder.ret(ir.Constant(ir.FloatType(), 0.0))
+    #         elif ret_type == ir.IntType(1):  # boolean
+    #             builder.ret(ir.Constant(ir.IntType(1), 0))
+    #         else:
+    #             builder.unreachable()  # tipo no soportado
+
+    # def _override_func(self, n: FuncDecl, env: Symtab):
+    #     """
+    #     Verificar si se intenta sobreescribir una función.
+    #     Si es así, verificar si los parámetros tienen los mismos tipos.
+
+    #     Solo sobreescribe funciones definidas en el mismo nivel del scope actual
+
+    #     Ejemplo:
+    #         fn: function void();
+
+    #         fn: function void() {...} -> Sobreescrita
+
+    #         {
+    #             fn: function void() {...} -> No sobreescrita nuevo scope
+    #         }
+    #     """
+
+    #     old_fun = env.get(n.name, recursive=False)
+
+    #     if old_fun is None:
+    #         return
+
+    #     print(f"Checking override for function {n.name}")
+    #     print(f"Old fun = {old_fun}")
+
+    #     if old_fun and isinstance(old_fun, ir.Function):
+    #         if old_fun.type != n.type:
+    #             print(f"Warning: Function {n.name} redefined with different signature.")
+
+    #     old_args = [old_fun.args[i].type for i in range(len(n.params))]
+    #     new_params = [n.params[i] for i in range(len(n.params))]
+
+    #     if old_args != new_params:
+    #         print(
+    #             f"Warning: Function {n.name} parameters redefined with different types."
+    #         )
+    #         return
+
+    #     # Sobreescribir la función
+    #     del env[n.name]
+
+    def visit(
+        self,
+        n: FuncDecl,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
+    ):
+        pass
+
+    # def visit(
+    #     self,
+    #     n: FuncDecl,
+    #     env: Symtab,
+    #     builder: ir.IRBuilder,
+    #     alloca: ir.IRBuilder,
+    #     func: ir.Function,
+    # ):
+    #     self.global_scope = False
+
+    #     # 1. Obtener tipo de retorno
+    #     ret_type = IrTypes.get_type(n.return_type)
+
+    #     # 2. Obtener tipos de parámetros
+    #     param_types = [IrTypes.get_type(p.type) for p in n.params]
+
+    #     # 3. Crear función LLVM
+    #     func_type = ir.FunctionType(ret_type, param_types)
+    #     func_body = ir.Function(
+    #         builder.module, func_type, name=n.name + "_" + n.uid
+    #     )  # para evitar conflictos de nombres
+    #     env.add(n.name, func_body)
+
+    #     # 4. Crear bloques, alloca-entry
+    #     alloca_block = func_body.append_basic_block(name="alloca")
+    #     entry_block = func_body.append_basic_block(name="entry")
+
+    #     alloca_builder = ir.IRBuilder(alloca_block)
+    #     body_builder = ir.IRBuilder(entry_block)
+
+    #     # 5. Crear entorno local
+    #     local_env = Symtab(n.name + "_" + n.uid, parent=env)
+
+    #     # 6. Asignar parámetros a variables locales
+    #     for i, param in enumerate(n.params):
+    #         llvm_type = param_types[i]
+    #         ptr = alloca_builder.alloca(llvm_type, name=param.name)
+    #         ptr.align = IrTypes.get_align(param.type)
+
+    #         body_builder.store(func_body.args[i], ptr)
+    #         local_env.add(param.name, ptr)
+
+    #     # 7. Visitar cuerpo
+    #     for stmt in n.body or []:
+    #         if not body_builder.block.is_terminated:
+    #             stmt.accept(self, local_env, body_builder, alloca_builder, func_body)
+
+    #     alloca_builder.branch(entry_block)
+
+    #     # 8. Si no hay return explícito, retornar 0 o equivalente
+    #     self.default_return(body_builder, ret_type)
 
     def visit(self, n: Param, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab):
         pass
@@ -930,7 +1146,9 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
-        pass
+        fun_name = env.get(n.name)
+        args = [arg.accept(self, env, builder, alloca, func) for arg in n.args]
+        return builder.call(fun_name, args)
 
     def visit(
         self,
