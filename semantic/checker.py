@@ -249,21 +249,30 @@ class Check(Visitor):
             return
 
         # Crear una nueva symtab (local) para if
-        env = Symtab(f"if line {n.lineno}", env)
-        n.env = env
+        if_env = Symtab(f"if line {n.lineno}", env)
+        n.env = if_env
+
+        else_env = None
 
         # Magic variable that references the current function
-        env["$if"] = n
+        if_env["$if"] = n
+
+        if n.else_branch:
+            else_env = Symtab(f"else line {n.lineno}", env)
+            else_env["$if"] = n
 
         # Visitar then (branch)
         for stmt in n.then_branch:
-            stmt.accept(self, env)
+            stmt.accept(self, if_env)
 
         # Visitar n.else (alterno)
         for stmt in n.else_branch or []:
-            stmt.accept(self, env)
+            stmt.accept(self, else_env)
 
-        env["$if"] = None
+        if_env["$if"] = None
+
+        if else_env is not None:
+            else_env["$if"] = None
 
     def _check_loop_condition(self, n, env) -> bool:
         if n is None or n.condition is None:

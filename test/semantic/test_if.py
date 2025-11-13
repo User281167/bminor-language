@@ -90,3 +90,22 @@ class TestIf(unittest.TestCase):
         """
         env = self.semantic(code)
         self.assertFalse(errors_detected())
+
+    def test_new_in_if_else(self):
+        code = """
+        main: function void() = {
+            x: integer = 0;
+
+            if (true) {
+                x: integer = 10;
+                print x;
+            } else {
+                x: integer = 20;
+                print x;
+            }
+
+            print x;
+        }
+        """
+        env = self.semantic(code)
+        self.assertFalse(errors_detected())

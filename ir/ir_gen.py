@@ -206,13 +206,17 @@ class IRGenerator(Visitor):
         """
         Genera LLVM IR para una sentencia 'if' o 'if-else'.
         """
+        self.comment(builder, "If statement")
         # Crear los bloques básicos necesarios
         then_block = func.append_basic_block(name=self.unique_block_name("then"))
+        then_env = Symtab(f"if_{n.lineno}", parent=env)
 
         else_block = None
+        else_env = None
 
         if n.else_branch:
             else_block = func.append_basic_block(name=self.unique_block_name("else"))
+            else_env = Symtab(f"else_{n.lineno}", parent=env)
 
         # El 'merge' block es donde el control se une después del if/else
         merge_block = func.append_basic_block(name=self.unique_block_name("merge"))
@@ -228,7 +232,7 @@ class IRGenerator(Visitor):
 
         # Generar las sentencias dentro del bloque 'then'
         for stmt in n.then_branch:
-            stmt.accept(self, env, builder, alloca, func)
+            stmt.accept(self, then_env, builder, alloca, func)
 
         # Al final del bloque 'then', siempre debe haber una rama incondicional al 'merge_block'
         builder.branch(merge_block)
@@ -239,7 +243,7 @@ class IRGenerator(Visitor):
 
             # Generar las sentencias dentro del bloque 'else'
             for stmt in n.else_branch:
-                stmt.accept(self, env, builder, alloca, func)
+                stmt.accept(self, else_env, builder, alloca, func)
 
             # Al final del bloque 'else', también hay una rama incondicional al 'merge_block'
             builder.branch(merge_block)
@@ -247,6 +251,7 @@ class IRGenerator(Visitor):
         # Posicionarse al final del bloque 'merge'
         # Cualquier código que siga al 'if' comenzará aquí.
         builder.position_at_end(merge_block)
+        self.comment(builder, "End if statement")
 
     def visit(
         self,
@@ -464,7 +469,9 @@ class IRGenerator(Visitor):
 
             var.linkage = "dso_local"
         else:
-            var = alloca.alloca(llvm_type, name=n.name)
+            var = alloca.alloca(
+                llvm_type
+            )  # no agregar nombre ya que puede redefinir una var global
 
         var.align = IrTypes.get_align(n.type) or 0
 

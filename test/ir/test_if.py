@@ -263,3 +263,38 @@ class TestIfElse(unittest.TestCase):
         """
         _, out = self.get_ir(code)
         self.assertEqual(out, "1346")
+
+    def test_new_env_in_if(self):
+        code = """
+        main: function void() = {
+            x: integer = 0;
+
+            if (true) {
+                x: integer = 10;
+                print x;
+            }
+
+            print x;
+        }
+        """
+        _, out = self.get_ir(code)
+        self.assertEqual(out, "100")
+
+    def test_new_env_in_else(self):
+        code = """
+        main: function void() = {
+            x: integer = 0;
+
+            if (false) {
+                x: integer = 10;
+                print x;
+            } else {
+                x: integer = 20;
+                print x;
+            }
+
+            print x;
+        }
+        """
+        _, out = self.get_ir(code)
+        self.assertEqual(out, "200")
