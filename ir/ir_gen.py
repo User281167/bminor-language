@@ -6,7 +6,6 @@ LLVMite.
 """
 
 import codecs
-import re
 from parser.model import *
 
 from llvmlite import ir
@@ -896,7 +895,6 @@ class IRGenerator(Visitor):
         y devuelve un puntero i8* a ella.
         """
         # 1. Comprobar si el string ya está en la caché
-        # str_val = re.sub(r"\\(?!\\)", "", py_string)
         interpreted_string = py_string.encode("utf-8").decode("unicode_escape")
         str_val = interpreted_string.encode("utf8") + b"\00"
 

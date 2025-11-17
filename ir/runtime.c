@@ -14,6 +14,10 @@ void print_char(char value) {
     printf("%c", value);
 }
 
+void print_string(const char* value) {
+    printf("%s", value);
+}
+
 void print_bool(int8_t value) {
     if (value) {
         printf("true");
