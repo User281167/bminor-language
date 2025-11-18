@@ -19,6 +19,7 @@ class StringRuntime:
         self._declare_string_from_literal()
         self._declare_print_bminor_string()
         self._declare_string_concat()
+        self._declare_string_copy()
         self._declare_string_free()
 
     def _declare_string_from_literal(self):
@@ -54,6 +55,18 @@ class StringRuntime:
             self.module, f_type, name="_bminor_string_concat"
         )
 
+    def _declare_string_copy(self):
+        # Tipo: BMinorString* _bminor_string_copy(BMinorString*)
+        f_type = ir.FunctionType(
+            self.bminor_string_type.as_pointer(),  # Tipo de retorno: BMinorString*
+            [
+                self.bminor_string_type.as_pointer()
+            ],  # Argumento: const BMinorString* source
+        )
+        self._functions["_bminor_string_copy"] = ir.Function(
+            self.module, f_type, name="_bminor_string_copy"
+        )
+
     def _declare_string_free(self):
         # Tipo: void _bminor_string_free(BMinorString*)
         f_type = ir.FunctionType(
@@ -85,6 +98,10 @@ class StringRuntime:
     def concat(self):
         """Devuelve la función LLVM para concatenar dos BMinorStrings."""
         return self._functions["_bminor_string_concat"]
+
+    def copy(self):
+        """Devuelve la función LLVM para copiar un BMinorString."""
+        return self._functions["_bminor_string_copy"]
 
     def free(self):
         """Devuelve la función LLVM para liberar la memoria de un BMinorString."""

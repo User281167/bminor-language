@@ -172,14 +172,53 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
-        val = n.value.accept(self, env, builder, alloca, func)
-
+        # Obtener la variable de destino (loc).
+        # 'loc' es un puntero a dónde se guarda el valor (BMinorString** o i32* etc.)
         if isinstance(n.location, VarLoc):
             loc = env.get(n.location.name)
-        elif isinstance(n.location, ArrayLoc):
-            loc = env.get(n.location.array)
+            # Para globales, env.get puede devolver una tupla (var, node). Nos quedamos con la var.
+            # if isinstance(loc, tuple):
+            #     loc = loc[0]
+        # ... (añadir lógica para ArrayLoc si es necesario) ...
 
-        builder.store(val, loc)
+        # =====================================================================
+        # Distinguir entre tipos de string y tipos simples
+        # =====================================================================
+        if n.location.type == SimpleTypes.STRING.value:
+            # --- LÓGICA ESPECIAL PARA LA ASIGNACIÓN DE STRINGS ---
+
+            # 1. Cargar y liberar el valor ANTIGUO.
+            #    Primero, cargamos el BMinorString* que está guardado en 'loc'.
+            old_bminor_string_ptr = builder.load(loc, "old_value_to_free")
+            #    Ahora sí, liberamos el puntero que acabamos de cargar.
+            builder.call(self.string_runtime.free(), [old_bminor_string_ptr])
+
+            # 2. Calcular el NUEVO valor (el lado derecho de la asignación).
+            new_value_ir = n.value.accept(self, env, builder, alloca, func)
+
+            # 3. Asegurarse de que el nuevo valor sea un BMinorString* nuevo e independiente.
+            if new_value_ir.type == ir.PointerType(ir.IntType(8)):
+                # Si el nuevo valor es un literal (i8*), creamos un BMinorString desde él.
+                from_literal_fn = self.string_runtime.from_literal()
+                final_new_ptr = builder.call(
+                    from_literal_fn, [new_value_ir], "new_from_literal"
+                )
+            else:
+                # Si el nuevo valor ya era un BMinorString* (de otra variable, etc.),
+                # creamos una COPIA para mantener la semántica de valor.
+                # Este es el caso de: str = var;
+                copy_fn = self.string_runtime.copy()
+                final_new_ptr = builder.call(copy_fn, [new_value_ir], "new_from_copy")
+
+            # 4. Guardar el puntero al nuevo valor en la variable 'loc'.
+            builder.store(final_new_ptr, loc)
+
+        else:
+            # --- LÓGICA PARA TIPOS SIMPLES ---
+            new_value_ir = n.value.accept(self, env, builder, alloca, func)
+            builder.store(new_value_ir, loc)
+
+        # builder.store(val, loc)
 
     def visit(
         self,
@@ -208,7 +247,7 @@ class IRGenerator(Visitor):
             ):
                 builder.call(func_bminor_print, [val])
 
-                if not isinstance(expr, UnaryOper):
+                if isinstance(expr, UnaryOper):
                     free = self.string_runtime.free()
                     builder.call(free, [val])
 
@@ -618,17 +657,38 @@ class IRGenerator(Visitor):
                 llvm_type
             )  # no agregar nombre ya que puede redefinir una var global
 
-        var.align = IrTypes.get_align(n.type) or 0
+        if n.type != SimpleTypes.STRING.value:
+            var.align = IrTypes.get_align(n.type) or 0
 
-        # Asignar el valor
-        if not n.value:
-            builder.store(ir.Constant(llvm_type, 0), var)
-        elif not val is None:
-            if not self.global_scope:
-                builder.store(ir.Constant(llvm_type, val), var)
+            # Asignar el valor
+            if not n.value:
+                builder.store(ir.Constant(llvm_type, 0), var)
+            elif not val is None:
+                if not self.global_scope:
+                    builder.store(ir.Constant(llvm_type, val), var)
+            else:
+                val = n.value.accept(self, env, builder, alloca, func)
+                builder.store(val, var)
         else:
-            val = n.value.accept(self, env, builder, alloca, func)
-            builder.store(val, var)
+            var.align = 8
+            var.initializer = ir.Constant(llvm_type, None)
+
+            if n.value:
+                initial_val_ptr = n.value.accept(self, env, builder, alloca, func)
+
+                if initial_val_ptr.type == ir.PointerType(ir.IntType(8)):
+                    from_literal_fn = self.string_runtime.from_literal()
+                    bminor_string_ptr = builder.call(from_literal_fn, [initial_val_ptr])
+                else:
+                    copy_fn = self.string_runtime.copy()
+                    bminor_string_ptr = builder.call(copy_fn, [initial_val_ptr])
+
+                builder.store(bminor_string_ptr, var)
+            else:
+                emtpy = self._create_global_string("", builder)
+                from_literal_fn = self.string_runtime.from_literal()
+                bminor_string_ptr = builder.call(from_literal_fn, [emtpy])
+                builder.store(bminor_string_ptr, var)
 
         env.add(n.name, var)
 

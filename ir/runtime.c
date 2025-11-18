@@ -64,13 +64,13 @@ void print_bminor_string(const BMinorString* str) {
     if (str != NULL && str->chars != NULL) {
         printf("%s", str->chars);
     } else {
-        printf("NULL");
+        printf("");
     }
 }
 
 BMinorString* _bminor_string_concat(const BMinorString* s1, const BMinorString* s2) {
-    int len1 = s1->length;
-    int len2 = s2->length;
+    int len1 = s1 != NULL ? s1->length : 0;
+    int len2 = s2 != NULL ? s2->length : 0;
 
     // Crear el nuevo string resultado
     BMinorString* result = (BMinorString*)malloc(sizeof(BMinorString));
@@ -78,10 +78,37 @@ BMinorString* _bminor_string_concat(const BMinorString* s1, const BMinorString* 
     result->chars = (char*)malloc(result->length + 1);
 
     // Copiar los datos
-    strcpy(result->chars, s1->chars);
-    strcat(result->chars, s2->chars);
+    if (s1)
+        strcpy(result->chars, s1->chars);
+    if (s2)
+        strcat(result->chars, s2->chars);
 
     return result;
+}
+
+BMinorString* _bminor_string_copy(const BMinorString* source) {
+    // Si el string fuente es nulo, devolvemos nulo.
+    if (!source || !source->chars) {
+        return NULL;
+    }
+
+    // Reservar memoria para la nueva estructura
+    BMinorString* new_str = malloc(sizeof(BMinorString));
+    if (!new_str) return NULL;
+
+    new_str->length = source->length;
+
+    // Reservar memoria para la copia de los caracteres
+    new_str->chars = malloc(new_str->length + 1);
+    if (!new_str->chars) {
+        free(new_str); // Limpieza si falla la segunda asignación
+        return NULL;
+    }
+
+    // Copiar los caracteres usando memcpy, que es rápido y seguro
+    memcpy(new_str->chars, source->chars, new_str->length + 1);
+
+    return new_str;
 }
 
 void _bminor_string_free(BMinorString* str) {
