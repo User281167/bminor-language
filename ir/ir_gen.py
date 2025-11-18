@@ -16,6 +16,7 @@ from utils import warning
 from .ir_type import IrTypes
 from .math_runtime import MathRuntime
 from .print_runtime import PrintRuntime
+from .string_runtime import StringRuntime
 
 
 class IRGenerator(Visitor):
@@ -78,6 +79,7 @@ class IRGenerator(Visitor):
         setattr(gen, "semantic_env", semantic_env)
         setattr(gen, "print_runtime", PrintRuntime(module))
         setattr(gen, "math_runtime", MathRuntime(module))
+        setattr(gen, "string_runtime", StringRuntime(module))
         setattr(gen, "_string_cache", {})
 
         # Entorno de símbolos
@@ -92,8 +94,13 @@ class IRGenerator(Visitor):
                 # print("Error decl = ")
                 # decl.pretty()
                 print(repr(e))
+                print(e)
 
-        gen._add_functions(n.body, env, run_builder, alloca_builder, run_func)
+        try:
+            gen._add_functions(n.body, env, run_builder, alloca_builder, run_func)
+        except Exception as e:
+            print(repr(e))
+            print(e)
 
         alloca_builder.branch(entry_block)  # salto explícito al bloque principal
         # Posicionar run_builder al final del bloque antes de emitir ret
@@ -190,9 +197,24 @@ class IRGenerator(Visitor):
             str(SimpleTypes.STRING.value): self.print_runtime.print_string(),
         }
 
+        func_bminor_print = self.string_runtime.print()
+
         for expr in n.expr or []:
-            fn = fun_call[str(expr.type)]
             val = expr.accept(self, env, builder, alloca, func)
+
+            if (
+                expr.type == SimpleTypes.STRING.value
+                and val.type == self.string_runtime.get_string_type_pointer()
+            ):
+                builder.call(func_bminor_print, [val])
+
+                if not isinstance(expr, UnaryOper):
+                    free = self.string_runtime.free()
+                    builder.call(free, [val])
+
+                continue
+
+            fn = fun_call[str(expr.type)]
             builder.call(fn, [val])
 
     def visit(
@@ -764,13 +786,19 @@ class IRGenerator(Visitor):
 
         # PRIMERA PASADA: Declarar todas las funciones
         for decl in n:
-            if isinstance(decl, FuncDecl):
-                self.declare_function(decl, env, builder.module)
+            try:
+                if isinstance(decl, FuncDecl):
+                    self.declare_function(decl, env, builder.module)
+            except Exception as e:
+                print(f"Error al declarar la función {decl.name}: {e}")
 
         # SEGUNDA PASADA: Definir todas las funciones
         for decl in n:
-            if isinstance(decl, FuncDecl):
-                self.define_function(decl, env)
+            try:
+                if isinstance(decl, FuncDecl):
+                    self.define_function(decl, env)
+            except Exception as e:
+                print(f"Error al definir la función {decl.name}: {e}")
 
     def declare_function(
         self, n: FuncDecl, env: Symtab, module
@@ -997,6 +1025,51 @@ class IRGenerator(Visitor):
 
         return incremented  # devuelve el valor incrementado
 
+    def _concatenate_string(
+        self, left: ir.Value, right: ir.Value, builder: ir.IRBuilder
+    ) -> ir.Value:
+        """
+        Genera el IR para concatenar dos strings, que pueden ser literales (i8*)
+        o el resultado de otra operación (BMinorString*).
+        """
+        # Obtenemos las funciones del runtime
+        from_literal_fn = self.string_runtime.from_literal()
+        concat_fn = self.string_runtime.concat()
+
+        free_left = False
+        free_right = False
+
+        # --- Operando Izquierdo ---
+        # Si 'left' es un literal (i8*), lo promovemos a BMinorString*
+        if left.type == ir.PointerType(ir.IntType(8)):
+            s1_ptr = builder.call(from_literal_fn, [left], "s1_struct")
+            free_left = True
+        else:  # Si ya era un BMinorString*, lo usamos directamente
+            s1_ptr = left
+
+        # --- Operando Derecho ---
+        # Si 'right' es un literal (i8*), lo promovemos a BMinorString*
+        if right.type == ir.PointerType(ir.IntType(8)):
+            s2_ptr = builder.call(from_literal_fn, [right], "s2_struct")
+            free_right = True
+        else:  # Si ya era un BMinorString*, lo usamos directamente
+            s2_ptr = right
+
+        # --- Concatenación ---
+        # Llamamos a la función de C con los dos punteros a BMinorString
+        result = builder.call(concat_fn, [s1_ptr, s2_ptr], "concat_result")
+
+        # NOTA SOBRE MEMORIA: s1_ptr y s2_ptr (si fueron creados por from_literal)
+        # ahora son fugas de memoria (memory leaks). Esto es aceptable por ahora.
+        # En un sistema más avanzado, los liberaríamos aquí con _bminor_free_string.
+
+        if free_left:
+            builder.call(self.string_runtime.free(), [s1_ptr], "free_s1")
+        if free_right:
+            builder.call(self.string_runtime.free(), [s2_ptr], "free_s2")
+
+        return result
+
     def visit(
         self,
         n: BinOper,
@@ -1008,6 +1081,12 @@ class IRGenerator(Visitor):
         left = n.left.accept(self, env, builder, alloca, func)
         right = n.right.accept(self, env, builder, alloca, func)
         is_int = left.type in (ir.IntType(32), ir.IntType(8))
+
+        if (n.left.type, n.right.type) == (
+            SimpleTypes.STRING.value,
+            SimpleTypes.STRING.value,
+        ):
+            return self._concatenate_string(left, right, builder)
 
         if n.oper == "^":
             fn = self.math_runtime.pow_int()
