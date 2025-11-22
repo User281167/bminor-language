@@ -4,23 +4,23 @@
 #include <string.h>
 #include <math.h>
 
-void print_int(int32_t value) {
+void _bminor_print_int(int32_t value) {
     printf("%d", value);
 }
 
-void print_float(float value) {
+void _bminor_print_float(float value) {
     printf("%f", value);
 }
 
-void print_char(char value) {
+void _bminor_print_char(char value) {
     printf("%c", value);
 }
 
-void print_string(const char* value) {
+void _bminor_print_string(const char* value) {
     printf("%s", value);
 }
 
-void print_bool(int8_t value) {
+void _bminor_print_bool(int8_t value) {
     if (value) {
         printf("true");
     } else {
@@ -30,93 +30,39 @@ void print_bool(int8_t value) {
 
 // ================= Math =================
 
-int32_t pow_int(int32_t base, int32_t exponent) {
+int32_t _bminor_pow_int(int32_t base, int32_t exponent) {
     return pow(base, exponent);
 }
 
-// ================= BMinorString =================
+// ================= Strings =================
 
-typedef struct {
-    int length;
-    char* chars; // Con terminal '\0'
-} BMinorString;
+// Concatena dos strings simples y devuelve un nuevo puntero al Heap
+char* _bminor_string_concat(char* s1, char* s2) {
+    if (!s1) s1 = "";
+    if (!s2) s2 = "";
 
-// Devuelve un puntero a un BMinorString en el heap.
-BMinorString* _bminor_string_from_literal(const char* literal) {
-    BMinorString* new_str = (BMinorString*)malloc(sizeof(BMinorString));
-    if (!new_str) return NULL; // Manejo de error de memoria
+    size_t len1 = strlen(s1);
+    size_t len2 = strlen(s2);
 
-    new_str->length = strlen(literal);
+    char* result = (char*)malloc(len1 + len2 + 1);
 
-    // Asignamos nueva memoria para los caracteres para que cada string sea independiente.
-    new_str->chars = (char*)malloc(new_str->length + 1);
-    if (!new_str->chars) {
-        free(new_str);
-        return NULL;
-    }
-    strcpy(new_str->chars, literal);
+    if (!result) return NULL;
 
-    return new_str;
-}
-
-// Función para imprimir nuestro tipo de string.
-void print_bminor_string(const BMinorString* str) {
-    if (str != NULL && str->chars != NULL) {
-        printf("%s", str->chars);
-    } else {
-        printf("");
-    }
-}
-
-BMinorString* _bminor_string_concat(const BMinorString* s1, const BMinorString* s2) {
-    int len1 = s1 != NULL ? s1->length : 0;
-    int len2 = s2 != NULL ? s2->length : 0;
-
-    // Crear el nuevo string resultado
-    BMinorString* result = (BMinorString*)malloc(sizeof(BMinorString));
-    result->length = len1 + len2;
-    result->chars = (char*)malloc(result->length + 1);
-
-    // Copiar los datos
-    if (s1)
-        strcpy(result->chars, s1->chars);
-    if (s2)
-        strcat(result->chars, s2->chars);
+    strcpy(result, s1);
+    strcat(result, s2);
 
     return result;
 }
 
-BMinorString* _bminor_string_copy(const BMinorString* source) {
-    // Si el string fuente es nulo, devolvemos nulo.
-    if (!source || !source->chars) {
-        return NULL;
-    }
+char* _bminor_string_copy(char* s) {
+    if (s == NULL) return strdup("");
 
-    // Reservar memoria para la nueva estructura
-    BMinorString* new_str = malloc(sizeof(BMinorString));
-    if (!new_str) return NULL;
-
-    new_str->length = source->length;
-
-    // Reservar memoria para la copia de los caracteres
-    new_str->chars = malloc(new_str->length + 1);
-    if (!new_str->chars) {
-        free(new_str); // Limpieza si falla la segunda asignación
-        return NULL;
-    }
-
-    // Copiar los caracteres usando memcpy, que es rápido y seguro
-    memcpy(new_str->chars, source->chars, new_str->length + 1);
-
-    return new_str;
+    return strdup(s);
 }
 
-void _bminor_string_free(BMinorString* str) {
-    if (str != NULL) {
-        free(str->chars);
-        str->chars = NULL;
+void _bminor_string_free(char* s) {
+    if (!s) return;
 
-        free(str);
-        str = NULL;
-    }
+    free(s);
+    s = NULL;
 }

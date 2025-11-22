@@ -55,7 +55,7 @@ class IRGenerator(Visitor):
         module = ir.Module(name=module_name)
 
         # Crear función run, bloques y builder
-        func_type = ir.FunctionType(ir.IntType(32), [])
+        func_type = ir.FunctionType(IrTypes.i32, [])
         run_func = ir.Function(module, func_type, name="main")
 
         alloca_block = run_func.append_basic_block(name="alloca_entry")
@@ -109,10 +109,10 @@ class IRGenerator(Visitor):
                     run_builder.ret(result)
                 else:
                     warning("Main function no return integer type")
-                    run_builder.ret(IrTypes.const_int(0))
+                    run_builder.ret(IrTypes.i32_zero)
         else:
             # No hay main, retornar 0
-            run_builder.ret(IrTypes.const_int(0))
+            run_builder.ret(IrTypes.i32_zero)
 
         return module
 
@@ -197,42 +197,17 @@ class IRGenerator(Visitor):
             builder.store(new_value_ir, loc)
             return
 
-        # Cargar y liberar el valor antiguo.
-        old_bminor_string_ptr = builder.load(loc, "old_value_to_free")
-        builder.call(self.string_runtime.free(), [old_bminor_string_ptr])
+        # Liberar el valor antiguo.
+        old_str = builder.load(loc, "old_str_to_free")
+        builder.call(self.string_runtime.free(), [old_str])
 
         new_value_ir = n.value.accept(self, env, builder, alloca, func)
 
-        # Si el nuevo valor es un literal
-        if new_value_ir.type == ir.PointerType(ir.IntType(8)):
-            from_literal_fn = self.string_runtime.from_literal()
-            final_new_ptr = builder.call(
-                from_literal_fn, [new_value_ir], "new_from_literal"
-            )
-        else:
-            # copiar el string
-            copy_fn = self.string_runtime.copy()
-            final_new_ptr = builder.call(copy_fn, [new_value_ir], "new_from_copy")
+        # copiar el string
+        copy_fn = self.string_runtime.copy()
+        final_new_ptr = builder.call(copy_fn, [new_value_ir], "new_from_copy")
 
         builder.store(final_new_ptr, loc)
-
-    def _print_bminor_string(self, expr, val, builder) -> bool:
-        # Imprimir string BMinor
-
-        if (
-            expr.type == SimpleTypes.STRING.value
-            and val.type == self.string_runtime.get_string_type_pointer()
-        ):
-            func_bminor_print = self.string_runtime.print()
-            builder.call(func_bminor_print, [val])
-
-            if isinstance(expr, UnaryOper):
-                free = self.string_runtime.free()
-                builder.call(free, [val])
-
-            return True
-
-        return False
 
     def visit(
         self,
@@ -253,11 +228,13 @@ class IRGenerator(Visitor):
         for expr in n.expr or []:
             val = expr.accept(self, env, builder, alloca, func)
 
-            if self._print_bminor_string(expr, val, builder):
-                continue
-
             fn = fun_call[str(expr.type)]
             builder.call(fn, [val])
+
+            # liberar string temporal si aplica
+            if expr.type == SimpleTypes.STRING.value and isinstance(expr, UnaryOper):
+                free = self.string_runtime.free()
+                builder.call(free, [val])
 
     def visit(
         self,
@@ -271,6 +248,7 @@ class IRGenerator(Visitor):
         Genera LLVM IR para una sentencia 'if' o 'if-else'.
         """
         self.comment(builder, "If statement")
+
         # Crear los bloques básicos necesarios
         then_block = func.append_basic_block(name="then")
         then_env = Symtab(f"if_{n.lineno}", parent=env)
@@ -596,9 +574,9 @@ class IRGenerator(Visitor):
                 llvm_type
             )  # no agregar nombre ya que puede redefinir una var global
 
-        if n.type != SimpleTypes.STRING.value:
-            var.align = IrTypes.get_align(n.type) or 0
+        var.align = IrTypes.get_align(n.type) or 0
 
+        if n.type != SimpleTypes.STRING.value:
             # Asignar el valor si no no era un literal
             if not n.value:
                 builder.store(ir.Constant(llvm_type, 0), var)
@@ -613,23 +591,13 @@ class IRGenerator(Visitor):
             var.initializer = ir.Constant(llvm_type, None)
 
             if n.value:
-                # Crear BMinor string desde literal o copiar
                 initial_val_ptr = n.value.accept(self, env, builder, alloca, func)
-
-                if initial_val_ptr.type == ir.PointerType(ir.IntType(8)):
-                    from_literal_fn = self.string_runtime.from_literal()
-                    bminor_string_ptr = builder.call(from_literal_fn, [initial_val_ptr])
-                else:
-                    copy_fn = self.string_runtime.copy()
-                    bminor_string_ptr = builder.call(copy_fn, [initial_val_ptr])
-
-                builder.store(bminor_string_ptr, var)
             else:
-                # Inicializar con string vacío
-                empty = self._create_global_string("", builder)
-                from_literal_fn = self.string_runtime.from_literal()
-                bminor_string_ptr = builder.call(from_literal_fn, [empty])
-                builder.store(bminor_string_ptr, var)
+                initial_val_ptr = self._create_global_string("", builder)
+
+            copy_fn = self.string_runtime.copy()
+            string_ptr = builder.call(copy_fn, [initial_val_ptr])
+            builder.store(string_ptr, var)
 
         env.add(n.name, var)
 
@@ -765,13 +733,13 @@ class IRGenerator(Visitor):
         if not builder.block.is_terminated:
             if ret_type == ir.VoidType() or ret_type is None:
                 builder.ret_void()
-            elif ret_type == IrTypes.int32:
-                builder.ret(IrTypes.const_int(0))
-            elif ret_type == IrTypes.float32:
+            elif ret_type == IrTypes.i32:
+                builder.ret(IrTypes.i32_zero)
+            elif ret_type == IrTypes.f32:
                 builder.ret(IrTypes.const_float(0.0))
-            elif ret_type == IrTypes.char8:
+            elif ret_type == IrTypes.i8:
                 builder.ret(IrTypes.const_char("\0"))
-            elif ret_type == IrTypes.bool1:
+            elif ret_type == IrTypes.i1:
                 builder.ret(IrTypes.const_bool(False))
 
     def _add_functions(
@@ -821,7 +789,7 @@ class IRGenerator(Visitor):
 
         if existing_entry and isinstance(existing_entry, ir.Function):
             env[n.name] = func_body
-        else:
+        elif not existing_entry:
             env.add(n.name, func_body)
 
     def define_function(self, n: FuncDecl, env: Symtab):
@@ -912,7 +880,7 @@ class IRGenerator(Visitor):
             global_var = self._string_cache[str_val]
         else:
             # Crear una nueva variable global para el string
-            str_type = ir.ArrayType(ir.IntType(8), len(str_val))
+            str_type = ir.ArrayType(IrTypes.i8, len(str_val))
             name = f".str.{len(self._string_cache)}"
 
             global_var = ir.GlobalVariable(self.module, str_type, name=name)
@@ -923,7 +891,7 @@ class IRGenerator(Visitor):
             self._string_cache[str_val] = global_var
 
         # Obtener un puntero al primer elemento (i8*)
-        zero = ir.Constant(ir.IntType(32), 0)
+        zero = IrTypes.i32_zero
         ptr = builder.gep(global_var, [zero, zero], name=f".str_ptr")
 
         return ptr
@@ -961,7 +929,7 @@ class IRGenerator(Visitor):
         else:
             ptr = n.location.accept(self, env, builder, alloca, func)
 
-        if type(ptr) == type(IrTypes.const_int32) or type(ptr) == ir.Instruction:
+        if type(ptr) == type(IrTypes.i32_zero) or type(ptr) == ir.Instruction:
             val = ptr
         else:
             val = builder.load(ptr)
@@ -1007,35 +975,9 @@ class IRGenerator(Visitor):
         o el resultado de otra operación (BMinorString*).
         """
         # Obtenemos las funciones del runtime
-        from_literal_fn = self.string_runtime.from_literal()
         concat_fn = self.string_runtime.concat()
 
-        free_left = False
-        free_right = False
-
-        # --- Operando Izquierdo ---
-        # Si 'left' es un literal (i8*), creamos BMinorString*
-        if left.type == ir.PointerType(ir.IntType(8)):
-            s1_ptr = builder.call(from_literal_fn, [left], "s1_struct")
-            free_left = True
-        else:  # Si ya era un BMinorString*, lo usamos directamente
-            s1_ptr = left
-
-        # --- Operando Derecho ---
-        if right.type == ir.PointerType(ir.IntType(8)):
-            s2_ptr = builder.call(from_literal_fn, [right], "s2_struct")
-            free_right = True
-        else:
-            s2_ptr = right
-
-        result = builder.call(concat_fn, [s1_ptr, s2_ptr], "concat_result")
-
-        if free_left:
-            builder.call(self.string_runtime.free(), [s1_ptr], "free_s1")
-        if free_right:
-            builder.call(self.string_runtime.free(), [s2_ptr], "free_s2")
-
-        return result
+        return builder.call(concat_fn, [left, right], "concat_result")
 
     def visit(
         self,
@@ -1047,12 +989,9 @@ class IRGenerator(Visitor):
     ):
         left = n.left.accept(self, env, builder, alloca, func)
         right = n.right.accept(self, env, builder, alloca, func)
-        is_int = left.type in (ir.IntType(32), ir.IntType(8))
+        is_int = not (n.left.type == SimpleTypes.FLOAT.value)
 
-        if (n.left.type, n.right.type) == (
-            SimpleTypes.STRING.value,
-            SimpleTypes.STRING.value,
-        ):
+        if n.left.type == SimpleTypes.STRING.value:
             return self._concatenate_string(left, right, builder)
 
         if n.oper == "^":

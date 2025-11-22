@@ -5,29 +5,27 @@ from parser.model import SimpleType
 
 from llvmlite import ir
 
-from .string_runtime import StringRuntime
-
 
 @dataclass
 class IrTypes:
-    int32 = ir.IntType(32)
-    float32 = ir.FloatType()
-    char8 = ir.IntType(8)
+    i32 = ir.IntType(32)
+    f32 = ir.FloatType()
+    i8 = ir.IntType(8)  # characters
     void = ir.VoidType()
-    bool1 = ir.IntType(1)
-    pointer = ir.PointerType(ir.IntType(struct.calcsize("P")))
-    generic_pointer = ir.IntType(8).as_pointer()
+    i1 = ir.IntType(1)
 
-    bminor_string_struct = ir.LiteralStructType(
-        [ir.IntType(32), ir.IntType(8).as_pointer()]  # length  # chars
-    )
-    # 2. El TIPO de una VARIABLE string (un puntero a la estructura)
-    bminor_string_pointer = bminor_string_struct.as_pointer()
+    # Puntero determinado por la arquitectura (Portable)
+    # Tamaño del puntero según la arquitectura del sistema (32-bit o 64-bit)
+    pointer_t = ir.IntType(struct.calcsize("P") * 8).as_pointer()
 
-    const_int32 = ir.Constant(int32, 0)
-    const_float32 = ir.Constant(float32, 0.0)
-    const_char8 = ir.Constant(char8, 0)
-    const_bool1 = ir.Constant(bool1, 0)
+    # Generic pointer (i8* en LLVM,  void*)
+    generic_pointer_t = i8.as_pointer()
+
+    i32_zero = ir.Constant(i32, 0)
+    f32_zero = ir.Constant(f32, 0.0)
+    i8_zero = ir.Constant(i8, 0)
+    i1_false = ir.Constant(i1, 0)
+    null_pointer = ir.Constant(generic_pointer_t, None)
 
     @classmethod
     def get_type(cls, name: str | SimpleType) -> ir.Type:
@@ -35,14 +33,14 @@ class IrTypes:
             name = name.name
 
         types = {
-            "integer": cls.int32,
-            "float": cls.float32,
-            "char": cls.char8,
-            "string": cls.bminor_string_pointer,
-            "boolean": cls.bool1,
+            "integer": cls.i32,
+            "float": cls.f32,
+            "char": cls.i8,
+            "string": cls.generic_pointer_t,
+            "boolean": cls.i1,
             "void": cls.void,
-            "pointer": cls.pointer,
-            "array": cls.pointer,
+            "pointer": cls.pointer_t,
+            "array": cls.pointer_t,
         }
 
         return types[name]
@@ -57,9 +55,9 @@ class IrTypes:
         arq = struct.calcsize("P") * 8
 
         types = {
-            "integer": 4,
+            "integer": cls.i32.width // 8,
             "float": 4,
-            "char": 1,
+            "char": cls.i8.width // 8,
             "boolean": 1,
             "string": arq,
             "array": arq,
@@ -75,27 +73,26 @@ class IrTypes:
 
     @classmethod
     def const_int(cls, value: int) -> ir.Constant:
-        return ir.Constant(cls.int32, value)
+        return ir.Constant(cls.i32, value)
 
     @classmethod
     def const_float(cls, value: float) -> ir.Constant:
-        return ir.Constant(cls.float32, value)
+        return ir.Constant(cls.f32, value)
 
     @classmethod
     def const_char(cls, value: str | int) -> ir.Constant:
         if isinstance(value, int):
-            return ir.Constant(cls.char8, value)
+            return ir.Constant(cls.i8, value)
 
         val = value
         decoded = codecs.decode(val, "unicode_escape")  # '\\n' -> '\n'
         ascii_val = ord(decoded)
-        return ir.Constant(cls.char8, ascii_val)
+        return ir.Constant(cls.i8, ascii_val)
 
     @classmethod
     def const_bool(cls, value: bool) -> ir.Constant:
-        return ir.Constant(cls.bool1, 1 if value else 0)
+        return ir.Constant(cls.i1, 1 if value else 0)
 
     @classmethod
     def const_pointer(cls, value: int) -> ir.Constant:
-        return ir.Constant(cls.pointer, value)
-        return ir.Constant(cls.pointer, value)
+        return ir.Constant(cls.pointer_t, value)

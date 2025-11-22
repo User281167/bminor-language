@@ -1,5 +1,7 @@
 from llvmlite import ir
 
+from .ir_type import IrTypes
+
 
 class MathRuntime:
     def __init__(self, module):
@@ -12,13 +14,12 @@ class MathRuntime:
 
     def _declare_pow_int(self):
         # Tipo de la función: void print_int(i32)
-        f_type = ir.FunctionType(
-            ir.IntType(32),
-            [ir.IntType(32), ir.IntType(32)],  # Argumentos
-        )
+        f_type = ir.FunctionType(IrTypes.i32, [IrTypes.i32, IrTypes.i32])
 
         # Declarar la función en el módulo
-        self._functions["pow_int"] = ir.Function(self.module, f_type, name="pow_int")
+        self._functions["pow_int"] = ir.Function(
+            self.module, f_type, name="_bminor_pow_int"
+        )
 
     def get(self, func_name):
         return self._functions.get(func_name)

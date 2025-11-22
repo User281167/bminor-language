@@ -1,5 +1,7 @@
 from llvmlite import ir
 
+from .ir_type import IrTypes
+
 
 class PrintRuntime:
     def __init__(self, module):
@@ -17,39 +19,39 @@ class PrintRuntime:
     def _declare_print_int(self):
         # Tipo de la función: void print_int(i32)
         f_type = ir.FunctionType(
-            ir.VoidType(), [ir.IntType(32)]  # Tipo de retorno  # Argumentos
+            ir.VoidType(), [IrTypes.i32]  # Tipo de retorno  # Argumentos
         )
         # Declarar la función en el módulo
         self._functions["print_int"] = ir.Function(
-            self.module, f_type, name="print_int"
+            self.module, f_type, name="_bminor_print_int"
         )
 
     def _declare_print_float(self):
         # Tipo: void print_float(float)
-        f_type = ir.FunctionType(ir.VoidType(), [ir.FloatType()])
+        f_type = ir.FunctionType(ir.VoidType(), [IrTypes.f32])
         self._functions["print_float"] = ir.Function(
-            self.module, f_type, name="print_float"
+            self.module, f_type, name="_bminor_print_float"
         )
 
     def _declare_print_char(self):
         # Tipo: void print_char(i8)
-        f_type = ir.FunctionType(ir.VoidType(), [ir.IntType(8)])
+        f_type = ir.FunctionType(ir.VoidType(), [IrTypes.i8])
         self._functions["print_char"] = ir.Function(
-            self.module, f_type, name="print_char"
+            self.module, f_type, name="_bminor_print_char"
         )
 
     def _declare_print_bool(self):
         # Tipo: void print_bool(i1) -> C lo recibirá como i8
-        f_type = ir.FunctionType(ir.VoidType(), [ir.IntType(1)])
+        f_type = ir.FunctionType(ir.VoidType(), [IrTypes.i1])
         self._functions["print_bool"] = ir.Function(
-            self.module, f_type, name="print_bool"
+            self.module, f_type, name="_bminor_print_bool"
         )
 
     def _declare_print_string(self):
         # Tipo: void print_string(i8*)
-        f_type = ir.FunctionType(ir.VoidType(), [ir.IntType(8).as_pointer()])
+        f_type = ir.FunctionType(ir.VoidType(), [IrTypes.generic_pointer_t])
         self._functions["print_string"] = ir.Function(
-            self.module, f_type, name="print_string"
+            self.module, f_type, name="_bminor_print_string"
         )
 
     def get(self, func_name):
