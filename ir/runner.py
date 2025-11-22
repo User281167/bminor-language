@@ -16,7 +16,7 @@ def run_llvm_ir(ir_code: str) -> str:
         ir_path.write_text(ir_code)
         result = run_cmd(["lli", ir_path])
 
-    return ""
+        return result.stdout
 
 
 def run_llvm_clang_ir(ir_code: str, add_runtime=False) -> str:

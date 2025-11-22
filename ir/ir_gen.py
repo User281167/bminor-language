@@ -176,7 +176,8 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
-        pass
+        env_local = Symtab(f"block_{n.lineno}", parent=env)
+        self._run_block(n.body, env_local, builder, alloca, func)
 
     # --- Statements
 
