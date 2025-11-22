@@ -6,11 +6,13 @@ LLVMite.
 """
 
 import codecs
+from parser import Parser
 from parser.model import *
 
 from llvmlite import ir
 
-from semantic import Symtab
+from scanner import Lexer
+from semantic import Check, Symtab
 from utils import warning
 
 from .ir_type import IrTypes
@@ -22,10 +24,6 @@ from .string_runtime import StringRuntime
 class IRGenerator(Visitor):
     @classmethod
     def generate_from_code(cls, code: str) -> ir.Module:
-        from parser import Parser
-
-        from scanner import Lexer
-        from semantic import Check
 
         lexer = Lexer().tokenize(code)
         ast = Parser().parse(lexer)
@@ -56,20 +54,17 @@ class IRGenerator(Visitor):
 
         module = ir.Module(name=module_name)
 
-        # Crear función run
+        # Crear función run, bloques y builder
         func_type = ir.FunctionType(ir.IntType(32), [])
         run_func = ir.Function(module, func_type, name="main")
 
-        # Crear bloques en orden correcto
         alloca_block = run_func.append_basic_block(name="alloca_entry")
         entry_block = run_func.append_basic_block(name="entry")
 
-        # Builder para allocas
         alloca_builder = ir.IRBuilder(alloca_block)
-
-        # Builder para instrucciones normales
         run_builder = ir.IRBuilder(entry_block)
 
+        # Asignar atributos al generador
         setattr(gen, "module", module)
         setattr(gen, "global_scope", True)
         setattr(gen, "run_func", run_func)
@@ -82,50 +77,71 @@ class IRGenerator(Visitor):
         setattr(gen, "string_runtime", StringRuntime(module))
         setattr(gen, "_string_cache", {})
 
-        # Entorno de símbolos
+        # Entorno de símbolos contexto global
         env = Symtab("global")
 
         # Visitar todas las declaraciones
-        for decl in n.body:
-            try:
-                gen.global_scope = True
-                decl.accept(gen, env, run_builder, alloca_builder, run_func)
-            except Exception as e:
-                # print("Error decl = ")
-                # decl.pretty()
-                print(repr(e))
-                print(e)
+        gen._run_block(
+            n.body,
+            env,
+            run_builder,
+            alloca_builder,
+            run_func,
+            is_global=True,
+        )
 
-        try:
-            gen._add_functions(n.body, env, run_builder, alloca_builder, run_func)
-        except Exception as e:
-            print(repr(e))
-            print(e)
-
-        alloca_builder.branch(entry_block)  # salto explícito al bloque principal
+        # salto explícito al bloque principal
         # Posicionar run_builder al final del bloque antes de emitir ret
+        alloca_builder.branch(entry_block)
         run_builder.position_at_end(entry_block)
 
-        main_env = semantic_env.get("main", recursive=False)
+        user_main = semantic_env.get("main", recursive=False)
 
-        if main_env:
+        if user_main:
             # si existe una función main, llamarla y retornar su valor si no return 0
-            main_func = module.get_global(main_env.name + "_" + main_env.uid)
+            main_func = module.get_global(user_main.name + "_" + user_main.uid)
 
             if main_func and isinstance(main_func, ir.Function):
-                # Llamar a main y retornar su resultado
                 result = run_builder.call(main_func, [])
 
-                if main_env.type == SimpleTypes.INTEGER.value:
+                if user_main.type == SimpleTypes.INTEGER.value:
+                    # Llamar a main y retornar su resultado
                     run_builder.ret(result)
                 else:
                     warning("Main function no return integer type")
-                    run_builder.ret(ir.Constant(IrTypes.int32, 0))
+                    run_builder.ret(IrTypes.const_int(0))
         else:
             # No hay main, retornar 0
-            run_builder.ret(ir.Constant(IrTypes.int32, 0))
+            run_builder.ret(IrTypes.const_int(0))
 
         return module
+
+    def _run_block(
+        self,
+        n,
+        env,
+        builder,
+        alloca,
+        func,
+        merge=None,
+        is_global=False,
+    ):
+        if not is_global:
+            self._add_functions(n, env, builder, alloca, func)
+
+        for stmt in n or []:
+            self.global_scope = is_global
+            stmt.accept(self, env, builder, alloca, func)
+
+            if builder.block.is_terminated:
+                break
+
+        self.global_scope = is_global
+
+        if is_global:
+            self._add_functions(n, env, builder, alloca, func)
+        if merge and not builder.block.is_terminated:
+            builder.branch(merge)
 
     def comment(self, builder: ir.IRBuilder, msg: str):
         builder.comment("-" * len(msg))
@@ -172,53 +188,50 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
-        # Obtener la variable de destino (loc).
-        # 'loc' es un puntero a dónde se guarda el valor (BMinorString** o i32* etc.)
         if isinstance(n.location, VarLoc):
             loc = env.get(n.location.name)
-            # Para globales, env.get puede devolver una tupla (var, node). Nos quedamos con la var.
-            # if isinstance(loc, tuple):
-            #     loc = loc[0]
-        # ... (añadir lógica para ArrayLoc si es necesario) ...
 
-        # =====================================================================
-        # Distinguir entre tipos de string y tipos simples
-        # =====================================================================
-        if n.location.type == SimpleTypes.STRING.value:
-            # --- LÓGICA ESPECIAL PARA LA ASIGNACIÓN DE STRINGS ---
-
-            # 1. Cargar y liberar el valor ANTIGUO.
-            #    Primero, cargamos el BMinorString* que está guardado en 'loc'.
-            old_bminor_string_ptr = builder.load(loc, "old_value_to_free")
-            #    Ahora sí, liberamos el puntero que acabamos de cargar.
-            builder.call(self.string_runtime.free(), [old_bminor_string_ptr])
-
-            # 2. Calcular el NUEVO valor (el lado derecho de la asignación).
-            new_value_ir = n.value.accept(self, env, builder, alloca, func)
-
-            # 3. Asegurarse de que el nuevo valor sea un BMinorString* nuevo e independiente.
-            if new_value_ir.type == ir.PointerType(ir.IntType(8)):
-                # Si el nuevo valor es un literal (i8*), creamos un BMinorString desde él.
-                from_literal_fn = self.string_runtime.from_literal()
-                final_new_ptr = builder.call(
-                    from_literal_fn, [new_value_ir], "new_from_literal"
-                )
-            else:
-                # Si el nuevo valor ya era un BMinorString* (de otra variable, etc.),
-                # creamos una COPIA para mantener la semántica de valor.
-                # Este es el caso de: str = var;
-                copy_fn = self.string_runtime.copy()
-                final_new_ptr = builder.call(copy_fn, [new_value_ir], "new_from_copy")
-
-            # 4. Guardar el puntero al nuevo valor en la variable 'loc'.
-            builder.store(final_new_ptr, loc)
-
-        else:
-            # --- LÓGICA PARA TIPOS SIMPLES ---
+        if not n.location.type == SimpleTypes.STRING.value:
             new_value_ir = n.value.accept(self, env, builder, alloca, func)
             builder.store(new_value_ir, loc)
+            return
 
-        # builder.store(val, loc)
+        # Cargar y liberar el valor antiguo.
+        old_bminor_string_ptr = builder.load(loc, "old_value_to_free")
+        builder.call(self.string_runtime.free(), [old_bminor_string_ptr])
+
+        new_value_ir = n.value.accept(self, env, builder, alloca, func)
+
+        # Si el nuevo valor es un literal
+        if new_value_ir.type == ir.PointerType(ir.IntType(8)):
+            from_literal_fn = self.string_runtime.from_literal()
+            final_new_ptr = builder.call(
+                from_literal_fn, [new_value_ir], "new_from_literal"
+            )
+        else:
+            # copiar el string
+            copy_fn = self.string_runtime.copy()
+            final_new_ptr = builder.call(copy_fn, [new_value_ir], "new_from_copy")
+
+        builder.store(final_new_ptr, loc)
+
+    def _print_bminor_string(self, expr, val, builder) -> bool:
+        # Imprimir string BMinor
+
+        if (
+            expr.type == SimpleTypes.STRING.value
+            and val.type == self.string_runtime.get_string_type_pointer()
+        ):
+            func_bminor_print = self.string_runtime.print()
+            builder.call(func_bminor_print, [val])
+
+            if isinstance(expr, UnaryOper):
+                free = self.string_runtime.free()
+                builder.call(free, [val])
+
+            return True
+
+        return False
 
     def visit(
         self,
@@ -236,21 +249,10 @@ class IRGenerator(Visitor):
             str(SimpleTypes.STRING.value): self.print_runtime.print_string(),
         }
 
-        func_bminor_print = self.string_runtime.print()
-
         for expr in n.expr or []:
             val = expr.accept(self, env, builder, alloca, func)
 
-            if (
-                expr.type == SimpleTypes.STRING.value
-                and val.type == self.string_runtime.get_string_type_pointer()
-            ):
-                builder.call(func_bminor_print, [val])
-
-                if isinstance(expr, UnaryOper):
-                    free = self.string_runtime.free()
-                    builder.call(free, [val])
-
+            if self._print_bminor_string(expr, val, builder):
                 continue
 
             fn = fun_call[str(expr.type)]
@@ -279,56 +281,25 @@ class IRGenerator(Visitor):
             else_block = func.append_basic_block(name="else")
             else_env = Symtab(f"else_{n.lineno}", parent=env)
 
-        # El 'merge' block es donde el control se une después del if/else
+        # Block donde el control se une después del if/else
         merge_block = func.append_basic_block(name="merge")
 
-        condition_value = n.condition.accept(self, env, builder, alloca, func)
-
         # Generar la rama condicional (cbranch)
+        condition_value = n.condition.accept(self, env, builder, alloca, func)
         builder.cbranch(
             condition_value, then_block, else_block if else_block else merge_block
         )
 
-        builder.position_at_end(then_block)
-
-        try:
-            self._add_functions(n.then_branch or [], then_env, builder, alloca, func)
-        except Exception as e:
-            pass
-
-        # Generar las sentencias dentro del bloque 'then'
-        for stmt in n.then_branch:
-            if not builder.block.is_terminated:
-                stmt.accept(self, then_env, builder, alloca, func)
-
         # Al final del bloque 'then', siempre debe haber una rama incondicional al 'merge_block'
-        # esto ya que continue o break pueden haber terminado el bloque
-        if not builder.block.is_terminated:
-            builder.branch(merge_block)
+        # Verificar que continue, break o return no hayan terminado el bloque
+        builder.position_at_end(then_block)
+        self._run_block(n.then_branch, then_env, builder, alloca, func, merge_block)
 
-        # Si existe una rama 'else', posicionarse y generar su código
         if n.else_branch:
             builder.position_at_end(else_block)
+            self._run_block(n.else_branch, else_env, builder, alloca, func, merge_block)
 
-            try:
-                self._add_functions(
-                    n.else_branch or [], else_env, builder, alloca, func
-                )
-            except Exception as e:
-                pass
-
-            # Generar las sentencias dentro del bloque 'else'
-            for stmt in n.else_branch:
-                if not builder.block.is_terminated:
-                    stmt.accept(self, else_env, builder, alloca, func)
-
-            # Al final del bloque 'else', siempre debe haber una rama incondicional al 'merge_block'
-            # esto ya que continue o break pueden haber terminado el bloque
-            if not builder.block.is_terminated:
-                builder.branch(merge_block)
-
-        # Posicionarse al final del bloque 'merge'
-        # Cualquier código que siga al 'if' comenzará aquí.
+        # Volver al bloque de merge
         builder.position_at_end(merge_block)
         self.comment(builder, "End if statement")
 
@@ -380,18 +351,7 @@ class IRGenerator(Visitor):
         local_env = Symtab(f"for_{n.lineno}", parent=env)
         self.add_loop_flags(local_env, condition_block, merge_block, update_block)
 
-        try:
-            self._add_functions(n.body or [], local_env, builder, alloca, func)
-        except Exception as e:
-            pass
-
-        for stmt in n.body or []:
-            if not builder.block.is_terminated:
-                stmt.accept(self, local_env, builder, alloca, func)
-
-        if not builder.block.is_terminated:
-            builder.branch(update_block)  # Ir al bloque de actualización
-
+        self._run_block(n.body, local_env, builder, alloca, func, update_block)
         builder.position_at_end(update_block)
 
         if n.update:
@@ -432,18 +392,7 @@ class IRGenerator(Visitor):
 
         local_env = Symtab(f"while_{n.lineno}", parent=env)
         self.add_loop_flags(local_env, condition_block, merge_block, condition_block)
-
-        try:
-            self._add_functions(n.body or [], local_env, builder, alloca, func)
-        except Exception as e:
-            pass
-
-        for stmt in n.body or []:
-            if not builder.block.is_terminated:
-                stmt.accept(self, local_env, builder, alloca, func)
-
-        if not builder.block.is_terminated:
-            builder.branch(condition_block)  # Volver a la condición
+        self._run_block(n.body, local_env, builder, alloca, func, condition_block)
 
         builder.position_at_end(merge_block)
         self.comment(builder, "End while loop")
@@ -478,18 +427,7 @@ class IRGenerator(Visitor):
 
         local_env = Symtab(f"do_while_{n.lineno}", parent=env)
         self.add_loop_flags(local_env, condition_block, merge_block, condition_block)
-
-        try:
-            self._add_functions(n.body or [], local_env, builder, alloca, func)
-        except Exception as e:
-            pass
-
-        for stmt in n.body or []:
-            if not builder.block.is_terminated:
-                stmt.accept(self, local_env, builder, alloca, func)
-
-        if not builder.block.is_terminated:
-            builder.branch(condition_block)  # Volver a la condición
+        self._run_block(n.body, local_env, builder, alloca, func, condition_block)
 
         builder.position_at_end(merge_block)
         self.comment(builder, "End do while loop")
@@ -660,7 +598,7 @@ class IRGenerator(Visitor):
         if n.type != SimpleTypes.STRING.value:
             var.align = IrTypes.get_align(n.type) or 0
 
-            # Asignar el valor
+            # Asignar el valor si no no era un literal
             if not n.value:
                 builder.store(ir.Constant(llvm_type, 0), var)
             elif not val is None:
@@ -674,6 +612,7 @@ class IRGenerator(Visitor):
             var.initializer = ir.Constant(llvm_type, None)
 
             if n.value:
+                # Crear BMinor string desde literal o copiar
                 initial_val_ptr = n.value.accept(self, env, builder, alloca, func)
 
                 if initial_val_ptr.type == ir.PointerType(ir.IntType(8)):
@@ -685,9 +624,10 @@ class IRGenerator(Visitor):
 
                 builder.store(bminor_string_ptr, var)
             else:
-                emtpy = self._create_global_string("", builder)
+                # Inicializar con string vacío
+                empty = self._create_global_string("", builder)
                 from_literal_fn = self.string_runtime.from_literal()
-                bminor_string_ptr = builder.call(from_literal_fn, [emtpy])
+                bminor_string_ptr = builder.call(from_literal_fn, [empty])
                 builder.store(bminor_string_ptr, var)
 
         env.add(n.name, var)
@@ -818,6 +758,9 @@ class IRGenerator(Visitor):
         return struct_ptr
 
     def default_return(self, builder: ir.IRBuilder, ret_type: ir.Type | None):
+        """
+        Genera un return por defecto si no hay uno explícito.
+        """
         if not builder.block.is_terminated:
             if ret_type == ir.VoidType() or ret_type is None:
                 builder.ret_void()
@@ -832,16 +775,20 @@ class IRGenerator(Visitor):
 
     def _add_functions(
         self,
-        n: list[Statement],
-        env: Symtab,
-        builder: ir.IRBuilder,
-        alloca: ir.IRBuilder,
+        n,
+        env,
+        builder,
+        alloca,
         func,
     ):
         """
         Declara todas las funciones en el módulo antes de generar sus cuerpos.
+        Permitiendo:
+            fun: function void();
 
-        n: Lista de declaraciones (Program)
+            fun() {
+                ...
+            }
         """
 
         # PRIMERA PASADA: Declarar todas las funciones
@@ -850,7 +797,7 @@ class IRGenerator(Visitor):
                 if isinstance(decl, FuncDecl):
                     self.declare_function(decl, env, builder.module)
             except Exception as e:
-                print(f"Error al declarar la función {decl.name}: {e}")
+                print(f"Error al declarar la función {decl.name}: {repr(e)}")
 
         # SEGUNDA PASADA: Definir todas las funciones
         for decl in n:
@@ -858,62 +805,47 @@ class IRGenerator(Visitor):
                 if isinstance(decl, FuncDecl):
                     self.define_function(decl, env)
             except Exception as e:
-                print(f"Error al definir la función {decl.name}: {e}")
+                print(f"Error al definir la función {decl.name}: {repr(e)}")
 
-    def declare_function(
-        self, n: FuncDecl, env: Symtab, module
-    ):  # Funcion para declarar
-
-        # 1. Obtener tipo de retorno
+    def declare_function(self, n: FuncDecl, env: Symtab, module):
+        # Obtener tipo de retorno y parámetros
+        # Crear tipo de función LLVM
+        # Crear la función LLVM (pero sin cuerpo)
         ret_type = IrTypes.get_type(n.return_type)
-
-        # 2. Obtener tipos de parámetros
         param_types = [IrTypes.get_type(p.type) for p in n.params]
-
-        # 3. Crear tipo de función LLVM
         func_type = ir.FunctionType(ret_type, param_types)
-
-        # 4. Crear la función LLVM (pero sin cuerpo)
         func_body = ir.Function(module, func_type, name=n.name + "_" + n.uid)
 
-        # self._override_func(n, env)
         existing_entry = env.get(n.name, recursive=False)
 
-        if existing_entry:
-            # La entrada ya existe, comprobar si es una función
-            if isinstance(existing_entry, ir.Function):  # Verificar que sea una función
-                env[n.name] = func_body
-            else:
-                raise Exception(f"Error: {n.name} already declared as a variable")
+        if existing_entry and isinstance(existing_entry, ir.Function):
+            env[n.name] = func_body
         else:
             env.add(n.name, func_body)
 
-    def define_function(self, n: FuncDecl, env: Symtab):  # Funcion para definir
+    def define_function(self, n: FuncDecl, env: Symtab):
         if n.body is None:
             return
 
         self.global_scope = False
 
-        # 1. Buscar la función en la tabla de símbolos
+        # Buscar la función en la tabla de símbolos
+        # Obtener tipo de retorno y parámetros
+        # Crear bloques y builder para el cuerpo
         func_body = env.get(n.name, recursive=False)
-
-        # 2. Obtener tipo de retorno
         ret_type = IrTypes.get_type(n.return_type)
-
-        # 3. Obtener tipos de parámetros
         param_types = [IrTypes.get_type(p.type) for p in n.params]
 
-        # 4. Crear bloques, alloca-entry
         alloca_block = func_body.append_basic_block(name="alloca")
         entry_block = func_body.append_basic_block(name="entry")
 
         alloca_builder = ir.IRBuilder(alloca_block)
         body_builder = ir.IRBuilder(entry_block)
 
-        # 5. Crear entorno local
+        # Entorno de la función
         local_env = Symtab(n.name + "_" + n.uid, parent=env)
 
-        # 6. Asignar parámetros a variables locales
+        # Asignar parámetros a variables locales
         for i, param in enumerate(n.params):
             llvm_type = param_types[i]
             ptr = alloca_builder.alloca(llvm_type, name=param.name)
@@ -922,22 +854,10 @@ class IRGenerator(Visitor):
             body_builder.store(func_body.args[i], ptr)
             local_env.add(param.name, ptr)
 
-        try:
-            self._add_functions(
-                n.body or [], local_env, body_builder, alloca_builder, func_body
-            )
-        except Exception as e:
-            pass
-
-        # 7. Visitar cuerpo
-        for stmt in n.body or []:
-            if not body_builder.block.is_terminated:
-                stmt.accept(self, local_env, body_builder, alloca_builder, func_body)
+        self._run_block(n.body, local_env, body_builder, alloca_builder, func_body)
 
         alloca_builder.branch(entry_block)
-
-        # 8. Si no hay return explícito, retornar 0 o equivalente
-        self.default_return(body_builder, ret_type)
+        self.default_return(body_builder, ret_type)  # asegurar return al final
 
     def visit(
         self,
@@ -981,18 +901,17 @@ class IRGenerator(Visitor):
         """
         Crea (o recupera de la caché) una constante de string global
         y devuelve un puntero i8* a ella.
+
+        Corregir escape sequences en el string y agregar null terminator.
         """
-        # 1. Comprobar si el string ya está en la caché
         interpreted_string = py_string.encode("utf-8").decode("unicode_escape")
         str_val = interpreted_string.encode("utf8") + b"\00"
 
         if str_val in self._string_cache:
             global_var = self._string_cache[str_val]
         else:
-            # 2. Si no está, crear una nueva variable global
+            # Crear una nueva variable global para el string
             str_type = ir.ArrayType(ir.IntType(8), len(str_val))
-
-            # Crear un nombre único para la variable global
             name = f".str.{len(self._string_cache)}"
 
             global_var = ir.GlobalVariable(self.module, str_type, name=name)
@@ -1000,10 +919,9 @@ class IRGenerator(Visitor):
             global_var.global_constant = True
             global_var.initializer = ir.Constant(str_type, bytearray(str_val))
 
-            # 3. Guardar la nueva variable en la caché
             self._string_cache[str_val] = global_var
 
-        # 4. Obtener un puntero al primer elemento (i8*) usando GEP
+        # Obtener un puntero al primer elemento (i8*)
         zero = ir.Constant(ir.IntType(32), 0)
         ptr = builder.gep(global_var, [zero, zero], name=f".str_ptr")
 
@@ -1029,9 +947,9 @@ class IRGenerator(Visitor):
     ):
         pass
 
-    def visit(
+    def _visit_inc_dec_common(
         self,
-        n: Increment,
+        n: Increment | Decrement,
         env: Symtab,
         builder: ir.IRBuilder,
         alloca: ir.IRBuilder,
@@ -1047,7 +965,10 @@ class IRGenerator(Visitor):
         else:
             val = builder.load(ptr)
 
-        incremented = builder.add(val, IrTypes.const_int(1))
+        if isinstance(n, Increment):
+            incremented = builder.add(val, IrTypes.const_int(1))
+        else:
+            incremented = builder.sub(val, IrTypes.const_int(1))
 
         if isinstance(n.location, VarLoc):
             builder.store(incremented, ptr)
@@ -1056,6 +977,16 @@ class IRGenerator(Visitor):
             return val  # devuelve el valor original
 
         return incremented  # devuelve el valor incrementado
+
+    def visit(
+        self,
+        n: Increment,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
+    ):
+        return self._visit_inc_dec_common(n, env, builder, alloca, func)
 
     def visit(
         self,
@@ -1065,25 +996,7 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
-        if isinstance(n.location, VarLoc):
-            ptr = env.get(n.location.name)
-        else:
-            ptr = n.location.accept(self, env, builder, alloca, func)
-
-        if type(ptr) == type(IrTypes.const_int32) or type(ptr) == ir.Instruction:
-            val = ptr
-        else:
-            val = builder.load(ptr)
-
-        incremented = builder.sub(val, IrTypes.const_int(1))
-
-        if isinstance(n.location, VarLoc):
-            builder.store(incremented, ptr)
-
-        if n.postfix:
-            return val  # devuelve el valor original
-
-        return incremented  # devuelve el valor incrementado
+        return self._visit_inc_dec_common(n, env, builder, alloca, func)
 
     def _concatenate_string(
         self, left: ir.Value, right: ir.Value, builder: ir.IRBuilder
@@ -1100,7 +1013,7 @@ class IRGenerator(Visitor):
         free_right = False
 
         # --- Operando Izquierdo ---
-        # Si 'left' es un literal (i8*), lo promovemos a BMinorString*
+        # Si 'left' es un literal (i8*), creamos BMinorString*
         if left.type == ir.PointerType(ir.IntType(8)):
             s1_ptr = builder.call(from_literal_fn, [left], "s1_struct")
             free_left = True
@@ -1108,20 +1021,13 @@ class IRGenerator(Visitor):
             s1_ptr = left
 
         # --- Operando Derecho ---
-        # Si 'right' es un literal (i8*), lo promovemos a BMinorString*
         if right.type == ir.PointerType(ir.IntType(8)):
             s2_ptr = builder.call(from_literal_fn, [right], "s2_struct")
             free_right = True
-        else:  # Si ya era un BMinorString*, lo usamos directamente
+        else:
             s2_ptr = right
 
-        # --- Concatenación ---
-        # Llamamos a la función de C con los dos punteros a BMinorString
         result = builder.call(concat_fn, [s1_ptr, s2_ptr], "concat_result")
-
-        # NOTA SOBRE MEMORIA: s1_ptr y s2_ptr (si fueron creados por from_literal)
-        # ahora son fugas de memoria (memory leaks). Esto es aceptable por ahora.
-        # En un sistema más avanzado, los liberaríamos aquí con _bminor_free_string.
 
         if free_left:
             builder.call(self.string_runtime.free(), [s1_ptr], "free_s1")
@@ -1152,7 +1058,7 @@ class IRGenerator(Visitor):
             fn = self.math_runtime.pow_int()
             return builder.call(fn, [left, right])
 
-        fn = {
+        fn_math = {
             "+": builder.add if is_int else builder.fadd,
             "-": builder.sub if is_int else builder.fsub,
             "*": builder.mul if is_int else builder.fmul,
@@ -1160,13 +1066,10 @@ class IRGenerator(Visitor):
             "%": builder.srem if is_int else builder.frem,
         }
 
+        # ordered para evitar problemas con NaN
         fn_log = {
             "<=": (builder.icmp_signed if is_int else builder.fcmp_ordered),
-            "<": (
-                builder.icmp_signed
-                if is_int
-                else builder.fcmp_ordered  # ordered para evitar problemas con NaN
-            ),
+            "<": (builder.icmp_signed if is_int else builder.fcmp_ordered),
             ">=": (builder.icmp_signed if is_int else builder.fcmp_ordered),
             ">": (builder.icmp_signed if is_int else builder.fcmp_ordered),
             "==": (builder.icmp_signed if is_int else builder.fcmp_ordered),
@@ -1178,8 +1081,8 @@ class IRGenerator(Visitor):
             "LOR": builder.or_,
         }
 
-        if n.oper in fn:
-            return fn[n.oper](left, right)
+        if n.oper in fn_math:
+            return fn_math[n.oper](left, right)
         elif n.oper in fn_log:
             return fn_log[n.oper](n.oper, left, right)
         elif n.oper in fn_bool:
