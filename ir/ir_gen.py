@@ -80,8 +80,12 @@ class IRGenerator(Visitor):
         # Entorno de símbolos contexto global
         env = Symtab("global")
 
+        # declarar y definir todas las funciones primero
+        gen._add_functions(n.body, env, alloca_builder, alloca_builder, run_func)
+
         # Visitar todas las declaraciones
-        gen._run_block(
+        # liberar string antes de salir
+        free_strings = gen._run_block(
             n.body,
             env,
             run_builder,
@@ -103,6 +107,7 @@ class IRGenerator(Visitor):
 
             if main_func and isinstance(main_func, ir.Function):
                 result = run_builder.call(main_func, [])
+                gen._free_strings(run_builder, env, free_strings)
 
                 if user_main.type == SimpleTypes.INTEGER.value:
                     # Llamar a main y retornar su resultado
@@ -112,9 +117,19 @@ class IRGenerator(Visitor):
                     run_builder.ret(IrTypes.i32_zero)
         else:
             # No hay main, retornar 0
+            gen._free_strings(run_builder, env, free_strings)
             run_builder.ret(IrTypes.i32_zero)
 
         return module
+
+    def _free_strings(self, builder: ir.IRBuilder, env: Symtab, strings_in_block: list):
+        for string in strings_in_block:
+            loc = env.get(string.name, recursive=False)
+            str_ptr = builder.load(loc, name=f"{string.name}_to_free")
+            free_fn = self.string_runtime.free()
+            builder.call(free_fn, [str_ptr])
+
+        strings_in_block.clear()
 
     def _run_block(
         self,
@@ -125,12 +140,25 @@ class IRGenerator(Visitor):
         func,
         merge=None,
         is_global=False,
-    ):
-        if not is_global:
-            self._add_functions(n, env, builder, alloca, func)
+    ) -> list:
+        """
+        Ejecuta un bloque de sentencias, manejando el scope y liberando strings.
+
+        Si en global_scope, declara las funciones primero.
+        return:
+            Si es global_scope, devuelve la lista strings en el bloque. ya que si se liberan en el bloque, se perderán las referencias globales.
+            Si no es global_scope, devuelve una lista vacía.
+        """
+        strings_in_block = []
 
         for stmt in n or []:
             self.global_scope = is_global
+
+            if isinstance(stmt, VarDecl) and stmt.type == SimpleTypes.STRING.value:
+                strings_in_block.append(stmt)
+            elif isinstance(stmt, (BreakStmt, ContinueStmt, ReturnStmt)):
+                self._free_strings(builder, env, strings_in_block)
+
             stmt.accept(self, env, builder, alloca, func)
 
             if builder.block.is_terminated:
@@ -139,9 +167,14 @@ class IRGenerator(Visitor):
         self.global_scope = is_global
 
         if is_global:
-            self._add_functions(n, env, builder, alloca, func)
+            return strings_in_block
+        else:
+            self._free_strings(builder, env, strings_in_block)
+
         if merge and not builder.block.is_terminated:
             builder.branch(merge)
+
+        return []
 
     def comment(self, builder: ir.IRBuilder, msg: str):
         builder.comment("-" * len(msg))
@@ -199,15 +232,17 @@ class IRGenerator(Visitor):
 
         # Liberar el valor antiguo.
         old_str = builder.load(loc, "old_str_to_free")
-        builder.call(self.string_runtime.free(), [old_str])
-
         new_value_ir = n.value.accept(self, env, builder, alloca, func)
 
-        # copiar el string
-        copy_fn = self.string_runtime.copy()
-        final_new_ptr = builder.call(copy_fn, [new_value_ir], "new_from_copy")
+        # evitar copiar un puntero suelto, en vez de hacer free o copy, usar el result
+        if isinstance(n.value, (BinOper, FuncCall)):
+            new_ptr = new_value_ir
+        else:
+            copy_fn = self.string_runtime.copy()
+            new_ptr = builder.call(copy_fn, [new_value_ir], "new_from_copy")
 
-        builder.store(final_new_ptr, loc)
+        builder.call(self.string_runtime.free(), [old_str])
+        builder.store(new_ptr, loc)
 
     def visit(
         self,
@@ -232,7 +267,7 @@ class IRGenerator(Visitor):
             builder.call(fn, [val])
 
             # liberar string temporal si aplica
-            if expr.type == SimpleTypes.STRING.value and isinstance(expr, UnaryOper):
+            if expr.type == SimpleTypes.STRING.value and isinstance(expr, BinOper):
                 free = self.string_runtime.free()
                 builder.call(free, [val])
 
@@ -592,11 +627,20 @@ class IRGenerator(Visitor):
 
             if n.value:
                 initial_val_ptr = n.value.accept(self, env, builder, alloca, func)
-            else:
-                initial_val_ptr = self._create_global_string("", builder)
 
-            copy_fn = self.string_runtime.copy()
-            string_ptr = builder.call(copy_fn, [initial_val_ptr])
+                # evitar copiar un puntero suelto, en vez de hacer free o copy, usar el result
+                if isinstance(n.value, (BinOper, FuncCall)):
+                    string_ptr = initial_val_ptr
+                else:
+                    # si es literal o variable, copiar
+                    copy_fn = self.string_runtime.copy()
+                    string_ptr = builder.call(copy_fn, [initial_val_ptr])
+            else:
+                # cadena vacía por defecto
+                initial_val_ptr = self._create_global_string("", builder)
+                copy_fn = self.string_runtime.copy()
+                string_ptr = builder.call(copy_fn, [initial_val_ptr])
+
             builder.store(string_ptr, var)
 
         env.add(n.name, var)
@@ -776,6 +820,15 @@ class IRGenerator(Visitor):
             except Exception as e:
                 print(f"Error al definir la función {decl.name}: {repr(e)}")
 
+        # for decl in n:
+        #     try:
+        #         if isinstance(decl, FuncDecl) and decl.body is None:
+        #             self.declare_function(decl, env, builder.module)
+        #         if isinstance(decl, FuncDecl):
+        #             self.define_function(decl, env)
+        #     except Exception as e:
+        #         print(f"Error al definir la función {decl.name}: {repr(e)}")
+
     def declare_function(self, n: FuncDecl, env: Symtab, module):
         # Obtener tipo de retorno y parámetros
         # Crear tipo de función LLVM
@@ -836,7 +889,54 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
-        pass
+        return
+        if env.get(n.name) is None:
+            ret_type = IrTypes.get_type(n.return_type)
+            param_types = [IrTypes.get_type(p.type) for p in n.params]
+            func_type = ir.FunctionType(ret_type, param_types)
+            func_body = ir.Function(
+                builder.module, func_type, name=n.name + "_" + n.uid
+            )
+
+            existing_entry = env.get(n.name, recursive=False)
+
+            if existing_entry and isinstance(existing_entry, ir.Function):
+                env[n.name] = func_body
+            elif not existing_entry:
+                env.add(n.name, func_body)
+            return
+
+        self.global_scope = False
+
+        # Buscar la función en la tabla de símbolos
+        # Obtener tipo de retorno y parámetros
+        # Crear bloques y builder para el cuerpo
+        func_body = env.get(n.name, recursive=False)
+        ret_type = IrTypes.get_type(n.return_type)
+        param_types = [IrTypes.get_type(p.type) for p in n.params]
+
+        alloca_block = func_body.append_basic_block(name="alloca")
+        entry_block = func_body.append_basic_block(name="entry")
+
+        alloca_builder = ir.IRBuilder(alloca_block)
+        body_builder = ir.IRBuilder(entry_block)
+
+        # Entorno de la función
+        local_env = Symtab(n.name + "_" + n.uid, parent=env)
+
+        # Asignar parámetros a variables locales
+        for i, param in enumerate(n.params):
+            llvm_type = param_types[i]
+            ptr = alloca_builder.alloca(llvm_type, name=param.name)
+            ptr.align = IrTypes.get_align(param.type)
+
+            body_builder.store(func_body.args[i], ptr)
+            local_env.add(param.name, ptr)
+
+        self._run_block(n.body, local_env, body_builder, alloca_builder, func_body)
+
+        alloca_builder.branch(entry_block)
+        self.default_return(body_builder, ret_type)  # asegurar return al final
 
     def visit(self, n: Param, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab):
         pass
@@ -968,16 +1068,32 @@ class IRGenerator(Visitor):
         return self._visit_inc_dec_common(n, env, builder, alloca, func)
 
     def _concatenate_string(
-        self, left: ir.Value, right: ir.Value, builder: ir.IRBuilder
+        self,
+        n: BinOper,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
     ) -> ir.Value:
         """
         Genera el IR para concatenar dos strings, que pueden ser literales (i8*)
         o el resultado de otra operación (BMinorString*).
         """
+        left = n.left.accept(self, env, builder, alloca, func)
+        right = n.right.accept(self, env, builder, alloca, func)
+
         # Obtenemos las funciones del runtime
         concat_fn = self.string_runtime.concat()
+        free_fn = self.string_runtime.free()
 
-        return builder.call(concat_fn, [left, right], "concat_result")
+        result = builder.call(concat_fn, [left, right], "concat_result")
+
+        if isinstance(n.left, BinOper):
+            builder.call(free_fn, [left])
+        if isinstance(n.right, BinOper):
+            builder.call(free_fn, [right])
+
+        return result
 
     def visit(
         self,
@@ -987,12 +1103,13 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
-        left = n.left.accept(self, env, builder, alloca, func)
-        right = n.right.accept(self, env, builder, alloca, func)
         is_int = not (n.left.type == SimpleTypes.FLOAT.value)
 
-        if n.left.type == SimpleTypes.STRING.value:
-            return self._concatenate_string(left, right, builder)
+        if n.type == SimpleTypes.STRING.value and n.oper == "+":
+            return self._concatenate_string(n, env, builder, alloca, func)
+
+        left = n.left.accept(self, env, builder, alloca, func)
+        right = n.right.accept(self, env, builder, alloca, func)
 
         if n.oper == "^":
             fn = self.math_runtime.pow_int()
@@ -1082,6 +1199,8 @@ class IRGenerator(Visitor):
         Obtener Puntero de la variable
         """
         var = env.get(n.name)
+        print("VAR:", var)
+        # env.parent.parent.print()
         return builder.load(var, name=n.name)
 
     def check(
@@ -1092,4 +1211,5 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
+        pass
         pass

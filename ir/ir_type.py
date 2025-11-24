@@ -52,12 +52,12 @@ class IrTypes:
         else:
             name = t
 
-        arq = struct.calcsize("P") * 8
+        arq = struct.calcsize("P")
 
         types = {
-            "integer": cls.i32.width // 8,
+            "integer": 4,
             "float": 4,
-            "char": cls.i8.width // 8,
+            "char": 4,
             "boolean": 1,
             "string": arq,
             "array": arq,
