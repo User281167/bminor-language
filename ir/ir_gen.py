@@ -130,11 +130,14 @@ class IRGenerator(Visitor):
         return module
 
     def _free_strings(self, builder: ir.IRBuilder, env: Symtab, strings_in_block: list):
+        free_fn = self.string_runtime.free()
+        null_ptr = ir.Constant(IrTypes.generic_pointer_t, None)
+
         for string in strings_in_block:
             loc = env.get(string.name, recursive=False)
             str_ptr = builder.load(loc, name=f"{string.name}_to_free")
-            free_fn = self.string_runtime.free()
             builder.call(free_fn, [str_ptr])
+            builder.store(null_ptr, loc)
 
         strings_in_block.clear()
 
@@ -163,10 +166,24 @@ class IRGenerator(Visitor):
 
             if isinstance(stmt, VarDecl) and stmt.type == SimpleTypes.STRING.value:
                 strings_in_block.append(stmt)
-            elif isinstance(stmt, (BreakStmt, ContinueStmt, ReturnStmt)):
+            elif isinstance(stmt, (BreakStmt, ContinueStmt)):
                 self._free_strings(builder, env, strings_in_block)
 
-            stmt.accept(self, env, builder, alloca, func)
+            ptr = stmt.accept(self, env, builder, alloca, func)
+
+            # free string flotantes
+            if (
+                isinstance(stmt, (UnaryOper, BinOper, FuncCall))
+                and stmt.type == SimpleTypes.STRING.value
+            ):
+                free = self.string_runtime.free()
+                builder.call(free, [ptr])
+            # liberar después de calcular return para evitar free prematuro
+            elif isinstance(stmt, ReturnStmt):
+                self._free_strings(builder, env, strings_in_block)
+
+                if ptr:
+                    builder.ret(ptr)
 
             if builder.block.is_terminated:
                 break
@@ -274,7 +291,9 @@ class IRGenerator(Visitor):
             builder.call(fn, [val])
 
             # liberar string temporal si aplica
-            if expr.type == SimpleTypes.STRING.value and isinstance(expr, BinOper):
+            if expr.type == SimpleTypes.STRING.value and isinstance(
+                expr, (BinOper, FuncCall)
+            ):
                 free = self.string_runtime.free()
                 builder.call(free, [val])
 
@@ -489,11 +508,18 @@ class IRGenerator(Visitor):
 
         if n.expr is None:
             self.default_return(builder, func.type)
-            return
+            return None
 
         if not builder.block.is_terminated:
             val = n.expr.accept(self, env, builder, alloca, func)
-            builder.ret(val)
+
+            if n.expr.type == SimpleTypes.STRING.value and isinstance(
+                n.expr, (VarLoc, Literal)
+            ):
+                copy = self.string_runtime.copy()
+                val = builder.call(copy, [val], "return_string_copy")
+
+            return val
 
     # --- Declaration
 
@@ -613,7 +639,7 @@ class IRGenerator(Visitor):
             var.linkage = "dso_local"
         else:
             var = alloca.alloca(
-                llvm_type
+                llvm_type, name=n.name
             )  # no agregar nombre ya que puede redefinir una var global
 
         var.align = IrTypes.get_align(n.type) or 0
@@ -832,7 +858,18 @@ class IRGenerator(Visitor):
         # Crear tipo de función LLVM
         # Crear la función LLVM (pero sin cuerpo)
         ret_type = IrTypes.get_type(n.return_type)
-        param_types = [IrTypes.get_type(p.type) for p in n.params]
+        param_types = []
+
+        for p in n.params:
+            llvm_type = IrTypes.get_type(p.type)
+
+            # Si el parámetro es STRING, se pasa por REFERENCIA (i8**),
+            # por lo que el tipo de argumento es puntero al puntero del string.
+            if p.type == SimpleTypes.STRING.value:
+                param_types.append(llvm_type.as_pointer())  # Convierte i8* a i8**
+            else:
+                param_types.append(llvm_type)
+
         func_type = ir.FunctionType(ret_type, param_types)
         func_body = ir.Function(module, func_type, name=n.name)
 
@@ -867,12 +904,19 @@ class IRGenerator(Visitor):
 
         # Asignar parámetros a variables locales
         for i, param in enumerate(n.params):
-            llvm_type = param_types[i]
-            ptr = alloca_builder.alloca(llvm_type, name=param.name)
-            ptr.align = IrTypes.get_align(param.type)
+            llvm_arg = func_body.args[i]
 
-            body_builder.store(func_body.args[i], ptr)
-            local_env.add(param.name, ptr)
+            if param.type == SimpleTypes.STRING.value:
+                # pasar por referencia
+                local_env.add(param.name, llvm_arg)
+            else:
+                # pasar por valor
+                llvm_type = llvm_arg.type
+                ptr = alloca_builder.alloca(llvm_type, name=param.name)
+                ptr.align = IrTypes.get_align(param.type)
+
+                body_builder.store(llvm_arg, ptr)
+                local_env.add(param.name, ptr)
 
         self._run_block(n.body, local_env, body_builder, alloca_builder, func_body)
 
@@ -1039,9 +1083,9 @@ class IRGenerator(Visitor):
 
         result = builder.call(concat_fn, [left, right], "concat_result")
 
-        if isinstance(n.left, BinOper):
+        if isinstance(n.left, (BinOper, FuncCall)):
             builder.call(free_fn, [left])
-        if isinstance(n.right, BinOper):
+        if isinstance(n.right, (BinOper, FuncCall)):
             builder.call(free_fn, [right])
 
         return result
@@ -1125,8 +1169,56 @@ class IRGenerator(Visitor):
         func: ir.Function,
     ):
         fun_name = env.get(n.name)
-        args = [arg.accept(self, env, builder, alloca, func) for arg in n.args]
-        return builder.call(fun_name, args)
+        args = []
+        free_ref_temps = (
+            []
+        )  # Para allocas temporales de strings pasados por referencia (i8**)
+
+        for i, arg in enumerate(n.args):
+            if arg.type == SimpleTypes.STRING.value:
+                if isinstance(arg, VarLoc):
+                    # Variable (Ej. set_str(var)) -> Pasa su alloca (i8**)
+                    # El scope es el encargado de liberar.
+                    loc = env.get(arg.name)
+                    args.append(loc)
+                else:
+                    # Expresión (Ej. fun("hola")) pasada a referencia (i8**)
+
+                    # Generar el valor temporal (P_TEMP = i8*)
+                    # Este puede ser un literal o un resultado de concatenación.
+                    val = arg.accept(self, env, builder, alloca, func)
+
+                    if isinstance(arg, Literal):
+                        # NO es memoria del heap. Se crea una copia para evitar free dentro de función.
+                        val_to_pass = builder.call(self.string_runtime.copy(), [val])
+                    elif isinstance(arg, (BinOper, FuncCall)):
+                        # ya es un puntero en heap
+                        val_to_pass = val
+                    else:
+                        # En caso de otras opereaciones con string
+                        val_to_pass = builder.call(self.string_runtime.copy(), [val])
+
+                    # Crear alloca temporal (i8**) en el scope
+                    temp_ptr = alloca.alloca(val_to_pass.type, name="temp_ref_arg")
+                    builder.store(val_to_pass, temp_ptr)
+
+                    # Pasar la REFERENCIA (i8**)
+                    args.append(temp_ptr)
+
+                    # manejar la fuga de memoria
+                    free_ref_temps.append(temp_ptr)
+            else:
+                # Tipos primitivos (int, float, bool, etc.)
+                args.append(arg.accept(self, env, builder, alloca, func))
+
+        val = builder.call(fun_name, args)
+
+        # limpiar los temporales
+        for ptr in free_ref_temps:
+            str_to_free = builder.load(ptr, name="arg_temp_to_free")
+            builder.call(self.string_runtime.free(), [str_to_free])
+
+        return val
 
     def visit(
         self,
@@ -1160,5 +1252,4 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
-        pass
         pass
