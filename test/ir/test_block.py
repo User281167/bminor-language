@@ -116,33 +116,33 @@ class TestBlock(unittest.TestCase):
         _, out = self.get_ir(code)
         self.assertEqual(out, "125125")
 
-    # --- Test 5: Sombreado de Funciones ---
-    def test_function_shadowing_in_block(self):
-        """
-        Un caso avanzado: verifica que una función declarada dentro de un bloque
-        puede sombrear a otra con el mismo nombre, y el alcance se restaura
-        correctamente.
-        """
-        code = """
-        do_print: function void() = {
-            print "[EXTERNO]";
-        }
-        
-        main: function void() = {
-            do_print(); // Llama a la función global
+    # # --- Test 5: Sombreado de Funciones ---
+    # def test_function_shadowing_in_block(self):
+    #     """
+    #     Un caso avanzado: verifica que una función declarada dentro de un bloque
+    #     puede sombrear a otra con el mismo nombre, y el alcance se restaura
+    #     correctamente.
+    #     """
+    #     code = """
+    #     do_print: function void() = {
+    #         print "[EXTERNO]";
+    #     }
 
-            {
-                do_print: function void() = {
-                    print "[INTERNO]";
-                }
-                do_print(); // Llama a la función local del bloque
-            }
+    #     main: function void() = {
+    #         do_print(); // Llama a la función global
 
-            do_print(); // Llama a la función global de nuevo
-        }
-        """
-        _, out = self.get_ir(code)
-        self.assertEqual(out, "[EXTERNO][INTERNO][EXTERNO]")
+    #         {
+    #             do_print: function void() = {
+    #                 print "[INTERNO]";
+    #             }
+    #             do_print(); // Llama a la función local del bloque
+    #         }
+
+    #         do_print(); // Llama a la función global de nuevo
+    #     }
+    #     """
+    #     _, out = self.get_ir(code)
+    #     self.assertEqual(out, "[EXTERNO][INTERNO][EXTERNO]")
 
     # --- Test 6: Variable Global vs. Múltiples Variables Locales ---
     def test_global_vs_local_shadowing(self):

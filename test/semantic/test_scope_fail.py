@@ -104,3 +104,46 @@ class TestScopeError(unittest.TestCase):
         }
         """
         self.assertError(code, SemanticError.UNDEFINED_FUNCTION)
+
+    def test_scope_func_inside_scope(self):
+        code = """
+        main: function void() = {
+            {
+                my_func: function void() = {
+                    x: integer = 5;
+                    print;
+                }
+
+                my_func();
+            }
+        }
+        """
+        self.assertError(code, SemanticError.INVALID_FUNCTION_DECLARATION)
+
+    def test_override_func_scopes(self):
+        code = """
+                f: function void(a: integer);
+                main: function void() = {
+                    {
+                        f: function void() = {
+                            print;
+                        }
+                    }
+
+                    f: function void(a: string) = {
+                    }
+
+                    for (;;) {
+                        f: function void(a: string) = {
+                            {
+                                f: function void(a: string) = {
+                                }
+                            }
+                        }
+                    }
+                }
+
+                f: function void(a: integer) = {
+                }
+            """
+        self.assertError(code, SemanticError.INVALID_FUNCTION_DECLARATION)

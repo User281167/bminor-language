@@ -67,24 +67,24 @@ class TestFunctions(unittest.TestCase):
         _, out = self.get_ir(code)
         self.assertEqual(out, "101")
 
-    def test_function_nested(self):
-        code = """
-        f: function void() = {
-            f: function void() = {
-                print 42;
-            }
+    # def test_function_nested(self):
+    #     code = """
+    #     f: function void() = {
+    #         f: function void() = {
+    #             print 42;
+    #         }
 
-            f();
+    #         f();
 
-            print 100;
-        }
+    #         print 100;
+    #     }
 
-        main: function void() = {
-            f();
-        }
-        """
-        _, out = self.get_ir(code)
-        self.assertEqual(out, "42100")
+    #     main: function void() = {
+    #         f();
+    #     }
+    #     """
+    #     _, out = self.get_ir(code)
+    #     self.assertEqual(out, "42100")
 
     def test_function_recursive(self):
         code = """
@@ -328,155 +328,155 @@ class TestFunctions(unittest.TestCase):
         _, out = self.get_ir(code)
         self.assertEqual(out, "false")
 
-    def test_function_nested(self):
-        code = """
-        f: function void() = {
-            f: function void() = {
-                print 42;
-            }
+    # def test_function_nested(self):
+    #     code = """
+    #     f: function void() = {
+    #         f: function void() = {
+    #             print 42;
+    #         }
 
-            f();
+    #         f();
 
-            print 100;
-        }
+    #         print 100;
+    #     }
 
-        main: function void() = {
-            f();
-        }
-        """
-        _, out = self.get_ir(code)
-        self.assertEqual(out, "42100")
+    #     main: function void() = {
+    #         f();
+    #     }
+    #     """
+    #     _, out = self.get_ir(code)
+    #     self.assertEqual(out, "42100")
 
-    def test_function_nested_if(self):
-        code = """
-        f: function void() = {
-            f: function void() = {
-                if (true) {
-                    f: function void() = {
-                        print 84;
-                    }
+    # def test_function_nested_if(self):
+    #     code = """
+    #     f: function void() = {
+    #         f: function void() = {
+    #             if (true) {
+    #                 f: function void() = {
+    #                     print 84;
+    #                 }
 
-                    f();
-                }
+    #                 f();
+    #             }
 
-                print 42;
-            }
+    #             print 42;
+    #         }
 
-            f();
+    #         f();
 
-            print 100;
-        }
+    #         print 100;
+    #     }
 
-        main: function void() = {
-            f();
-        }
-        """
-        _, out = self.get_ir(code)
-        self.assertEqual(out, "8442100")
+    #     main: function void() = {
+    #         f();
+    #     }
+    #     """
+    #     _, out = self.get_ir(code)
+    #     self.assertEqual(out, "8442100")
 
-    def test_function_nested_if_else(self):
-        code = """
-        f: function void() = {
-            f: function void() = {
-                if (false) {
-                    f: function void() = {
-                        print 84;
-                    }
+    # def test_function_nested_if_else(self):
+    #     code = """
+    #     f: function void() = {
+    #         f: function void() = {
+    #             if (false) {
+    #                 f: function void() = {
+    #                     print 84;
+    #                 }
 
-                    f();
-                } else {
-                    f: function void() = {
-                        print 21;
-                    }
+    #                 f();
+    #             } else {
+    #                 f: function void() = {
+    #                     print 21;
+    #                 }
 
-                    f();
-                }
+    #                 f();
+    #             }
 
-                print 42;
-            }
+    #             print 42;
+    #         }
 
-            f();
+    #         f();
 
-            print 100;
-        }
+    #         print 100;
+    #     }
 
-        main: function void() = {
-            f();
-        }
-        """
-        _, out = self.get_ir(code)
-        self.assertEqual(out, "2142100")
+    #     main: function void() = {
+    #         f();
+    #     }
+    #     """
+    #     _, out = self.get_ir(code)
+    #     self.assertEqual(out, "2142100")
 
-    def test_function_nested_for(self):
-        code = """
-        f: function void() = {
-            i: integer;
+    # def test_function_nested_for(self):
+    #     code = """
+    #     f: function void() = {
+    #         i: integer;
 
-            for (i = 0; i < 3; i++) {
-                f: function void() = {
-                    print '-';
-                }
+    #         for (i = 0; i < 3; i++) {
+    #             f: function void() = {
+    #                 print '-';
+    #             }
 
-                f();
-            }
+    #             f();
+    #         }
 
-            print 100;
-        }
+    #         print 100;
+    #     }
 
-        main: function void() = {
-            f();
-        }
-        """
-        _, out = self.get_ir(code)
-        self.assertEqual(out, "---100")
+    #     main: function void() = {
+    #         f();
+    #     }
+    #     """
+    #     _, out = self.get_ir(code)
+    #     self.assertEqual(out, "---100")
 
-    def test_function_nested_while(self):
-        code = """
-        f: function void() = {
-            i: integer = 0;
+    # def test_function_nested_while(self):
+    #     code = """
+    #     f: function void() = {
+    #         i: integer = 0;
 
-            while (i < 3) {
-                f: function void() = {
-                    print '-';
-                }
+    #         while (i < 3) {
+    #             f: function void() = {
+    #                 print '-';
+    #             }
 
-                f();
-                i = i + 1;
-            }
+    #             f();
+    #             i = i + 1;
+    #         }
 
-            print 100;
-        }
+    #         print 100;
+    #     }
 
-        main: function void() = {
-            f();
-        }
-        """
-        _, out = self.get_ir(code)
-        self.assertEqual(out, "---100")
+    #     main: function void() = {
+    #         f();
+    #     }
+    #     """
+    #     _, out = self.get_ir(code)
+    #     self.assertEqual(out, "---100")
 
-    def test_function_nested_do_while(self):
-        code = """
-        f: function void() = {
-            i: integer = 0;
+    # def test_function_nested_do_while(self):
+    #     code = """
+    #     f: function void() = {
+    #         i: integer = 0;
 
-            do {
-                f: function void() = {
-                    print '-';
-                }
+    #         do {
+    #             f: function void() = {
+    #                 print '-';
+    #             }
 
-                f();
-                i = i + 1;
-            } while (i < 3);
+    #             f();
+    #             i = i + 1;
+    #         } while (i < 3);
 
-            print 100;
-        }
+    #         print 100;
+    #     }
 
-        main: function void() = {
-            f();
-        }
-        """
-        _, out = self.get_ir(code)
-        self.assertEqual(out, "---100")
+    #     main: function void() = {
+    #         f();
+    #     }
+    #     """
+    #     _, out = self.get_ir(code)
+    #     self.assertEqual(out, "---100")
 
     def test_function_recursive(self):
         code = """

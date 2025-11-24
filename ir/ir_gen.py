@@ -6,6 +6,7 @@ LLVMite.
 """
 
 import codecs
+import uuid
 from parser import Parser
 from parser.model import *
 
@@ -80,8 +81,11 @@ class IRGenerator(Visitor):
         # Entorno de símbolos contexto global
         env = Symtab("global")
 
-        # declarar y definir todas las funciones primero
-        gen._add_functions(n.body, env, alloca_builder, alloca_builder, run_func)
+        # renombrar función main del usuario, main_uid para evitar conflicto con nuestro main de entrada
+        user_main = semantic_env.get("main", recursive=False)
+
+        if user_main:
+            user_main.name = f"main_{uuid.uuid4().hex}"
 
         # Visitar todas las declaraciones
         # liberar string antes de salir
@@ -94,6 +98,9 @@ class IRGenerator(Visitor):
             is_global=True,
         )
 
+        # declarar y definir todas las funciones primero
+        gen._add_functions(n.body, env, alloca_builder, alloca_builder, run_func)
+
         # salto explícito al bloque principal
         # Posicionar run_builder al final del bloque antes de emitir ret
         alloca_builder.branch(entry_block)
@@ -103,7 +110,7 @@ class IRGenerator(Visitor):
 
         if user_main:
             # si existe una función main, llamarla y retornar su valor si no return 0
-            main_func = module.get_global(user_main.name + "_" + user_main.uid)
+            main_func = module.get_global(user_main.name)
 
             if main_func and isinstance(main_func, ir.Function):
                 result = run_builder.call(main_func, [])
@@ -820,15 +827,6 @@ class IRGenerator(Visitor):
             except Exception as e:
                 print(f"Error al definir la función {decl.name}: {repr(e)}")
 
-        # for decl in n:
-        #     try:
-        #         if isinstance(decl, FuncDecl) and decl.body is None:
-        #             self.declare_function(decl, env, builder.module)
-        #         if isinstance(decl, FuncDecl):
-        #             self.define_function(decl, env)
-        #     except Exception as e:
-        #         print(f"Error al definir la función {decl.name}: {repr(e)}")
-
     def declare_function(self, n: FuncDecl, env: Symtab, module):
         # Obtener tipo de retorno y parámetros
         # Crear tipo de función LLVM
@@ -836,14 +834,14 @@ class IRGenerator(Visitor):
         ret_type = IrTypes.get_type(n.return_type)
         param_types = [IrTypes.get_type(p.type) for p in n.params]
         func_type = ir.FunctionType(ret_type, param_types)
-        func_body = ir.Function(module, func_type, name=n.name + "_" + n.uid)
+        func_body = ir.Function(module, func_type, name=n.name)
 
         existing_entry = env.get(n.name, recursive=False)
 
         if existing_entry and isinstance(existing_entry, ir.Function):
-            env[n.name] = func_body
-        elif not existing_entry:
-            env.add(n.name, func_body)
+            del env[n.name]
+
+        env.add(n.name, func_body)
 
     def define_function(self, n: FuncDecl, env: Symtab):
         if n.body is None:
@@ -865,7 +863,7 @@ class IRGenerator(Visitor):
         body_builder = ir.IRBuilder(entry_block)
 
         # Entorno de la función
-        local_env = Symtab(n.name + "_" + n.uid, parent=env)
+        local_env = Symtab(n.name, parent=env)
 
         # Asignar parámetros a variables locales
         for i, param in enumerate(n.params):
@@ -889,54 +887,7 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
-        return
-        if env.get(n.name) is None:
-            ret_type = IrTypes.get_type(n.return_type)
-            param_types = [IrTypes.get_type(p.type) for p in n.params]
-            func_type = ir.FunctionType(ret_type, param_types)
-            func_body = ir.Function(
-                builder.module, func_type, name=n.name + "_" + n.uid
-            )
-
-            existing_entry = env.get(n.name, recursive=False)
-
-            if existing_entry and isinstance(existing_entry, ir.Function):
-                env[n.name] = func_body
-            elif not existing_entry:
-                env.add(n.name, func_body)
-            return
-
-        self.global_scope = False
-
-        # Buscar la función en la tabla de símbolos
-        # Obtener tipo de retorno y parámetros
-        # Crear bloques y builder para el cuerpo
-        func_body = env.get(n.name, recursive=False)
-        ret_type = IrTypes.get_type(n.return_type)
-        param_types = [IrTypes.get_type(p.type) for p in n.params]
-
-        alloca_block = func_body.append_basic_block(name="alloca")
-        entry_block = func_body.append_basic_block(name="entry")
-
-        alloca_builder = ir.IRBuilder(alloca_block)
-        body_builder = ir.IRBuilder(entry_block)
-
-        # Entorno de la función
-        local_env = Symtab(n.name + "_" + n.uid, parent=env)
-
-        # Asignar parámetros a variables locales
-        for i, param in enumerate(n.params):
-            llvm_type = param_types[i]
-            ptr = alloca_builder.alloca(llvm_type, name=param.name)
-            ptr.align = IrTypes.get_align(param.type)
-
-            body_builder.store(func_body.args[i], ptr)
-            local_env.add(param.name, ptr)
-
-        self._run_block(n.body, local_env, body_builder, alloca_builder, func_body)
-
-        alloca_builder.branch(entry_block)
-        self.default_return(body_builder, ret_type)  # asegurar return al final
+        pass
 
     def visit(self, n: Param, builder: ir.IRBuilder, alloca: ir.IRBuilder, env: Symtab):
         pass
@@ -1199,8 +1150,6 @@ class IRGenerator(Visitor):
         Obtener Puntero de la variable
         """
         var = env.get(n.name)
-        print("VAR:", var)
-        # env.parent.parent.print()
         return builder.load(var, name=n.name)
 
     def check(

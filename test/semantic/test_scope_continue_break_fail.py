@@ -55,9 +55,7 @@ class TestScopeContinueBreakError(unittest.TestCase):
         code = """
         main: function void() = {
             {
-                inner: function void() = {
-                    continue;
-                }
+                continue;
             }
         }
         """

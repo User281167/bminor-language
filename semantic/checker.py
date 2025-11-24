@@ -10,7 +10,6 @@
 # A medida que agregue código, piense en cómo podría probarlo.
 # '''
 from parser.model import *
-from uuid import uuid4
 
 from rich import print
 
@@ -111,6 +110,30 @@ class Check(Visitor):
         except Symtab.SymbolDefinedError as ex:
             self._error(f"{dec_type} {n.name!r} is already defined", n.lineno, defined)
 
+    def _visit_block(self, n, env, deep=0):
+        """
+        Recorre un bloque de sentencias
+        Verificar que no se definan funciones dentro de bloques
+
+        Args:
+            n: list[Statement]
+        """
+        if n is None:
+            return
+
+        for stmt in n:
+            if isinstance(stmt, FuncDecl):
+                self._error(
+                    f"Function {stmt.name!r} cannot be defined inside a block",
+                    stmt.lineno,
+                    SemanticError.INVALID_FUNCTION_DECLARATION,
+                )
+            else:
+                if isinstance(stmt, BlockStmt):
+                    stmt.deep = deep + 1
+
+                stmt.accept(self, env)
+
     def visit(self, n: BlockStmt, env: Symtab):
         """
         Validar scopes de tipo {} que no son body de funciones, if, o bucles, sino que son aislados
@@ -141,12 +164,7 @@ class Check(Visitor):
         # Magic variable that references the current scope
         env["$scope"] = n
 
-        for stmt in n.body:
-            if isinstance(stmt, BlockStmt):
-                stmt.deep = n.deep + 1
-
-            stmt.accept(self, env)
-
+        self._visit_block(n.body, env, n.deep)
         env["$scope"] = None
 
     # --- Statements
@@ -262,12 +280,10 @@ class Check(Visitor):
             else_env["$if"] = n
 
         # Visitar then (branch)
-        for stmt in n.then_branch:
-            stmt.accept(self, if_env)
+        self._visit_block(n.then_branch, if_env)
 
         # Visitar n.else (alterno)
-        for stmt in n.else_branch or []:
-            stmt.accept(self, else_env)
+        self._visit_block(n.else_branch, else_env)
 
         if_env["$if"] = None
 
@@ -319,8 +335,7 @@ class Check(Visitor):
         env["$loop"] = n
 
         # Visitar n.body
-        for stmt in n.body:
-            stmt.accept(self, env)
+        self._visit_block(n.body, env)
 
         env["$loop"] = None
 
@@ -339,8 +354,7 @@ class Check(Visitor):
         env["$loop"] = True
 
         # Visitar n.body
-        for stm in n.body:
-            stm.accept(self, env)
+        self._visit_block(n.body, env)
 
         # Deshabilitar marca del While
         env["$loop"] = False
@@ -356,8 +370,7 @@ class Check(Visitor):
         n.env = env
         env["$loop"] = n
 
-        for stmt in n.body:
-            stmt.accept(self, env)
+        self._visit_block(n.body, env)
 
         # Marcar que se esta dentro de un While
         env["$loop"] = True
@@ -751,8 +764,6 @@ class Check(Visitor):
             n, env
         )  # verificar si la nueva función cumple para sobreescritura
 
-        n.uid = uuid4().hex[:8]  # id de la función, necesaria en la generación de IR
-
         self._add_to_env(
             n,
             env,
@@ -773,8 +784,7 @@ class Check(Visitor):
             p.accept(self, env)
 
         # Visitar n.stmts
-        for stmt in n.body or []:
-            stmt.accept(self, env)
+        self._visit_block(n.body, env)
 
         if n.return_type != SimpleTypes.VOID.value and not n.body is None:
             # buscar si hay retorno return expr;

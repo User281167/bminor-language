@@ -57,7 +57,7 @@ class IrTypes:
         types = {
             "integer": 4,
             "float": 4,
-            "char": 4,
+            "char": 1,
             "boolean": 1,
             "string": arq,
             "array": arq,

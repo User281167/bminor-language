@@ -57,6 +57,7 @@ class SemanticError(Enum):
     FUNCTION_USED_AS_VALUE = "Function used as value"
     UNDEFINED_FUNCTION = "Undefined function"
     IS_NOT_FUNCTION = "Is not function"
+    INVALID_FUNCTION_DECLARATION = "Invalid function declaration"
 
     WRONG_NUMBER_OF_ARGUMENTS = "Wrong number of arguments"
     MISMATCH_ARGUMENT_TYPE = "Mismatch argument type"
