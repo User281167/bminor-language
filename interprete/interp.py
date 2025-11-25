@@ -133,10 +133,14 @@ class Interpreter(Visitor):
         except Exception as e:
             # self.error(node, f"Un error inesperado: {e}")
             print(f"Un error inesperado: {repr(e)}")
+            raise RuntimeError(e)
 
     def visit(self, node: Program):
         for stmt in node.body:
-            stmt.accept(self)
+            try:
+                stmt.accept(self)
+            except Exception as e:
+                raise RuntimeError(e)
 
     # Declarations
 
@@ -172,6 +176,18 @@ class Interpreter(Visitor):
             val = val.encode("utf-8").decode("unicode_escape")
 
         return val
+
+    def visit(self, node: UnaryOper):
+        expr = node.expr.accept(self)
+
+        if node.oper == "+":
+            return expr
+        elif node.oper == "-":
+            return -expr
+        elif node.oper == "!":
+            return not _is_truthy(expr)
+        else:
+            raise NotImplementedError(node.oper)
 
     # def visit(self, node: WhileStmt):
     #     while _is_truthy(node.expr.accept(self)):
