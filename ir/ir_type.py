@@ -1,7 +1,7 @@
 import codecs
 import struct
 from dataclasses import dataclass
-from parser.model import SimpleType
+from parser.model import ArrayType, SimpleType
 
 from llvmlite import ir
 
@@ -31,6 +31,8 @@ class IrTypes:
     def get_type(cls, name: str | SimpleType) -> ir.Type:
         if isinstance(name, SimpleType):
             name = name.name
+        if isinstance(name, ArrayType):
+            return cls.generic_pointer_t
 
         types = {
             "integer": cls.i32,

@@ -263,27 +263,29 @@ class IRGenerator(Visitor):
     ):
         val = n.value.accept(self, env, builder, alloca, func)
 
-        # A. Obtener puntero al array y el índice
+        # Obtener puntero al array y el índice
         array_name = n.location.array.name
         array_var = env.get(array_name)
-        array_ptr = builder.load(array_var, name=f"{array_name}_ptr")
+
+        if array_var.type == IrTypes.generic_pointer_t:
+            array_ptr = array_var
+        else:
+            array_ptr = builder.load(array_var, name=f"{array_name}_ptr")
+
         index = n.location.index.accept(self, env, builder, alloca, func)
 
-        # B. Preparar el puntero al valor (value_ptr)
         if n.location.type == SimpleTypes.STRING.value:
             # Si es string, el valor YA ES un puntero (i8*)
             value_ptr = val
         else:
             # Si es básico (int/bool), necesitamos un puntero a él.
-            # 1. Crear espacio temporal en el stack
-            # (Usa alloca.alloca para asegurar que esté en el bloque correcto)
+            # Crear espacio temporal en el stack
             temp_val = alloca.alloca(val.type, name="temp_assign_val")
-            # 2. Guardar el valor allí
             builder.store(val, temp_val)
-            # 3. Obtener el puntero genérico (i8*)
+
+            # Obtener el puntero genérico (i8*)
             value_ptr = builder.bitcast(temp_val, IrTypes.generic_pointer_t)
 
-        # C. ¡DELEGAR AL RUNTIME!
         # El runtime decide si hace free, strdup o memcpy.
         set_fn = self.array_runtime.set()
         builder.call(set_fn, [array_ptr, index, value_ptr])
@@ -664,6 +666,14 @@ class IRGenerator(Visitor):
 
         return val
 
+    def _auto_array(self, n, env, builder, alloca, func):
+        arr = ArrayDecl(
+            n.name,
+            n.type,
+            n.value,
+        )
+        self.visit(arr, env, builder, alloca, func)
+
     def visit(
         self,
         n: VarDecl,
@@ -672,6 +682,10 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
+        if isinstance(n, AutoDecl) and isinstance(n.value, list):
+            self._auto_array(n, env, builder, alloca, func)
+            return
+
         llvm_type = IrTypes.get_type(n.type)
         val = self._get_literal_value(n.value)
 
@@ -785,7 +799,6 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
-
         # Loc para el Puntero (i8**)
         if self.global_scope:
             var = ir.GlobalVariable(self.module, IrTypes.generic_pointer_t, n.name)
@@ -794,7 +807,12 @@ class IRGenerator(Visitor):
         else:
             var = alloca.alloca(IrTypes.generic_pointer_t, name=n.name)
 
-        size = n.type.size.accept(self, env, builder, alloca, func)
+        if isinstance(n.type.size, int):
+            # Auto array posible size como entero de len(n.value)
+            size = IrTypes.const_int(n.type.size)
+        else:
+            size = n.type.size.accept(self, env, builder, alloca, func)
+
         element_size = IrTypes.get_align(n.type.base)
         element_size = IrTypes.const_int(element_size)
 
@@ -869,18 +887,20 @@ class IRGenerator(Visitor):
 
             # Si el parámetro es STRING, se pasa por REFERENCIA (i8**),
             # por lo que el tipo de argumento es puntero al puntero del string.
-            if p.type == SimpleTypes.STRING.value:
+            if isinstance(p.type, ArrayType):
+                param_types.append(llvm_type)
+            elif p.type == SimpleTypes.STRING.value:
                 param_types.append(llvm_type.as_pointer())  # Convierte i8* a i8**
             else:
                 param_types.append(llvm_type)
 
-        func_type = ir.FunctionType(ret_type, param_types)
-        func_body = ir.Function(module, func_type, name=n.name)
-
         existing_entry = env.get(n.name, recursive=False)
 
         if existing_entry and isinstance(existing_entry, ir.Function):
-            del env[n.name]
+            return
+
+        func_type = ir.FunctionType(ret_type, param_types)
+        func_body = ir.Function(module, func_type, name=n.name)
 
         env.add(n.name, func_body)
 
@@ -910,7 +930,9 @@ class IRGenerator(Visitor):
         for i, param in enumerate(n.params):
             llvm_arg = func_body.args[i]
 
-            if param.type == SimpleTypes.STRING.value:
+            if param.type == SimpleTypes.STRING.value or isinstance(
+                param.type, ArrayType
+            ):
                 # pasar por referencia
                 local_env.add(param.name, llvm_arg)
             else:
@@ -1257,24 +1279,27 @@ class IRGenerator(Visitor):
         func: ir.Function,
     ):
         array_var = env.get(n.array.name)
-        array_ptr = builder.load(array_var, name=f"{n.array.name}_struct_ptr")
+
+        # no cargar nuevamente el array
+        if array_var.type == IrTypes.generic_pointer_t:
+            array_ptr = array_var
+        else:
+            array_ptr = builder.load(array_var, name=f"{n.array.name}_struct_ptr")
+
         index = n.index.accept(self, env, builder, alloca, func)
 
         # Obtener el tipo de retorno LLVM
         return_type = IrTypes.get_type(n.type)
 
-        # --- 2. 🎯 CREACIÓN LOCAL DE ALLOCA (SOLUCIÓN) 🎯 ---
-        # ¡Usamos el 'alloca' builder para crear la variable!
-        # Esto genera la instrucción `%temp_get_val = alloca i32` en el bloque 'alloca_entry'.
+        # crear variable local
         temp_alloca = alloca.alloca(return_type, name="temp_get_val")
-        # --- FIN SOLUCIÓN ---
 
-        # 3. Castear al puntero genérico (i8*) para el runtime
+        # Castear al puntero genérico (i8*) para el runtime
         destination_ptr = builder.bitcast(
             temp_alloca, IrTypes.generic_pointer_t, name="dest_ptr"
         )
 
-        # 4. Llamar a GET y Cargar el valor
+        # Cargar el valor
         get_fn = self.array_runtime.get()
         builder.call(get_fn, [array_ptr, index, destination_ptr])
 
