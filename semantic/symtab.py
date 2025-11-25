@@ -98,6 +98,16 @@ class Symtab:
 
         return None
 
+    def set(self, name, value):
+        """
+        Cambiar valor de un simbolo
+        """
+
+        if name in self.entries:
+            self.entries[name] = value
+        elif self.parent:
+            self.parent.set(name, value)
+
     def print(self):
         table = Table(title=f"Symbol Table: '{self.name}'")
         table.add_column("key", style="cyan")

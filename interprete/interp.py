@@ -293,7 +293,8 @@ class Interpreter(Visitor):
         loc = node.location.name
 
         value = node.value.accept(self)
-        self.env[loc] = value
+        self.env.set(loc, value)
+
         return value
 
     # def visit(self, node: WhileStmt):
@@ -305,12 +306,25 @@ class Interpreter(Visitor):
     #         except ContinueException:
     #             raise NotImplementedError
 
-    # def visit(self, node: IfStmt):
-    #     expr = node.expr.accept(self)
-    #     if _is_truthy(expr):
-    #         node.then_stmt.accept(self)
-    #     elif node.else_stmt:
-    #         node.else_stmt.accept(self)
+    def visit(self, node: IfStmt):
+        expr = node.condition.accept(self)
+
+        if _is_truthy(expr):
+            env = Symtab("if", self.env)
+            self.env = env
+
+            for stmt in node.then_branch:
+                stmt.accept(self)
+
+            self.env = self.env.parent
+        elif node.else_branch:
+            env = Symtab("else", self.env)
+            self.env = env
+
+            for stmt in node.else_branch:
+                stmt.accept(self)
+
+            self.env = self.env.parent
 
     # def visit(self, node: ReturnStmt):
     #     # Ojo: node.expr es opcional
