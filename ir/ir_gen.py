@@ -1192,6 +1192,61 @@ class IRGenerator(Visitor):
 
         return result
 
+    def _eval_and(
+        self,
+        n: BinOper,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
+    ):
+        # Evaluar and, ya que si uno de los dos lados es falso, no requiere seguir evaluando el otro.
+        # A && B
+
+        if n.oper == "LAND":
+            # bloques de destino (si es True, si es False, y el de merge/retorno)
+            # Bloque para evaluar la parte derecha
+            true_block = func.append_basic_block(name="land_eval_right")
+            false_block = func.append_basic_block(name="land_false")
+            merge_block = func.append_basic_block(name="land_merge")
+
+            # El resultado de left
+            left_result = n.left.accept(self, env, builder, alloca, func)
+
+            # Si A es VERDADERO, saltamos a evaluar B.
+            # Si A es FALSO, saltamos directamente al bloque 'false_block'.
+            builder.cbranch(left_result, true_block, false_block)
+
+            builder.position_at_start(false_block)
+            # Siempre devuelve False (0)
+            false_val = ir.Constant(ir.IntType(1), 0)
+
+            # Saltamos al bloque de retorno (Merge)
+            builder.branch(merge_block)
+
+            # Construir el bloque para evaluar B (si A era verdadero)
+            builder.position_at_start(true_block)
+            right_result = n.right.accept(
+                self, env, builder, alloca, func
+            )  # Generar código para B
+
+            # Finalizar el bloque TRUE: B es el resultado final
+            builder.branch(merge_block)
+
+            # Construir el bloque de Fusión (Merge)
+            builder.position_at_start(merge_block)
+
+            # Resultado final de la operación A && B
+            phi_node = builder.phi(ir.IntType(1), name="land_result")
+
+            # Si venimos del bloque FALSO, el resultado es 'false_val'
+            phi_node.add_incoming(false_val, false_block)
+
+            # Si venimos del bloque VERDADERO (True Block), el resultado es el resultado de la derecha (B)
+            phi_node.add_incoming(right_result, true_block)
+
+            return phi_node
+
     def visit(
         self,
         n: BinOper,
@@ -1200,6 +1255,9 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
+        if n.oper == "LAND":
+            return self._eval_and(n, env, builder, alloca, func)
+
         is_int = not (n.left.type == SimpleTypes.FLOAT.value)
 
         if n.type == SimpleTypes.STRING.value and n.oper == "+":
@@ -1231,7 +1289,6 @@ class IRGenerator(Visitor):
         }
 
         fn_bool = {
-            "LAND": builder.and_,
             "LOR": builder.or_,
         }
 
