@@ -97,6 +97,8 @@ class IRGenerator(Visitor):
             except Exception as e:
                 print(f"Error al declarar la función {decl.name}: {repr(e)}")
 
+        gen._inject_fun_builtins(env, run_builder, alloca_builder, run_func)
+
         # Visitar todas las declaraciones
         # liberar string antes de salir
         free_strings = gen._run_block(
@@ -230,7 +232,38 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
-        pass
+        # agregar array_length(i8*)
+        array_length = FuncDecl(
+            name="array_length",
+            return_type=SimpleTypes.INTEGER.value,
+            params=[
+                Param("array", ArrayType(base=SimpleTypes.UNDEFINED.value, size=None))
+            ],
+            body=None,
+        )
+        array_length.type = SimpleTypes.INTEGER.value
+        self.declare_function(array_length, env, builder.module)
+
+        n = array_length
+
+        # definir
+        func_body = env.get(n.name, recursive=False)
+
+        entry_block = func_body.append_basic_block(name="entry")
+        body_builder = ir.IRBuilder(entry_block)
+
+        # Entorno de la función
+        local_env = Symtab(n.name, parent=env)
+
+        # Asignar parámetros a variables locales
+        for i, param in enumerate(n.params):
+            llvm_arg = func_body.args[i]
+            local_env.add(param.name, llvm_arg)
+
+        # llamar a runtime ._bminor_array_size
+        size_fn = self.array_runtime.size()
+        size = body_builder.call(size_fn, [local_env.get(n.params[0].name)])
+        body_builder.ret(size)
 
     def _check_fun_call_builtins(
         self, n: FuncCall, builder: ir.IRBuilder, alloca: ir.IRBuilder
