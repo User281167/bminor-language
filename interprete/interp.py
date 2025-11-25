@@ -95,13 +95,28 @@ class Interpreter(Visitor):
         if isinstance(left, (int, float)) and isinstance(right, (int, float)):
             return True
         else:
-            self.error(node, f"En '{node.op}' los operandos deben ser numeros")
+            self.error(node, f"En '{node.oper}' los operandos deben ser numeros")
+
+    def _check_numeric_char_operands(self, node, left, right):
+        if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+            return left, right
+        elif (
+            isinstance(left, str)
+            and isinstance(right, str)
+            and (len(left) == 1)
+            and (len(right) == 1)
+        ):
+            return ord(left), ord(right)
+        else:
+            self.error(
+                node, f"En '{node.oper}' los operandos deben ser numeros o caracteres"
+            )
 
     def _check_numeric_operand(self, node, value):
         if isinstance(value, (int, float)):
             return True
         else:
-            self.error(node, f"En '{node.op}' el operando debe ser un numero")
+            self.error(node, f"En '{node.oper}' el operando debe ser un numero")
 
     def error(self, position, message):
         self.ctxt.error(position, message)
@@ -177,6 +192,8 @@ class Interpreter(Visitor):
 
         return val
 
+    # Expressions
+
     def visit(self, node: UnaryOper):
         expr = node.expr.accept(self)
 
@@ -188,6 +205,73 @@ class Interpreter(Visitor):
             return not _is_truthy(expr)
         else:
             raise NotImplementedError(node.oper)
+
+    def check(self, node: BinOper):
+        left = node.left.accept(self)
+        right = node.right.accept(self)
+
+        if node.oper == "+":
+            if (
+                isinstance(left, str) and isinstance(right, str)
+            ) or self._check_numeric_operands(node, left, right):
+                return left + right
+
+        elif node.oper == "-":
+            self._check_numeric_operands(node, left, right)
+            return left - right
+
+        elif node.oper == "*":
+            self._check_numeric_operands(node, left, right)
+            return left * right
+
+        elif node.oper == "/":
+            self._check_numeric_operands(node, left, right)
+            if isinstance(left, int) and isinstance(right, int):
+                return left // right
+
+            return left / right
+
+        elif node.oper == "%":
+            self._check_numeric_operands(node, left, right)
+            return left % right
+
+        elif node.oper == "==":
+            return left == right
+
+        elif node.oper == "!=":
+            return left != right
+
+        elif node.oper == "<":
+            left, right = self._check_numeric_char_operands(node, left, right)
+            return left < right
+
+        elif node.oper == ">":
+            left, right = self._check_numeric_char_operands(node, left, right)
+            return left > right
+
+        elif node.oper == "<=":
+            left, right = self._check_numeric_char_operands(node, left, right)
+            return left <= right
+
+        elif node.oper == ">=":
+            left, right = self._check_numeric_char_operands(node, left, right)
+            return left >= right
+
+        else:
+            raise NotImplementedError(f"Mal operador {node.oper}")
+
+    def visit(self, node: BinOper):
+        left = node.left.accept(self)
+
+        if node.oper == "LOR":
+            return left if _is_truthy(left) else node.right.accept(self)
+        if node.oper == "LAND":
+            return node.right.accept(self) if _is_truthy(left) else left
+
+        return self.check(node)
+
+    # def visit(self, node: Assignment):
+    #     pass
 
     # def visit(self, node: WhileStmt):
     #     while _is_truthy(node.expr.accept(self)):
@@ -209,76 +293,6 @@ class Interpreter(Visitor):
     #     # Ojo: node.expr es opcional
     #     value = 0 if not node.expr else node.expr.accept(self)
     #     raise ReturnException(value)
-
-    # # Expressions
-
-    # def visit(self, node: BinOper):
-    #     left = node.left.accept(self)
-    #     right = node.right.accept(self)
-
-    #     if node.op == "+":
-    #         if (
-    #             isinstance(left, str) and isinstance(right, str)
-    #         ) or self._check_numeric_operands(node, left, right):
-    #             return left + right
-
-    #     elif node.op == "-":
-    #         self._check_numeric_operands(node, left, right)
-    #         return left - right
-
-    #     elif node.op == "*":
-    #         self._check_numeric_operands(node, left, right)
-    #         return left * right
-
-    #     elif node.op == "/":
-    #         self._check_numeric_operands(node, left, right)
-    #         if isinstance(left, int) and isinstance(right, int):
-    #             return left // right
-
-    #         return left / right
-
-    #     elif node.op == "%":
-    #         self._check_numeric_operands(node, left, right)
-    #         return left % right
-
-    #     elif node.op == "==":
-    #         return left == right
-
-    #     elif node.op == "!=":
-    #         return left != right
-
-    #     elif node.op == "<":
-    #         self._check_numeric_operands(node, left, right)
-    #         return left < right
-
-    #     elif node.op == ">":
-    #         self._check_numeric_operands(node, left, right)
-    #         return left > right
-
-    #     elif node.op == "<=":
-    #         self._check_numeric_operands(node, left, right)
-    #         return left <= right
-
-    #     elif node.op == ">=":
-    #         self._check_numeric_operands(node, left, right)
-    #         return left >= right
-
-    #     else:
-    #         raise NotImplementedError(f"Mal operador {node.op}")
-
-    # def visit(self, node: BinOper):
-    #     left = node.left.accept(self)
-    #     if node.op == "||":
-    #         return left if _is_truthy(left) else node.right.accept(self)
-    #     if node.op == "&&":
-    #         return node.right.accept(self) if _is_truthy(left) else left
-    #     raise NotImplementedError(f"Mal operador {node.op}")
-
-    # def visit(self, node: UnaryOper):
-    #     pass
-
-    # def visit(self, node: Assignment):
-    #     pass
 
     # def visit(self, node: FuncCall):
     #     callee = node.func.accept(self)
