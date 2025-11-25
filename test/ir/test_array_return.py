@@ -209,3 +209,26 @@ class TestArrayReturn(unittest.TestCase):
     #     expected_output = "6"
     #     _, output = self.get_ir_and_output(code)
     #     self.assertEqual(output, expected_output)
+
+    def test_return_auto_array(self):
+        """
+        Prueba crítica: Retornar un array de strings.
+        Verifica que los punteros a los strings (char*) dentro del array
+        se mantengan válidos al volver al main.
+        """
+        code = """
+        get_messages: function array [2] string () = {
+            // Inicialización con literales y concat
+            msgs: array [2] string = {"Hello", "World" + "!"};
+            return msgs;
+        }
+
+        main: function void () = {
+            data: auto = get_messages();
+
+            print data[0], " ", data[1];
+        }
+        """
+        expected_output = "Hello World!"
+        _, output = self.get_ir_and_output(code)
+        self.assertEqual(output, expected_output)

@@ -722,6 +722,32 @@ class IRGenerator(Visitor):
         )
         self.visit(arr, env, builder, alloca, func)
 
+    def _auto_array_decl_assign(self, n, env, builder, alloca, func):
+        arr = ArrayDecl(
+            n.name,
+            n.type,
+            n.value,
+        )
+        # arr.pretty()
+        # self.visit(arr, env, builder, alloca, func)
+
+        if self.global_scope:
+            var = ir.GlobalVariable(self.module, IrTypes.generic_pointer_t, n.name)
+            var.initializer = IrTypes.null_pointer
+            var.linkage = "dso_local"
+        else:
+            var = alloca.alloca(IrTypes.generic_pointer_t, name=n.name)
+
+        print("decl")
+        env.add(n.name, var)
+
+        # tenemos array = array, array = funcall
+        loc = VarLoc(n.name)
+        loc.type = n.type
+
+        assignment: Assignment = Assignment(location=loc, value=n.value)
+        self.visit(assignment, env, builder, alloca, func)
+
     def visit(
         self,
         n: VarDecl,
@@ -732,6 +758,9 @@ class IRGenerator(Visitor):
     ):
         if isinstance(n, AutoDecl) and isinstance(n.value, list):
             self._auto_array(n, env, builder, alloca, func)
+            return
+        elif isinstance(n, AutoDecl) and isinstance(n.value.type, ArrayType):
+            self._auto_array_decl_assign(n, env, builder, alloca, func)
             return
 
         llvm_type = IrTypes.get_type(n.type)
