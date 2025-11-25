@@ -158,7 +158,21 @@ class Interpreter(Visitor):
                     f"Error en {type(stmt).__name__} linea {stmt.lineno} \n\n {e}"
                 )
 
-    # # Statements
+    def visit(self, node: BlockStmt):
+        env = Symtab("block", parent=self.env)
+        self.env = env
+
+        for stmt in node.body:
+            try:
+                stmt.accept(self)
+            except Exception as e:
+                raise RuntimeError(
+                    f"Error en {type(stmt).__name__} linea {stmt.lineno} \n\n {e}"
+                )
+
+        self.env = env.parent
+
+    # Statements
 
     def visit(self, node: PrintStmt):
         for expr in node.expr:
@@ -265,6 +279,9 @@ class Interpreter(Visitor):
     #     self.env[node.name] = func
 
     def _default_val(self, node: VarDecl):
+        if not hasattr(node, "type"):
+            return None
+
         if node.type == SimpleTypes.INTEGER.value:
             return 0
         elif node.type == SimpleTypes.STRING.value:
