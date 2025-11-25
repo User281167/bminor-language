@@ -146,7 +146,8 @@ class Interpreter(Visitor):
         except BminorExit as e:
             pass
         except Exception as e:
-            # self.error(node, f"Un error inesperado: {e}")
+            # self.error(node, f"Un error inesperado: {e.__class__.__name__}")
+            # raise RuntimeError(f"{e}")
             print(e)
 
     def visit(self, node: Program):
@@ -155,7 +156,7 @@ class Interpreter(Visitor):
                 stmt.accept(self)
             except Exception as e:
                 raise RuntimeError(
-                    f"Error en {type(stmt).__name__} linea {stmt.lineno} \n\n {e}"
+                    f"Error in {type(stmt).__name__} line {stmt.lineno} \n\n {e}"
                 )
 
     def visit(self, node: BlockStmt):
@@ -167,7 +168,7 @@ class Interpreter(Visitor):
                 stmt.accept(self)
             except Exception as e:
                 raise RuntimeError(
-                    f"Error en {type(stmt).__name__} linea {stmt.lineno} \n\n {e}"
+                    f"Error in {type(stmt).__name__} line {stmt.lineno} \n\n {e}"
                 )
 
         self.env = env.parent
@@ -208,8 +209,11 @@ class Interpreter(Visitor):
         else:
             raise NotImplementedError(node.oper)
 
-    def check(self, node: BinOper):
-        left = node.left.accept(self)
+    def check(self, node: BinOper, left):
+        """
+        Pasar left ya que en el visit se acepto, evitar doble visit
+            0++, se agrega el valor después debería dar 0 pero con doble visit da 1
+        """
         right = node.right.accept(self)
 
         if node.oper == "+":
@@ -270,7 +274,7 @@ class Interpreter(Visitor):
         if node.oper == "LAND":
             return node.right.accept(self) if _is_truthy(left) else left
 
-        return self.check(node)
+        return self.check(node, left)
 
     # Declarations
 
@@ -313,6 +317,27 @@ class Interpreter(Visitor):
         self.env.set(loc, value)
 
         return value
+
+    def visit(self, node: Increment | Decrement):
+        if isinstance(node.location, VarLoc):
+            loc = node.location.name
+            value = self.env.get(loc)
+        else:
+            value = node.location.accept(self)
+            loc = None
+
+        if isinstance(node, Increment):
+            new_value = value + 1
+        else:
+            new_value = value - 1
+
+        if loc:
+            self.env.set(loc, new_value)
+
+        if node.postfix:
+            return value
+        else:
+            return new_value
 
     # def visit(self, node: WhileStmt):
     #     while _is_truthy(node.expr.accept(self)):
