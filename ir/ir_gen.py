@@ -16,6 +16,7 @@ from scanner import Lexer
 from semantic import Check, Symtab
 from utils import warning
 
+from .array_runtime import ArrayRuntime
 from .ir_type import IrTypes
 from .math_runtime import MathRuntime
 from .print_runtime import PrintRuntime
@@ -76,6 +77,7 @@ class IRGenerator(Visitor):
         setattr(gen, "print_runtime", PrintRuntime(module))
         setattr(gen, "math_runtime", MathRuntime(module))
         setattr(gen, "string_runtime", StringRuntime(module))
+        setattr(gen, "array_runtime", ArrayRuntime(module))
         setattr(gen, "_string_cache", {})
 
         # Entorno de símbolos contexto global
@@ -162,6 +164,7 @@ class IRGenerator(Visitor):
         strings_in_block = []
 
         for stmt in n or []:
+            print(type(stmt))
             self.global_scope = is_global
 
             if isinstance(stmt, VarDecl) and stmt.type == SimpleTypes.STRING.value:
@@ -678,6 +681,31 @@ class IRGenerator(Visitor):
 
         env.add(n.name, var)
 
+    def _set_arr_index(
+        self, array_ptr, val_ast, index, env, builder, alloca, func, is_string=False
+    ):
+        index_llvm = IrTypes.const_int(index)
+        value_llvm = val_ast.accept(self, env, builder, alloca, func)
+
+        if is_string:
+            # copiar string
+            set_fn = self.array_runtime.set_string()
+            value_ptr = value_llvm  # ya es un puntero
+        else:
+            # Lógica para tipos básicos (int, bool, float) usar memcpy
+            set_fn = self.array_runtime.set()
+
+            # Alloca temporal para el valor (i32, i1, etc.)
+            temp_alloca = alloca.alloca(value_llvm.type, name="temp_val")
+            builder.store(value_llvm, temp_alloca)
+
+            # Bitcast a puntero genérico (i8*) para pasar la dirección temporal
+            value_ptr = builder.bitcast(
+                temp_alloca, IrTypes.generic_pointer_t, name="value_ptr"
+            )
+
+        builder.call(set_fn, [array_ptr, index_llvm, value_ptr])
+
     def visit(
         self,
         n: ArrayDecl,
@@ -686,123 +714,45 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
-        """
-        Genera el IR para la declaración de un array usando una estructura descriptor.
-        La estructura es: { i32 size, <base_type>* data }
+        # Loc para el Puntero (i8**)
+        if self.global_scope:
+            var = ir.GlobalVariable(self.module, IrTypes.generic_pointer_t, n.name)
+            var.initializer = IrTypes.null_pointer
+            var.linkage = "dso_local"
+        else:
+            var = alloca.alloca(IrTypes.generic_pointer_t, name=n.name)
 
-        arr: array [1] boolean = {true};
+        size = n.type.size.accept(self, env, builder, alloca, func)
+        element_size = IrTypes.get_align(n.type.base)
+        element_size = IrTypes.const_int(element_size)
 
-        alloca_entry:
-            %"arr.data" = alloca [1 x i1]
-            %"arr" = alloca {i32, i1*}
+        list_size = len(n.value) if n.value else 0
+        list_size = IrTypes.const_int(list_size)
 
-        entry:
-            store [1 x i1] [i1 true], [1 x i1]* %"arr.data"                                  # Inicializar el array
-            %"arr.size_ptr" = getelementptr {i32, i1*}, {i32, i1*}* %"arr", i32 0, i32 0     # Acceder al campo size
-            store i32 1, i32* %"arr.size_ptr"                                                # Asignar el tamaño
+        env.add(n.name, var)
 
-            %"arr.data_ptr" = getelementptr {i32, i1*}, {i32, i1*}* %"arr", i32 0, i32 1     # Acceder al campo data
-            %".5" = bitcast [1 x i1]* %"arr.data" to i1*                                     # Apuntar al primer elemento del array
-            store i1* %".5", i1** %"arr.data_ptr"                                            # Asignar el apuntador en la estructura
-        """
-        # Determinar el tipo base de los elementos del array (ej: i32, float)
-        # Definir el tipo de la estructura descriptor
-        base_type = IrTypes.get_type(n.type.base)
-        struct_type = ir.LiteralStructType([IrTypes.int32, base_type.as_pointer()])
+        # para inicializar en función
+        load_var = env.get(n.name)
 
-        size_val = None
-        initial_values = None
-        array_len = 0
+        new_fn = self.array_runtime.new()
+        array_ptr = builder.call(new_fn, [size, list_size, element_size])
+        builder.store(array_ptr, load_var)
 
-        # Determinar el tamaño y el contenido inicial del array
-        # El array se define con una lista de inicialización (ej: x = {1, 2, 3})
+        # Iniciar valores (Si n.value existe)
         if n.value:
-            content = []
+            for i, val_ast in enumerate(n.value):
+                self._set_arr_index(
+                    array_ptr,
+                    val_ast,
+                    i,
+                    env,
+                    builder,
+                    alloca,
+                    func,
+                    is_string=n.type.base == SimpleTypes.STRING.value,
+                )
 
-            for v in n.value:
-                item = self._get_literal_value(v)
-
-                if item is None:
-                    item = v.accept(self, env, builder, alloca, func)
-
-                content.append(item)
-
-            array_len = len(content)
-            # Check problema cuando el array tiene un tamaño variable
-            # size_val = IrTypes.const_int(array_len)  # El tamaño es una constante
-            array_ty = ir.ArrayType(base_type, array_len)
-            initial_values = ir.Constant(array_ty, content)
-
-        # El array se define con un tamaño explícito (ej: array[10] integer)
-        if n.type.size:
-            const_size = self._get_literal_value(n.type.size)
-
-            # El tamaño es una constante literal (ej: [10])
-            if const_size is not None:
-                array_len = const_size
-                size_val = IrTypes.const_int(array_len)
-
-            # El tamaño es una variable o expresión (ej: [n])
-            else:
-                size_val = n.type.size.accept(self, env, builder, alloca, func)
-                # No conocemos array_len en tiempo de compilación
-        else:
-            # Un array debe tener un tamaño o un inicializador
-            raise ValueError(
-                "La declaración del array es inválida: falta tamaño o inicializador."
-            )
-
-        # Reservar memoria para los datos del array en la pila
-        data_ptr = None
-
-        if array_len > 0 or isinstance(size_val, ir.Constant):
-            # Si el tamaño es conocido en tiempo de compilación, creamos un ArrayType
-            array_type = ir.ArrayType(base_type, array_len)
-            data_ptr = alloca.alloca(array_type, name=f"{n.name}.data")
-        else:
-            # Si el tamaño es dinámico (una variable), usamos la sintaxis de VLA de alloca
-            data_ptr = alloca.alloca(base_type, size=size_val, name=f"{n.name}.data")
-
-        # Si había valores iniciales, los almacenamos en el puntero de datos
-        if initial_values:
-            builder.store(initial_values, data_ptr)
-
-        builder.comment(f"Declaring array {n.name}")
-
-        # Reservar memoria para la estructura en la pila
-        struct_ptr = alloca.alloca(struct_type, name=n.name)
-
-        # Agregar valores a la estructura
-        # Almacenar el tamaño en el primer campo (índice 0)
-        size_field_ptr = builder.gep(
-            struct_ptr,
-            [IrTypes.const_int(0), IrTypes.const_int(0)],
-            name=f"{n.name}.size_ptr",
-        )
-
-        builder.store(size_val, size_field_ptr)
-
-        # Almacenar el puntero a los datos en el segundo campo (índice 1)
-        data_field_ptr = builder.gep(
-            struct_ptr,
-            [IrTypes.const_int(0), IrTypes.const_int(1)],
-            name=f"{n.name}.data_ptr",
-        )
-
-        # El puntero `data_ptr` es de tipo `[N x T]*` o `T*`. La estructura necesita `T*`.
-        # Un `bitcast` asegura que el tipo sea el correcto.
-        casted_data_ptr = builder.bitcast(data_ptr, base_type.as_pointer())
-        builder.store(casted_data_ptr, data_field_ptr)
-
-        # Agregar linea de espacio
-        builder.comment(f"end of array {n.name}")
-        builder.comment("")
-
-        # Registrar el puntero al descriptor en la tabla de símbolos
-        env.add(n.name, struct_ptr)
-
-        return struct_ptr
-
+    # El visitor continúa desde aquí.
     def default_return(self, builder: ir.IRBuilder, ret_type: ir.Type | None):
         """
         Genera un return por defecto si no hay uno explícito.
@@ -1244,7 +1194,7 @@ class IRGenerator(Visitor):
         var = env.get(n.name)
         return builder.load(var, name=n.name)
 
-    def check(
+    def visit(
         self,
         n: ArrayLoc,
         env: Symtab,
@@ -1252,4 +1202,30 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
-        pass
+        # Obtener el puntero al array structure (i8*)
+        # Asume que el array está en el entorno y es una variable local o global (i8**)
+        array_var = env.get(n.array.name)
+        array_ptr = builder.load(
+            array_var, name=f"{n.array.name}_struct_ptr"
+        )  # Carga el puntero de la estructura
+
+        # Evaluar el índice
+        index = n.index.accept(self, env, builder, alloca, func)
+
+        # Preparación del destino temporal (donde se copiará el valor)
+
+        # Obtener el tipo de retorno (ej. i32 para integer)
+        return_type = IrTypes.get_type(n.type)
+
+        # Crear un alloca para que C pueda copiar el valor (temporalmente en la pila)
+        temp_alloca = alloca.alloca(return_type, name="temp_get_val")
+
+        # Castear el puntero temporal (ej. i32*) a puntero genérico (i8*)
+        destination_ptr = builder.bitcast(
+            temp_alloca, IrTypes.generic_pointer_t, name="dest_ptr"
+        )
+
+        get_fn = self.array_runtime.get()
+        builder.call(get_fn, [array_ptr, index, destination_ptr])
+
+        return builder.load(temp_alloca, name="array_element")

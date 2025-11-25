@@ -70,3 +70,5 @@ class SemanticError(Enum):
 
     PRINT_VOID_EXPRESSION = "Print void expression"
     PRINT_ARRAY_NOT_ALLOWED = "Cannot print array"
+
+    DIVIDE_BY_ZERO = "Divide by zero"

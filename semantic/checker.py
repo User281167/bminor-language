@@ -590,12 +590,48 @@ class Check(Visitor):
         """
         size_value = None
 
+        if self._search_env_name(env, "$func"):
+            return None
+
         if isinstance(size, Integer):
             size_value = size.value
         elif isinstance(size, UnaryOper):
             size_value = self._get_unary_integer(size)
         elif isinstance(size, VarLoc):
             size_value = self._get_varloc_integer(size, env, "Array size")
+        elif isinstance(size, BinOper):
+            left = self._get_array_size(size.left, env)
+            right = self._get_array_size(size.right, env)
+
+            if left is not None and right is not None:
+                if size.oper == "+":
+                    size_value = left + right
+                elif size.oper == "-":
+                    size_value = left - right
+                elif size.oper == "*":
+                    size_value = left * right
+                elif size.oper == "/":
+                    if right == 0:
+                        self._error(
+                            f"Divide by zero",
+                            size.lineno,
+                            SemanticError.DIVIDE_BY_ZERO,
+                        )
+                        return
+
+                    size_value = left // right
+                elif size.oper == "%":
+                    if right == 0:
+                        self._error(
+                            f"Divide by zero",
+                            size.lineno,
+                            SemanticError.DIVIDE_BY_ZERO,
+                        )
+                        return
+
+                    size_value = left % right
+                elif size.oper == "^":
+                    size_value = left**right
 
         return size_value
 
