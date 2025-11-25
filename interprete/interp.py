@@ -147,28 +147,16 @@ class Interpreter(Visitor):
             pass
         except Exception as e:
             # self.error(node, f"Un error inesperado: {e}")
-            print(f"Un error inesperado: {repr(e)}")
-            raise RuntimeError(e)
+            print(e)
 
     def visit(self, node: Program):
         for stmt in node.body:
             try:
                 stmt.accept(self)
             except Exception as e:
-                raise RuntimeError(e)
-
-    # Declarations
-
-    # def visit(self, node: FuncDecl):
-    #     func = Function(node, self.env)
-    #     self.env[node.name] = func
-
-    # def visit(self, node: VarDecl):
-    #     if node.expr:
-    #         expr = node.expr.accept(self)
-    #     else:
-    #         expr = None
-    #     self.env[node.name] = expr
+                raise RuntimeError(
+                    f"Error en {type(stmt).__name__} linea {stmt.lineno} \n\n {e}"
+                )
 
     # # Statements
 
@@ -270,8 +258,43 @@ class Interpreter(Visitor):
 
         return self.check(node)
 
-    # def visit(self, node: Assignment):
-    #     pass
+    # Declarations
+
+    # def visit(self, node: FuncDecl):
+    #     func = Function(node, self.env)
+    #     self.env[node.name] = func
+
+    def _default_val(self, node: VarDecl):
+        if node.type == SimpleTypes.INTEGER.value:
+            return 0
+        elif node.type == SimpleTypes.STRING.value:
+            return ""
+        elif node.type == SimpleTypes.BOOLEAN.value:
+            return False
+        elif node.type == SimpleTypes.CHAR.value:
+            return 0
+        elif node.type == SimpleTypes.FLOAT.value:
+            return 0
+
+        return None
+
+    def visit(self, node: VarDecl):
+        if node.value:
+            expr = node.value.accept(self)
+        else:
+            expr = self._default_val(node)
+
+        self.env.add(node.name, expr)
+
+    def visit(self, node: VarLoc):
+        return self.env.get(node.name)
+
+    def visit(self, node: Assignment):
+        loc = node.location.name
+
+        value = node.value.accept(self)
+        self.env[loc] = value
+        return value
 
     # def visit(self, node: WhileStmt):
     #     while _is_truthy(node.expr.accept(self)):
