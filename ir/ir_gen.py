@@ -290,6 +290,9 @@ class IRGenerator(Visitor):
         set_fn = self.array_runtime.set()
         builder.call(set_fn, [array_ptr, index, value_ptr])
 
+        # retornar valor
+        return val
+
     def visit(
         self,
         n: Assignment,
@@ -301,13 +304,12 @@ class IRGenerator(Visitor):
         if isinstance(n.location, VarLoc):
             loc = env.get(n.location.name)
         elif isinstance(n.location, ArrayLoc):
-            self._set_array_location(n, env, builder, alloca, func)
-            return
+            return self._set_array_location(n, env, builder, alloca, func)
 
         if not n.location.type == SimpleTypes.STRING.value:
             new_value_ir = n.value.accept(self, env, builder, alloca, func)
             builder.store(new_value_ir, loc)
-            return
+            return new_value_ir
 
         # Liberar el valor antiguo.
         old_str = builder.load(loc, "old_str_to_free")
@@ -322,6 +324,7 @@ class IRGenerator(Visitor):
 
         builder.call(self.string_runtime.free(), [old_str])
         builder.store(new_ptr, loc)
+        return new_ptr
 
     def visit(
         self,
