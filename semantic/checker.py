@@ -134,6 +134,14 @@ class Check(Visitor):
 
                 stmt.accept(self, env)
 
+    def visit(self, n: Program, env: Symtab):
+        """
+        Visita el nodo raíz 'Program'. Itera sobre todas las declaraciones
+        y sentencias globales (func, var, print, etc.) y las verifica.
+        """
+        for item in n.body:  # Asumiendo que Program usa 'body' o 'items'
+            item.accept(self, env)
+
     def visit(self, n: BlockStmt, env: Symtab):
         """
         Validar scopes de tipo {} que no son body de funciones, if, o bucles, sino que son aislados
@@ -1205,14 +1213,21 @@ class Check(Visitor):
                     SemanticError.INDEX_OUT_OF_BOUNDS,
                 )
 
-    #     '''
-    # 	def check(self, n:MemoryLocation, env:Symtab):
-    # 		# Visitar n.address (expression) para validar
-    # 		n.address.accept(self, env)
-    # 		if n.address.type != 'int':
-    # 			error(f"Dirección de Memoria debe ser 'integer'", n.lineno)
+    @classmethod
+    def check_interpreter(cls, node, env, interpreter_instance):
+        """
+        Método de entrada para la verificación semántica.
+        Instancia el checker y comienza el recorrido del AST.
+        """
+        # Aquí deberías crear una instancia del Checker
+        # Nota: Necesitas saber qué recibe el constructor de tu Checker
+        # Asumiendo que recibe el contexto (ctxt) o el mismo objeto 'interpreter'
+        checker = cls()  # o cls(interpreter_instance)
+        checker.interpreter = interpreter_instance
 
-    # 		# Retornar el tipo de datos
-    # 		n.type = '<infer>'
-    # 		n.mutable = True
-    # 	'''
+        # Iniciar el recorrido del AST.
+        # Si tu método 'visit' espera el entorno (env), lo pasas aquí:
+        node.accept(checker, env)
+
+        # Si tu clase Checker maneja los errores, no necesitas devolver nada.
+        # Los errores se registran en el contexto (ctxt) del intérprete.

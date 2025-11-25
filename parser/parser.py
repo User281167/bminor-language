@@ -24,9 +24,14 @@ class Parser(sly.Parser):
 
     tokens = Lexer.tokens
 
-    @_("decl_list")
+    # @_("decl_list")
+    # def prog(self, p):
+    # return Program(p.decl_list)
+
+    @_("global_list")
     def prog(self, p):
-        return Program(p.decl_list)
+        # El programa ahora es una lista de cualquier cosa que pueda existir a nivel global
+        return Program(p.global_list)
 
     # Declarations
 
@@ -36,6 +41,22 @@ class Parser(sly.Parser):
 
     @_("empty")
     def decl_list(self, p):
+        return []
+
+    @_("decl")
+    def global_item(self, p):
+        return p.decl
+
+    @_("stmt")
+    def global_item(self, p):
+        return p.stmt
+
+    @_("global_item global_list")
+    def global_list(self, p):
+        return [p.global_item] + p.global_list
+
+    @_("empty")
+    def global_list(self, p):
         return []
 
     @_("ID ':' type_simple ';'")
