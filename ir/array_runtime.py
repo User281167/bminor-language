@@ -13,14 +13,13 @@ class ArrayRuntime:
         self._declare_array_free()
         self._declare_array_size()
         self._declare_array_set()
-        self._declare_array_set_sting()
         self._declare_array_get()
 
     def _declare_array_new(self):
-        # func(i32, i32, i32) -> i8*
+        # func(i32, i32, i32, i1) -> i8*
         f_type = ir.FunctionType(
             IrTypes.generic_pointer_t,  # Tipo de retorno: i8*
-            [IrTypes.i32, IrTypes.i32, IrTypes.i32],  # Argumento: i32
+            [IrTypes.i32, IrTypes.i32, IrTypes.i32, IrTypes.i1],  # Argumento: i32
         )
         self._functions["_bminor_array_new"] = ir.Function(
             self.module, f_type, name="_bminor_array_new"
@@ -69,20 +68,6 @@ class ArrayRuntime:
             self.module, f_type, name="_bminor_array_set"
         )
 
-    def _declare_array_set_sting(self):
-        # func(i8*, i32, i8*) -> void
-        f_type = ir.FunctionType(
-            ir.VoidType(),  # Tipo de retorno: void
-            [
-                IrTypes.generic_pointer_t,
-                IrTypes.i32,
-                IrTypes.generic_pointer_t,
-            ],
-        )
-        self._functions["_bminor_array_set_string"] = ir.Function(
-            self.module, f_type, name="_bminor_array_set_string"
-        )
-
     def _declare_array_get(self):
         # func(i8*, i32, i8*) -> void
         f_type = ir.FunctionType(
@@ -113,9 +98,6 @@ class ArrayRuntime:
 
     def set(self):
         return self._functions["_bminor_array_set"]
-
-    def set_string(self):
-        return self._functions["_bminor_array_set_string"]
 
     def get(self):
         return self._functions["_bminor_array_get"]

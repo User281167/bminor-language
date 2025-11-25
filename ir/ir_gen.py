@@ -89,6 +89,14 @@ class IRGenerator(Visitor):
         if user_main:
             user_main.name = f"main_{uuid.uuid4().hex}"
 
+        # PRIMERA PASADA: Declarar todas las funciones
+        for decl in n.body:
+            try:
+                if isinstance(decl, FuncDecl):
+                    gen.declare_function(decl, env, run_builder.module)
+            except Exception as e:
+                print(f"Error al declarar la función {decl.name}: {repr(e)}")
+
         # Visitar todas las declaraciones
         # liberar string antes de salir
         free_strings = gen._run_block(
@@ -100,8 +108,13 @@ class IRGenerator(Visitor):
             is_global=True,
         )
 
-        # declarar y definir todas las funciones primero
-        gen._add_functions(n.body, env, alloca_builder, alloca_builder, run_func)
+        # SEGUNDA PASADA: Definir todas las funciones
+        for decl in n.body:
+            try:
+                if isinstance(decl, FuncDecl):
+                    gen.define_function(decl, env)
+            except Exception as e:
+                print(f"Error al definir la función {decl.name}: {repr(e)}")
 
         # salto explícito al bloque principal
         # Posicionar run_builder al final del bloque antes de emitir ret
@@ -164,7 +177,6 @@ class IRGenerator(Visitor):
         strings_in_block = []
 
         for stmt in n or []:
-            print(type(stmt))
             self.global_scope = is_global
 
             if isinstance(stmt, VarDecl) and stmt.type == SimpleTypes.STRING.value:
@@ -241,6 +253,41 @@ class IRGenerator(Visitor):
 
     # --- Statements
 
+    def _set_array_location(
+        self,
+        n: Assignment,
+        env: Symtab,
+        builder: ir.IRBuilder,
+        alloca: ir.IRBuilder,
+        func: ir.Function,
+    ):
+        val = n.value.accept(self, env, builder, alloca, func)
+
+        # A. Obtener puntero al array y el índice
+        array_name = n.location.array.name
+        array_var = env.get(array_name)
+        array_ptr = builder.load(array_var, name=f"{array_name}_ptr")
+        index = n.location.index.accept(self, env, builder, alloca, func)
+
+        # B. Preparar el puntero al valor (value_ptr)
+        if n.location.type == SimpleTypes.STRING.value:
+            # Si es string, el valor YA ES un puntero (i8*)
+            value_ptr = val
+        else:
+            # Si es básico (int/bool), necesitamos un puntero a él.
+            # 1. Crear espacio temporal en el stack
+            # (Usa alloca.alloca para asegurar que esté en el bloque correcto)
+            temp_val = alloca.alloca(val.type, name="temp_assign_val")
+            # 2. Guardar el valor allí
+            builder.store(val, temp_val)
+            # 3. Obtener el puntero genérico (i8*)
+            value_ptr = builder.bitcast(temp_val, IrTypes.generic_pointer_t)
+
+        # C. ¡DELEGAR AL RUNTIME!
+        # El runtime decide si hace free, strdup o memcpy.
+        set_fn = self.array_runtime.set()
+        builder.call(set_fn, [array_ptr, index, value_ptr])
+
     def visit(
         self,
         n: Assignment,
@@ -251,6 +298,9 @@ class IRGenerator(Visitor):
     ):
         if isinstance(n.location, VarLoc):
             loc = env.get(n.location.name)
+        elif isinstance(n.location, ArrayLoc):
+            self._set_array_location(n, env, builder, alloca, func)
+            return
 
         if not n.location.type == SimpleTypes.STRING.value:
             new_value_ir = n.value.accept(self, env, builder, alloca, func)
@@ -682,29 +732,50 @@ class IRGenerator(Visitor):
         env.add(n.name, var)
 
     def _set_arr_index(
-        self, array_ptr, val_ast, index, env, builder, alloca, func, is_string=False
+        self,
+        array_ptr,
+        val_ast,
+        index,
+        env,
+        builder,
+        alloca,
+        func,
+        is_string=False,
+        temp_alloca=None,
+        free=False,
     ):
         index_llvm = IrTypes.const_int(index)
         value_llvm = val_ast.accept(self, env, builder, alloca, func)
+        set_fn = self.array_runtime.set()  # El set unificado
 
         if is_string:
-            # copiar string
-            set_fn = self.array_runtime.set_string()
-            value_ptr = value_llvm  # ya es un puntero
+            # Tipo String: Pasamos el puntero directo a la cadena
+            value_ptr = value_llvm
         else:
-            # Lógica para tipos básicos (int, bool, float) usar memcpy
-            set_fn = self.array_runtime.set()
+            # Tipo Básico: Reutilizamos el alloca y lo usamos para el store/bitcast
 
-            # Alloca temporal para el valor (i32, i1, etc.)
-            temp_alloca = alloca.alloca(value_llvm.type, name="temp_val")
+            if temp_alloca is None:
+                # Esto NO DEBERÍA pasar si la lógica del llamador es correcta.
+                # Si pasa, significa que se llamó a _set_arr_index para un tipo básico sin preparar el alloca.
+                raise Exception(
+                    "Internal Error: Missing reusable alloca for array initialization."
+                )
+
+            # 1. Almacenar el valor en el alloca REUTILIZABLE
             builder.store(value_llvm, temp_alloca)
 
-            # Bitcast a puntero genérico (i8*) para pasar la dirección temporal
+            # 2. Bitcast a puntero genérico (i8*)
             value_ptr = builder.bitcast(
                 temp_alloca, IrTypes.generic_pointer_t, name="value_ptr"
             )
 
+        # Llamada unificada a _bminor_array_set
         builder.call(set_fn, [array_ptr, index_llvm, value_ptr])
+
+        if free:
+            # 3. Llamar a la free
+            free_fn = self.string_runtime.free()
+            builder.call(free_fn, [value_ptr])
 
     def visit(
         self,
@@ -714,6 +785,7 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
+
         # Loc para el Puntero (i8**)
         if self.global_scope:
             var = ir.GlobalVariable(self.module, IrTypes.generic_pointer_t, n.name)
@@ -729,18 +801,32 @@ class IRGenerator(Visitor):
         list_size = len(n.value) if n.value else 0
         list_size = IrTypes.const_int(list_size)
 
+        is_string = n.type.base == SimpleTypes.STRING.value
+        is_string = IrTypes.const_bool(is_string)
+
         env.add(n.name, var)
 
         # para inicializar en función
         load_var = env.get(n.name)
 
         new_fn = self.array_runtime.new()
-        array_ptr = builder.call(new_fn, [size, list_size, element_size])
+        array_ptr = builder.call(new_fn, [size, list_size, element_size, is_string])
         builder.store(array_ptr, load_var)
 
-        # Iniciar valores (Si n.value existe)
+        temp_alloca_reusable = None
+
         if n.value:
+            # Si NO es string, preparamos un alloca único para la inicialización
+            if n.type.base != SimpleTypes.STRING.value:
+                # Asume que 'alloca' es el IRBuilder para el bloque alloca_entry
+                element_llvm_type = IrTypes.get_type(n.type.base)
+                temp_alloca_reusable = alloca.alloca(
+                    element_llvm_type, name="temp_arr_init_val"
+                )
+
             for i, val_ast in enumerate(n.value):
+                free = is_string and isinstance(val_ast, (BinOper, FuncCall))
+
                 self._set_arr_index(
                     array_ptr,
                     val_ast,
@@ -750,6 +836,8 @@ class IRGenerator(Visitor):
                     alloca,
                     func,
                     is_string=n.type.base == SimpleTypes.STRING.value,
+                    temp_alloca=temp_alloca_reusable,  # <-- ¡PASAMOS EL ALLOCA REUTILIZABLE!
+                    free=free,
                 )
 
     # El visitor continúa desde aquí.
@@ -768,40 +856,6 @@ class IRGenerator(Visitor):
                 builder.ret(IrTypes.const_char("\0"))
             elif ret_type == IrTypes.i1:
                 builder.ret(IrTypes.const_bool(False))
-
-    def _add_functions(
-        self,
-        n,
-        env,
-        builder,
-        alloca,
-        func,
-    ):
-        """
-        Declara todas las funciones en el módulo antes de generar sus cuerpos.
-        Permitiendo:
-            fun: function void();
-
-            fun() {
-                ...
-            }
-        """
-
-        # PRIMERA PASADA: Declarar todas las funciones
-        for decl in n:
-            try:
-                if isinstance(decl, FuncDecl):
-                    self.declare_function(decl, env, builder.module)
-            except Exception as e:
-                print(f"Error al declarar la función {decl.name}: {repr(e)}")
-
-        # SEGUNDA PASADA: Definir todas las funciones
-        for decl in n:
-            try:
-                if isinstance(decl, FuncDecl):
-                    self.define_function(decl, env)
-            except Exception as e:
-                print(f"Error al definir la función {decl.name}: {repr(e)}")
 
     def declare_function(self, n: FuncDecl, env: Symtab, module):
         # Obtener tipo de retorno y parámetros
@@ -1202,29 +1256,25 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
-        # Obtener el puntero al array structure (i8*)
-        # Asume que el array está en el entorno y es una variable local o global (i8**)
         array_var = env.get(n.array.name)
-        array_ptr = builder.load(
-            array_var, name=f"{n.array.name}_struct_ptr"
-        )  # Carga el puntero de la estructura
-
-        # Evaluar el índice
+        array_ptr = builder.load(array_var, name=f"{n.array.name}_struct_ptr")
         index = n.index.accept(self, env, builder, alloca, func)
 
-        # Preparación del destino temporal (donde se copiará el valor)
-
-        # Obtener el tipo de retorno (ej. i32 para integer)
+        # Obtener el tipo de retorno LLVM
         return_type = IrTypes.get_type(n.type)
 
-        # Crear un alloca para que C pueda copiar el valor (temporalmente en la pila)
+        # --- 2. 🎯 CREACIÓN LOCAL DE ALLOCA (SOLUCIÓN) 🎯 ---
+        # ¡Usamos el 'alloca' builder para crear la variable!
+        # Esto genera la instrucción `%temp_get_val = alloca i32` en el bloque 'alloca_entry'.
         temp_alloca = alloca.alloca(return_type, name="temp_get_val")
+        # --- FIN SOLUCIÓN ---
 
-        # Castear el puntero temporal (ej. i32*) a puntero genérico (i8*)
+        # 3. Castear al puntero genérico (i8*) para el runtime
         destination_ptr = builder.bitcast(
             temp_alloca, IrTypes.generic_pointer_t, name="dest_ptr"
         )
 
+        # 4. Llamar a GET y Cargar el valor
         get_fn = self.array_runtime.get()
         builder.call(get_fn, [array_ptr, index, destination_ptr])
 
