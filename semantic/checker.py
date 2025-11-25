@@ -475,7 +475,9 @@ class Check(Visitor):
                 n.lineno,
                 SemanticError.RETURN_IN_VOID_FUNCTION,
             )
-        elif n.expr.type != func.return_type:
+        elif n.expr.type != func.return_type and str(n.expr.type) != str(
+            func.return_type
+        ):
             self._error(
                 f"Return type {n.expr.type} does not match function return type {func.return_type}",
                 n.lineno,

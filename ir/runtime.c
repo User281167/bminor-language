@@ -83,12 +83,12 @@ void _bminor_runtime_error(const char* msg) {
 }
 
 struct _bminor_array* _bminor_array_new(int32_t size, int32_t list_size, int32_t type, bool is_string) {
-    if (size <= 0 || size > list_size || list_size < 0) {
+    if (size <= 0 || ((list_size != 0) && (size > list_size || list_size < 0))) {
         _bminor_runtime_error("Invalid array size");
         return NULL;
     }
 
-    if (list_size > 0 && (list_size != size)) {
+    if ((list_size > 0) && (list_size != size)) {
         _bminor_runtime_error("Invalid array size");
         return NULL;
     }

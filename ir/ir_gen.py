@@ -568,7 +568,19 @@ class IRGenerator(Visitor):
         if not builder.block.is_terminated:
             val = n.expr.accept(self, env, builder, alloca, func)
 
-            if n.expr.type == SimpleTypes.STRING.value and isinstance(
+            if isinstance(n.expr, VarLoc) and isinstance(n.expr.type, ArrayType):
+                # Verificar si es un parámetro de la función actual
+                loc_ptr = env.get(n.expr.name)
+
+                if loc_ptr.type == IrTypes.generic_pointer_t:
+                    array_ptr = loc_ptr  # ya es un puntero de referencia
+                elif loc_ptr.type == IrTypes.generic_pointer_t.as_pointer():
+                    array_ptr = builder.load(
+                        loc_ptr, name=f"{n.expr.name}_ptr_for_call"
+                    )
+
+                return array_ptr
+            elif n.expr.type == SimpleTypes.STRING.value and isinstance(
                 n.expr, (VarLoc, Literal)
             ):
                 copy = self.string_runtime.copy()
