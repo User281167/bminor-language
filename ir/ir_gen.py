@@ -775,10 +775,10 @@ class IRGenerator(Visitor):
                     "Internal Error: Missing reusable alloca for array initialization."
                 )
 
-            # 1. Almacenar el valor en el alloca REUTILIZABLE
+            # Almacenar el valor en el alloca REUTILIZABLE
             builder.store(value_llvm, temp_alloca)
 
-            # 2. Bitcast a puntero genérico (i8*)
+            # Bitcast a puntero genérico (i8*)
             value_ptr = builder.bitcast(
                 temp_alloca, IrTypes.generic_pointer_t, name="value_ptr"
             )
@@ -787,7 +787,6 @@ class IRGenerator(Visitor):
         builder.call(set_fn, [array_ptr, index_llvm, value_ptr])
 
         if free:
-            # 3. Llamar a la free
             free_fn = self.string_runtime.free()
             builder.call(free_fn, [value_ptr])
 
@@ -1233,7 +1232,19 @@ class IRGenerator(Visitor):
 
                     # manejar la fuga de memoria
                     free_ref_temps.append(temp_ptr)
-            else:
+            elif isinstance(arg, VarLoc) and isinstance(arg.type, ArrayType):
+                loc_ptr = env.get(arg.name)
+
+                # Chequea si el tipo es i8*
+                # Si loc_ptr es de tipo i8** (es una variable local como 'x') -> Cárgalo.
+                # Genera la instrucción de carga: %"a_ptr_for_call" = load i8*, i8** %"a"
+                if loc_ptr.type == IrTypes.generic_pointer_t:
+                    array_ptr = loc_ptr  # ya es un puntero de referencia
+                elif loc_ptr.type == IrTypes.generic_pointer_t.as_pointer():
+                    array_ptr = builder.load(loc_ptr, name=f"{arg.name}_ptr_for_call")
+
+                args.append(array_ptr)
+            elif not arg.type == SimpleTypes.STRING.value:
                 # Tipos primitivos (int, float, bool, etc.)
                 args.append(arg.accept(self, env, builder, alloca, func))
 
