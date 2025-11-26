@@ -389,15 +389,22 @@ class Interpreter(Visitor):
         env["$loop"] = True
         self.env = env
 
+        is_break = False
+
         while True:
             try:
                 for stmt in node.body:
                     stmt.accept(self)
             except BreakException:
+                is_break = True
                 break
             except ContinueException:
                 continue
             finally:
+                # salir sin actualizar o evaluar la condicion
+                if is_break:
+                    break
+
                 # Condition es con el env fuera del bucle
                 self.env = env_parent
 
@@ -420,6 +427,8 @@ class Interpreter(Visitor):
         if node.init:
             node.init.accept(self)
 
+        is_break = False
+
         while node.condition is None or _is_truthy(node.condition.accept(self)):
             self.env = env
 
@@ -427,10 +436,15 @@ class Interpreter(Visitor):
                 for stmt in node.body:
                     stmt.accept(self)
             except BreakException:
+                is_break = True
                 break
             except ContinueException:
                 continue
             finally:
+                # salir sin actualizar
+                if is_break:
+                    break
+
                 # Update, Condition es con el env fuera del bucle
                 self.env = env_parent
 
@@ -439,6 +453,12 @@ class Interpreter(Visitor):
 
         env["$loop"] = None
         self.env = env_parent
+
+    def visit(self, node: ContinueStmt):
+        raise ContinueException
+
+    def visit(self, node: BreakStmt):
+        raise BreakException
 
     # def visit(self, node: ReturnStmt):
     #     # Ojo: node.expr es opcional
