@@ -497,16 +497,6 @@ class Check(Visitor):
     def visit(self, n: Declaration, env: Symtab):
         self.check(n, env)
 
-        # Todas las definiciones tienen nombre. Tras la
-        # comprobación, el nombre debe formar parte del
-        # entorno (de ahí el propósito de definirlo).
-        assert n.name in env
-
-        if "$func" in env:
-            n.scope = "local"
-        else:
-            n.scope = "global"
-
     def check(self, n: VarDecl, env: Symtab):
         """
         Comprueba la declaración de variable n en el entorno symtab actual.

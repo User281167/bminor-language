@@ -144,7 +144,7 @@ def run_ir(filename):
                 out = run_llvm_clang_ir(str(gen), add_runtime=True)
                 print(out)
         except Exception as e:
-            print("Error: " + str(e))
+            print(f"Error: {repr(e)}\n{e}")
             sys.exit(1)
     elif filename.endswith(".py"):
         path = os.path.abspath(filename)
