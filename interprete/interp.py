@@ -301,21 +301,47 @@ class Interpreter(Visitor):
         return None
 
     def visit(self, node: VarDecl):
-        if node.value:
+        if isinstance(node, AutoDecl) and isinstance(node.value, list):
+            expr = [v.accept(self) for v in node.value]
+        elif node.value:
             expr = node.value.accept(self)
         else:
             expr = self._default_val(node)
 
         self.env[node.name] = expr
 
+    def visit(self, node: ArrayDecl):
+        vals = []
+
+        for v in node.value or []:
+            vals.append(v.accept(self))
+
+        size = node.type.size.accept(self)
+
+        if size and not vals:
+            vals = [None] * size
+
+        self.env[node.name] = vals
+
     def visit(self, node: VarLoc):
         return self.env.get(node.name)
 
-    def visit(self, node: Assignment):
-        loc = node.location.name
+    def visit(self, node: ArrayLoc):
+        loc = node.array.accept(self)
+        index = node.index.accept(self)
 
+        return loc[index]
+
+    def visit(self, node: Assignment):
         value = node.value.accept(self)
-        self.env.set(loc, value)
+
+        if isinstance(node.location, ArrayLoc):
+            loc = node.location.array.accept(self)
+            index = node.location.index.accept(self)
+            loc[index] = value
+        else:
+            loc = node.location.name
+            self.env.set(loc, value)
 
         return value
 
@@ -363,7 +389,6 @@ class Interpreter(Visitor):
     def visit(self, node: WhileStmt):
         env_parent = self.env
         env = Symtab("while", env_parent)
-        env["$loop"] = True
         self.env = env
 
         while node.condition is None or _is_truthy(node.condition.accept(self)):
@@ -380,13 +405,11 @@ class Interpreter(Visitor):
                 # Condition es con el env fuera del bucle
                 self.env = env_parent
 
-        env["$loop"] = None
         self.env = env_parent
 
     def visit(self, node: DoWhileStmt):
         env_parent = self.env
         env = Symtab("do-while", env_parent)
-        env["$loop"] = True
         self.env = env
 
         is_break = False
@@ -415,13 +438,11 @@ class Interpreter(Visitor):
 
                 self.env = env
 
-        env["$loop"] = None
         self.env = env_parent
 
     def visit(self, node: ForStmt):
         env_parent = self.env
         env = Symtab("for", env_parent)
-        env["$loop"] = True
         self.env = env
 
         if node.init:
@@ -451,7 +472,6 @@ class Interpreter(Visitor):
                 if node.update:
                     node.update.accept(self)
 
-        env["$loop"] = None
         self.env = env_parent
 
     def visit(self, node: ContinueStmt):
