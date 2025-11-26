@@ -11,7 +11,7 @@ from rich import print
 
 # from typesys import Array, Bool, CObject, Nil, Number, String
 from semantic import Check, Symtab
-from utils import errors_detected
+from utils import clear_errors, errors_detected
 
 from .builtins import CallError, builtins, consts
 
@@ -141,7 +141,8 @@ class Interpreter(Visitor):
         try:
             Check.check_interpreter(node, self.check_env, self)
 
-            if not self.ctxt.have_errors:
+            # if not self.ctxt.have_errors:
+            if errors_detected() == 0:
                 node.accept(self)
         except BminorExit as e:
             pass
@@ -305,7 +306,7 @@ class Interpreter(Visitor):
         else:
             expr = self._default_val(node)
 
-        self.env.add(node.name, expr)
+        self.env[node.name] = expr
 
     def visit(self, node: VarLoc):
         return self.env.get(node.name)
@@ -339,15 +340,6 @@ class Interpreter(Visitor):
         else:
             return new_value
 
-    # def visit(self, node: WhileStmt):
-    #     while _is_truthy(node.expr.accept(self)):
-    #         try:
-    #             node.stmt.accept(self)
-    #         except BreakException:
-    #             return
-    #         except ContinueException:
-    #             raise NotImplementedError
-
     def visit(self, node: IfStmt):
         expr = node.condition.accept(self)
 
@@ -367,6 +359,86 @@ class Interpreter(Visitor):
                 stmt.accept(self)
 
             self.env = self.env.parent
+
+    def visit(self, node: WhileStmt):
+        env_parent = self.env
+        env = Symtab("while", env_parent)
+        env["$loop"] = True
+        self.env = env
+
+        while node.condition is None or _is_truthy(node.condition.accept(self)):
+            self.env = env
+
+            try:
+                for stmt in node.body:
+                    stmt.accept(self)
+            except BreakException:
+                break
+            except ContinueException:
+                continue
+            finally:
+                # Condition es con el env fuera del bucle
+                self.env = env_parent
+
+        env["$loop"] = None
+        self.env = env_parent
+
+    def visit(self, node: DoWhileStmt):
+        env_parent = self.env
+        env = Symtab("do-while", env_parent)
+        env["$loop"] = True
+        self.env = env
+
+        while True:
+            try:
+                for stmt in node.body:
+                    stmt.accept(self)
+            except BreakException:
+                break
+            except ContinueException:
+                continue
+            finally:
+                # Condition es con el env fuera del bucle
+                self.env = env_parent
+
+                if not (
+                    node.condition is None or _is_truthy(node.condition.accept(self))
+                ):
+                    break
+
+                self.env = env
+
+        env["$loop"] = None
+        self.env = env_parent
+
+    def visit(self, node: ForStmt):
+        env_parent = self.env
+        env = Symtab("for", env_parent)
+        env["$loop"] = True
+        self.env = env
+
+        if node.init:
+            node.init.accept(self)
+
+        while node.condition is None or _is_truthy(node.condition.accept(self)):
+            self.env = env
+
+            try:
+                for stmt in node.body:
+                    stmt.accept(self)
+            except BreakException:
+                break
+            except ContinueException:
+                continue
+            finally:
+                # Update, Condition es con el env fuera del bucle
+                self.env = env_parent
+
+                if node.update:
+                    node.update.accept(self)
+
+        env["$loop"] = None
+        self.env = env_parent
 
     # def visit(self, node: ReturnStmt):
     #     # Ojo: node.expr es opcional
