@@ -62,6 +62,7 @@ class IRGenerator(Visitor):
 
         alloca_block = run_func.append_basic_block(name="alloca_entry")
         entry_block = run_func.append_basic_block(name="entry")
+        global_exit_block = run_func.append_basic_block(name="global_exit")
 
         alloca_builder = ir.IRBuilder(alloca_block)
         run_builder = ir.IRBuilder(entry_block)
@@ -73,6 +74,7 @@ class IRGenerator(Visitor):
         setattr(gen, "run_builder", run_builder)
         setattr(gen, "alloca_builder", alloca_builder)
         setattr(gen, "entry_block", entry_block)
+        setattr(gen, "global_exit_block", global_exit_block)
         setattr(gen, "semantic_env", semantic_env)
         setattr(gen, "print_runtime", PrintRuntime(module))
         setattr(gen, "math_runtime", MathRuntime(module))
@@ -121,7 +123,8 @@ class IRGenerator(Visitor):
         # salto explícito al bloque principal
         # Posicionar run_builder al final del bloque antes de emitir ret
         alloca_builder.branch(entry_block)
-        run_builder.position_at_end(entry_block)
+        run_builder.branch(global_exit_block)
+        run_builder.position_at_start(global_exit_block)
 
         user_main = semantic_env.get("main", recursive=False)
 
@@ -186,7 +189,12 @@ class IRGenerator(Visitor):
             elif isinstance(stmt, (BreakStmt, ContinueStmt)):
                 self._free_strings(builder, env, strings_in_block)
 
-            ptr = stmt.accept(self, env, builder, alloca, func)
+            try:
+                ptr = stmt.accept(self, env, builder, alloca, func)
+            except Exception as e:
+                print(f"Error al ejecutar la sentencia {stmt}: {repr(e)}")
+                self._free_strings(builder, env, strings_in_block)
+                continue
 
             # free string flotantes
             if (
