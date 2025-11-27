@@ -2,18 +2,19 @@
 Tree-walking interpreter
 """
 
-from collections import ChainMap
+import sys
 from parser.model import *
 
-# from checker import Checker
-# from model import *
 from rich import print
 
-# from typesys import Array, Bool, CObject, Nil, Number, String
 from semantic import Check, Symtab
-from utils import clear_errors, errors_detected
+from utils import errors_detected
 
 from .builtins import BuiltinFunction, CallError, builtins, consts
+
+# Recursividad limitada en python
+# Problemas de rendimiento en el interprete por recursividad
+# sys.setrecursionlimit(1000) # por defecto
 
 
 # Veracidad en bminor
@@ -79,7 +80,6 @@ class Function:
 
     def __call__(self, interp, *args):
         new_env = Symtab("func", self.env)
-        new_env[self.node.name] = self  # recursividad
 
         for name, arg in zip(self.node.params, args):
             new_env[name.name] = arg
@@ -93,6 +93,8 @@ class Function:
                 stmt.accept(interp)
         except ReturnException as e:
             result = e.value
+        except Exception as e:
+            raise RuntimeError(f"Un error inesperado en {self.node.name}: {e}")
         finally:
             interp.env = old_env
 
@@ -329,7 +331,7 @@ class Interpreter(Visitor):
         size = node.type.size.accept(self)
 
         if size and not vals:
-            vals = [None] * size
+            vals = [_default_val(node.type.base) for _ in range(size)]
 
         self.env[node.name] = vals
 

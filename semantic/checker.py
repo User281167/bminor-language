@@ -1093,7 +1093,7 @@ class Check(Visitor):
                 and arg.type.base == parm.type.base
             ):
                 continue
-            elif parm.type != arg.type:
+            elif parm.type != arg.type and str(parm.type) != str(arg.type):
                 self._error(
                     f"Function {n.name!r} parameter {pos}. expected {parm.type} given {arg.type}",
                     arg.lineno,
