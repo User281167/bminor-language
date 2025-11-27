@@ -9,7 +9,8 @@
  *                                                                     *
  * =================================================================== */
 
-N: constant = 8;       // Tamaño del tablero
+N: constant = 5;       // Tamaño del tablero
+recu: auto = 0;
 
 index: function integer (r: integer, c:integer) = {
     return r * N + c;
@@ -45,7 +46,9 @@ walk: function boolean (r: integer, c: integer, m: integer, board: array [] inte
         return true;
     }
 
-    for (i = 0; i < N; i++) {
+    recu++;
+
+    for (i = 0; i < 8; i++) {
         next_x: integer = r + xmoves[i];
         next_y: integer = c + ymoves[i];
 
@@ -64,9 +67,13 @@ walk: function boolean (r: integer, c: integer, m: integer, board: array [] inte
 
 main: function void () = {
     board: array [N*N] integer;
+    i: integer;
 
-    xmoves: array [N] integer = {2, 1, -1, -2, -2, -1, 1, 2};
-    ymoves: array [N] integer = {1, 2, 2, 1, -1, -2, -2, -1};
+    for (i = 0; i < N*N; i++)
+        board[i] = 0;
+
+    xmoves: array [8] integer = {2, 1, -1, -2, -2, -1, 1, 2};
+    ymoves: array [8] integer = {1, 2, 2, 1, -1, -2, -2, -1};
 
     board[0] = 1;   // marcar casilla inicial
 
@@ -75,4 +82,8 @@ main: function void () = {
     } else {
         print "No existe solucion\n";
     }
+
+    print recu, '\n';
 }
+
+main();
