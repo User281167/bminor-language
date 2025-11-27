@@ -10,12 +10,12 @@ Para una descripción más detallada de la gramática, reglas de sintaxis, semá
 
 Este documento incluye:
 
-- 📐 Definición formal de la gramática en estilo BNF
-- 🧠 Reglas semánticas y tipos de datos
-- 🧪 Ejemplos de código válidos e inválidos
-- 🛠️ Detalles sobre el diseño del lexer y parser con SLY
-- 🔍 Explicación de operadores y precedencia
-- 📚 Guía para escribir funciones, arreglos y estructuras de control
+- Definición formal de la gramática en estilo BNF
+- Reglas semánticas y tipos de datos
+- Ejemplos de código válidos e inválidos
+- Detalles sobre el diseño del lexer y parser con SLY
+- Explicación de operadores y precedencia
+- Guía para escribir funciones, arreglos y estructuras de control
 
 ---
 
@@ -49,11 +49,12 @@ El archivo `bminor.py` permite ejecutar tres fases del compilador:
 - **Escaneo léxico** (`--scan`)
 - **Parsing / análisis sintáctico** (`--parser`)
 - **Análisis semántico** (`--semantic`)
+- **Ejecución de código** (`--ir --run` o `--interpreter`)
 
 ### 📍 Sintaxis general
 
 ```bash
-python bminor.py --scan|--parser|--semantic [test | archivo.bminor | test/.../*.py]
+python bminor.py --scan|--parser|--semantic|--ir|--interprete [tests | archivo.bminor | test/.../*.py]
 ```
 
 ---
@@ -90,11 +91,15 @@ Genera el árbol de sintaxis abstracta (AST) a partir del código fuente.
 python bminor.py --parser ejemplo.bminor
 python bminor.py --parser ejemplo.bminor --pretty
 python bminor.py --parser ejemplo.bminor --json
+python bminor.py --parser ejemplo.bminor --graph
 ```
 
 - `--print`: imprime el AST en consola.
 - `--pretty`: imprime el AST con formato.
 - `--json`: exporta el AST en formato JSON.
+- `--graph`: exporta el AST en formato PNG.
+- `--graph -svg`: exporta el AST en formato SVG.
+
 
 También puedes ejecutar pruebas unitarias:
 
@@ -113,13 +118,46 @@ Realiza el análisis semántico sobre el AST generado.
 
 ```bash
 python bminor.py --semantic ejemplo.bminor
+python bminor.py --semantic ejemplo.bminor --table
 ```
+
+- `--table`: muestra la tabla de símbolos en una tabla con `rich`.
 
 También puedes ejecutar pruebas semánticas:
 
 ```bash
 python bminor.py --semantic test/semantic/good1.py
 python bminor.py --semantic test
+```
+---
+
+### 🚀 `run_ir(filename)`
+
+Realizar la ejecución del código generado en LLVM/Clang.
+
+#### Ejemplos:
+
+```bash
+python bminor.py --ir ejemplo.bminor
+python bminor.py --ir ejemplo.bminor --run
+python bminor.py --ir ejemplo.bminor --print
+python bminor.py --ir ejemplo.bminor --print --run
+```
+
+- `--print`: imprime el código LLVM en consola.
+- `--run`: compila y ejecuta el código LLVM con clang agregando runtime.c archivos temporales.
+
+---
+
+### 🤖 `run_interpreter(filename)`
+
+Realizar la ejecución del código bminor en Python.
+
+#### Ejemplos:
+
+```bash
+python bminor.py --interpreter ejemplo.bminor
+python bminor.py --interpreter ejemplo.bminor
 ```
 
 ---
@@ -133,6 +171,9 @@ test/
 ├── scanner/
 ├── parser/
 └── semantic/
+└── ir/
+└── interprete/
+
 ```
 
 Puedes ejecutar todas las pruebas de una fase con:
@@ -141,4 +182,6 @@ Puedes ejecutar todas las pruebas de una fase con:
 python bminor.py --scan test
 python bminor.py --parser test
 python bminor.py --semantic test
+python bminor.py --ir test
+python bminor.py --interpreter test
 ```
