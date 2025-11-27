@@ -13,7 +13,7 @@ from rich import print
 from semantic import Check, Symtab
 from utils import clear_errors, errors_detected
 
-from .builtins import CallError, builtins, consts
+from .builtins import BuiltinFunction, CallError, builtins, consts
 
 
 # Veracidad en bminor
@@ -24,6 +24,27 @@ def _is_truthy(value):
         return False
     else:
         return True
+
+
+def _default_val(_type: SimpleType | ArrayType | None):
+    if _type is None:
+        return None
+
+    if isinstance(_type, ArrayType):
+        return []
+
+    if _type == SimpleTypes.INTEGER.value:
+        return 0
+    elif _type == SimpleTypes.STRING.value:
+        return ""
+    elif _type == SimpleTypes.BOOLEAN.value:
+        return False
+    elif _type == SimpleTypes.CHAR.value:
+        return "\\0"
+    elif _type == SimpleTypes.FLOAT.value:
+        return 0
+
+    return None
 
 
 class ReturnException(Exception):
@@ -48,7 +69,7 @@ class AttributeError(Exception):
 
 
 class Function:
-    def __init__(self, node, env):
+    def __init__(self, node: FuncDecl, env: Symtab):
         self.node = node
         self.env = env
 
@@ -57,25 +78,31 @@ class Function:
         return len(self.node.params)
 
     def __call__(self, interp, *args):
-        newenv = self.env.new_child()
+        new_env = Symtab("func", self.env)
+        new_env[self.node.name] = self  # recursividad
 
         for name, arg in zip(self.node.params, args):
-            newenv[name] = arg
+            new_env[name.name] = arg
 
-        oldenv = interp.env
-        interp.env = newenv
+        old_env = interp.env
+        interp.env = new_env
+        result = None
 
         try:
-            self.node.stmts.accept(interp)
-            result = None
+            for stmt in self.node.body or []:
+                stmt.accept(interp)
         except ReturnException as e:
             result = e.value
         finally:
-            interp.env = oldenv
+            interp.env = old_env
+
+        if result is None and self.node.return_type != SimpleTypes.VOID.value:
+            result = _default_val(self.node.return_type)
+
         return result
 
     def bind(self, instance):
-        env = self.env.new_child()
+        env = Symtab("func", self.env)
         env["this"] = instance
         return Function(self.node, env)
 
@@ -279,26 +306,9 @@ class Interpreter(Visitor):
 
     # Declarations
 
-    # def visit(self, node: FuncDecl):
-    #     func = Function(node, self.env)
-    #     self.env[node.name] = func
-
-    def _default_val(self, node: VarDecl):
-        if not hasattr(node, "type"):
-            return None
-
-        if node.type == SimpleTypes.INTEGER.value:
-            return 0
-        elif node.type == SimpleTypes.STRING.value:
-            return ""
-        elif node.type == SimpleTypes.BOOLEAN.value:
-            return False
-        elif node.type == SimpleTypes.CHAR.value:
-            return 0
-        elif node.type == SimpleTypes.FLOAT.value:
-            return 0
-
-        return None
+    def visit(self, node: FuncDecl):
+        func = Function(node, self.env)
+        self.env[node.name] = func
 
     def visit(self, node: VarDecl):
         if isinstance(node, AutoDecl) and isinstance(node.value, list):
@@ -306,7 +316,7 @@ class Interpreter(Visitor):
         elif node.value:
             expr = node.value.accept(self)
         else:
-            expr = self._default_val(node)
+            expr = _default_val(node.type)
 
         self.env[node.name] = expr
 
@@ -480,26 +490,40 @@ class Interpreter(Visitor):
     def visit(self, node: BreakStmt):
         raise BreakException
 
-    # def visit(self, node: ReturnStmt):
-    #     # Ojo: node.expr es opcional
-    #     value = 0 if not node.expr else node.expr.accept(self)
-    #     raise ReturnException(value)
+    def visit(self, node: ReturnStmt):
+        value = None if not node.expr else node.expr.accept(self)
+        raise ReturnException(value)
 
-    # def visit(self, node: FuncCall):
-    #     callee = node.func.accept(self)
-    #     if not callable(callee):
-    #         self.error(
-    #             node.func, f"{self.ctxt.find_source(node.func)!r} no es invocable"
-    #         )
+    def visit(self, node: FuncCall):
+        callee = self.env.get(node.name)
 
-    #     args = [arg.accept(self) for arg in node.args]
+        if not callee:
+            self.error(node, f"'{node.name}' no existe.")
+            return None
+        elif not isinstance(callee, Function) and not isinstance(
+            callee, BuiltinFunction
+        ):
+            self.error(node, f"'{node.name}' no es invocable.")
+            return None
 
-    #     if callee.arity != -1 and len(args) != callee.arity:
-    #         self.error(node.func, f"Experado {callee.arity} argumentos")
+        args = [arg.accept(self) for arg in node.args]
 
-    #     try:
-    #         return callee(self, *args)
-    #     except CallError as err:
-    #         self.error(node.func, str(err))
-    #         self.error(node.func, str(err))
-    #         self.error(node.func, str(err))
+        if callee.arity != -1 and len(args) != callee.arity:
+            self.error(
+                node,
+                f"La función '{node.name}' espera {callee.arity} argumentos, pero se recibieron {len(args)}.",
+            )
+            return None
+
+        try:
+            # Llama al método __call__ de la función (BuiltinFunction o Function).
+            # El intérprete 'self' se pasa como primer argumento por convención.
+            return callee(self, *args)
+        except CallError as err:
+            self.error(node, str(err))
+        except KeyError as e:
+            self.error(node, f"No existe la variable o función '{e.args[0]}'")
+        except Exception as e:
+            self.error(node, str(e))
+
+        return None
