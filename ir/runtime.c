@@ -5,6 +5,21 @@
 #include <string.h>
 #include <math.h>
 
+// Errores comunes
+typedef enum {
+    OK = 0,
+    ALLOCATION_ERROR,
+    ARRAY_SIZE_ERROR,
+    ARRAY_SIZE_MISMATCH,
+    ARRAY_INDEX_OUT_OF_BOUNDS,
+    ARRAY_NULL_ERROR
+} _bminor_error_type;
+
+void _bminor_runtime_error(const char* msg, _bminor_error_type code) {
+    fprintf(stderr, "Runtime Error: %s\n", msg);
+    exit(code);
+}
+
 void _bminor_print_int(int32_t value) {
     printf("%d", value);
 }
@@ -47,7 +62,10 @@ char* _bminor_string_concat(char* s1, char* s2) {
 
     char* result = (char*)malloc(len1 + len2 + 1);
 
-    if (!result) return NULL;
+    if (!result) {
+        _bminor_runtime_error("Failed to allocate memory.", ALLOCATION_ERROR);
+        return NULL;
+    };
 
     strcpy(result, s1);
     strcat(result, s2);
@@ -70,36 +88,37 @@ void _bminor_string_free(char* s) {
 
 // ================= Arrays =================
 
-struct _bminor_array {
+typedef struct _bminor_array {
     void* data;
     int32_t element_size;
     int32_t size;
     bool is_string;
-};
+} _bminor_array;
 
-void _bminor_runtime_error(const char* msg) {
-    fprintf(stderr, "Runtime Error: %s\n", msg);
-    exit(1);
-}
 
-struct _bminor_array* _bminor_array_new(int32_t size, int32_t list_size, int32_t type, bool is_string) {
+
+_bminor_array* _bminor_array_new(int32_t size, int32_t list_size, int32_t type, bool is_string) {
     if (size <= 0 || ((list_size != 0) && (size > list_size || list_size < 0))) {
-        _bminor_runtime_error("Invalid array size");
+        _bminor_runtime_error("Invalid array size, size must be > 0 and <= list size.", ARRAY_SIZE_ERROR);
         return NULL;
     }
 
     if ((list_size > 0) && (list_size != size)) {
-        _bminor_runtime_error("Invalid array size");
+        _bminor_runtime_error("Invalid array size, size must be equal to list size.", ARRAY_SIZE_MISMATCH);
         return NULL;
     }
 
-    struct _bminor_array* array = (struct _bminor_array*)malloc(sizeof(struct _bminor_array));
+    _bminor_array* array = (_bminor_array*)malloc(sizeof(_bminor_array));
 
-    if (!array) return NULL;
+    if (!array) {
+        _bminor_runtime_error("Failed to allocate memory.", ALLOCATION_ERROR);
+        return NULL;
+    };
 
     array->data = calloc(size, type);
 
     if (!array->data) {
+        _bminor_runtime_error("Failed to allocate memory.", ALLOCATION_ERROR);
         free(array);
         return NULL;
     }
@@ -110,7 +129,7 @@ struct _bminor_array* _bminor_array_new(int32_t size, int32_t list_size, int32_t
     return array;
 }
 
-void _bminor_array_free(struct _bminor_array* array) {
+void _bminor_array_free(_bminor_array* array) {
     if (!array) return;
 
     if (array->is_string) {
@@ -126,19 +145,19 @@ void _bminor_array_free(struct _bminor_array* array) {
     array = NULL;
 }
 
-int32_t _bminor_array_size(struct _bminor_array* array) {
+int32_t _bminor_array_size(_bminor_array* array) {
     if (!array) return 0;
 
     return array->size;
 }
 
-void _bminor_array_set(struct _bminor_array* array, int32_t index, void* value_ptr) {
+void _bminor_array_set(_bminor_array* array, int32_t index, void* value_ptr) {
     if (!array || !array->data) {
-        _bminor_runtime_error("Cannot set value in null array.");
+        _bminor_runtime_error("Cannot set value in null array.", ARRAY_NULL_ERROR);
         return;
     }
     if (index < 0 || index >= array->size) {
-        _bminor_runtime_error("Array index out of bounds.");
+        _bminor_runtime_error("Array index out of bounds.", ARRAY_INDEX_OUT_OF_BOUNDS);
         return;
     }
 
@@ -164,13 +183,13 @@ void _bminor_array_set(struct _bminor_array* array, int32_t index, void* value_p
     }
 }
 
-void _bminor_array_get(struct _bminor_array* array, int32_t index, void* destination_ptr) {
+void _bminor_array_get(_bminor_array* array, int32_t index, void* destination_ptr) {
     if (!array || !array->data) {
-        _bminor_runtime_error("Cannot get value from null array.");
+        _bminor_runtime_error("Cannot get value from null array.", ARRAY_NULL_ERROR);
         return;
     }
     if (index < 0 || index >= array->size) {
-        _bminor_runtime_error("Array index out of bounds.");
+        _bminor_runtime_error("Array index out of bounds.", ARRAY_INDEX_OUT_OF_BOUNDS);
         return;
     }
 
