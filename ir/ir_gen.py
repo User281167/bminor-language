@@ -14,7 +14,7 @@ from llvmlite import ir
 
 from scanner import Lexer
 from semantic import Check, Symtab
-from utils import warning
+from utils import error, warning
 
 from .array_runtime import ArrayRuntime
 from .ir_type import IrTypes
@@ -97,7 +97,7 @@ class IRGenerator(Visitor):
                 if isinstance(decl, FuncDecl):
                     gen.declare_function(decl, env, run_builder.module)
             except Exception as e:
-                print(f"Error al declarar la función {decl.name}: {repr(e)}")
+                error(f"Error declaring function {decl.name}", lineno=decl.lineno)
 
         gen._inject_fun_builtins(env, run_builder, alloca_builder, run_func)
 
@@ -118,7 +118,7 @@ class IRGenerator(Visitor):
                 if isinstance(decl, FuncDecl):
                     gen.define_function(decl, env)
             except Exception as e:
-                print(f"Error al definir la función {decl.name}: {repr(e)}")
+                error(f"Error defining function {decl.name}", lineno=decl.lineno)
 
         # salto explícito al bloque principal
         # Posicionar run_builder al final del bloque antes de emitir ret
@@ -150,6 +150,10 @@ class IRGenerator(Visitor):
         return module
 
     def _free_strings(self, builder: ir.IRBuilder, env: Symtab, strings_in_block: list):
+        if not strings_in_block:
+            return
+
+        self.comment(builder, "Free strings")
         free_fn = self.string_runtime.free()
         null_ptr = ir.Constant(IrTypes.generic_pointer_t, None)
 
@@ -160,6 +164,7 @@ class IRGenerator(Visitor):
             builder.store(null_ptr, loc)
 
         strings_in_block.clear()
+        self.comment(builder, "End free strings")
 
     def _run_block(
         self,
@@ -192,7 +197,7 @@ class IRGenerator(Visitor):
             try:
                 ptr = stmt.accept(self, env, builder, alloca, func)
             except Exception as e:
-                print(f"Error al ejecutar la sentencia {stmt}: {repr(e)}")
+                error(f"Unexpected error in statement {stmt}", lineno=stmt.lineno)
                 self._free_strings(builder, env, strings_in_block)
                 continue
 
@@ -225,7 +230,11 @@ class IRGenerator(Visitor):
 
         return []
 
-    def comment(self, builder: ir.IRBuilder, msg: str):
+    def comment(self, builder: ir.IRBuilder, msg: str = None):
+        if not msg:
+            builder.comment("")
+            return
+
         builder.comment("-" * len(msg))
 
         for line in msg.split("\n"):
@@ -273,14 +282,6 @@ class IRGenerator(Visitor):
         size = body_builder.call(size_fn, [local_env.get(n.params[0].name)])
         body_builder.ret(size)
 
-    def _check_fun_call_builtins(
-        self, n: FuncCall, builder: ir.IRBuilder, alloca: ir.IRBuilder
-    ) -> bool:
-        pass
-
-    def _error(self, msg: str, lineno: int):
-        pass
-
     def visit(
         self,
         n: BlockStmt,
@@ -289,8 +290,10 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
+        self.comment(builder, "Run block")
         env_local = Symtab(f"block_{n.lineno}", parent=env)
         self._run_block(n.body, env_local, builder, alloca, func)
+        self.comment(builder, "End block")
 
     # --- Statements
 
@@ -302,6 +305,7 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
+        self.comment(builder, "Set array location")
         val = n.value.accept(self, env, builder, alloca, func)
 
         # Obtener puntero al array y el índice
@@ -330,6 +334,8 @@ class IRGenerator(Visitor):
         # El runtime decide si hace free, strdup o memcpy.
         set_fn = self.array_runtime.set()
         builder.call(set_fn, [array_ptr, index, value_ptr])
+
+        self.comment(builder)
 
         # retornar valor
         return val
@@ -375,6 +381,8 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
+        self.comment(builder, "Print statement")
+
         fun_call = {
             str(SimpleTypes.INTEGER.value): self.print_runtime.print_int(),
             str(SimpleTypes.CHAR.value): self.print_runtime.print_char(),
@@ -395,6 +403,8 @@ class IRGenerator(Visitor):
             ):
                 free = self.string_runtime.free()
                 builder.call(free, [val])
+
+        self.comment(builder)
 
     def visit(
         self,
@@ -417,6 +427,7 @@ class IRGenerator(Visitor):
         else_env = None
 
         if n.else_branch:
+            self.comment(builder, "Else")
             else_block = func.append_basic_block(name="else")
             else_env = Symtab(f"else_{n.lineno}", parent=env)
 
@@ -437,6 +448,7 @@ class IRGenerator(Visitor):
         if n.else_branch:
             builder.position_at_end(else_block)
             self._run_block(n.else_branch, else_env, builder, alloca, func, merge_block)
+            self.comment(builder, "End else")
 
         # Volver al bloque de merge
         builder.position_at_end(merge_block)
@@ -736,8 +748,6 @@ class IRGenerator(Visitor):
             n.type,
             n.value,
         )
-        # arr.pretty()
-        # self.visit(arr, env, builder, alloca, func)
 
         if self.global_scope:
             var = ir.GlobalVariable(self.module, IrTypes.generic_pointer_t, n.name)
@@ -746,7 +756,6 @@ class IRGenerator(Visitor):
         else:
             var = alloca.alloca(IrTypes.generic_pointer_t, name=n.name)
 
-        print("decl")
         env.add(n.name, var)
 
         # tenemos array = array, array = funcall
@@ -843,6 +852,7 @@ class IRGenerator(Visitor):
         temp_alloca=None,
         free=False,
     ):
+        self.comment(builder, "Set array index")
         index_llvm = IrTypes.const_int(index)
         value_llvm = val_ast.accept(self, env, builder, alloca, func)
         set_fn = self.array_runtime.set()  # El set unificado
@@ -874,6 +884,8 @@ class IRGenerator(Visitor):
         if free:
             free_fn = self.string_runtime.free()
             builder.call(free_fn, [value_ptr])
+
+        self.comment(builder)
 
     def visit(
         self,
@@ -942,7 +954,6 @@ class IRGenerator(Visitor):
                     free=free,
                 )
 
-    # El visitor continúa desde aquí.
     def default_return(self, builder: ir.IRBuilder, ret_type: ir.Type | None):
         """
         Genera un return por defecto si no hay uno explícito.
@@ -1227,7 +1238,7 @@ class IRGenerator(Visitor):
 
             builder.position_at_start(false_block)
             # Siempre devuelve False (0)
-            false_val = ir.Constant(ir.IntType(1), 0)
+            false_val = IrTypes.const_int(0)
 
             # Saltamos al bloque de retorno (Merge)
             builder.branch(merge_block)
@@ -1431,6 +1442,7 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
+        self.comment(builder, f"Array loc")
         array_var = env.get(n.array.name)
 
         # no cargar nuevamente el array
@@ -1455,5 +1467,6 @@ class IRGenerator(Visitor):
         # Cargar el valor
         get_fn = self.array_runtime.get()
         builder.call(get_fn, [array_ptr, index, destination_ptr])
+        self.comment(builder)
 
         return builder.load(temp_alloca, name="array_element")
