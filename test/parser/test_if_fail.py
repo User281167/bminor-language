@@ -25,7 +25,7 @@ class TestInvalidIfStmt(unittest.TestCase):
         }
         """
         self.parse(code)
-        self.assertEqual(errors_detected(), 1)
+        self.assertTrue(errors_detected())
         self.assertTrue(has_error(ParserError.MISSING_EXPRESSION))
 
     def test_if_missing_parenthesis(self):

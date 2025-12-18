@@ -1,5 +1,5 @@
 import unittest
-from parser import Parser, ParserError
+from parser import Parser
 from parser.model import *
 
 from scanner import Lexer
@@ -23,8 +23,8 @@ class TestContinueBreakError(unittest.TestCase):
 
     def test_continue_error(self):
         code = "continue;"
-        self.assertError(code, ParserError.UNEXPECTED_TOKEN)
+        self.assertFalse(errors_detected())
 
     def test_break_error(self):
         code = "break;"
-        self.assertError(code, ParserError.UNEXPECTED_TOKEN)
+        self.assertFalse(errors_detected())

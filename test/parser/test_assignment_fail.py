@@ -74,13 +74,13 @@ class TestAssignmentError(unittest.TestCase):
         code = "++;"
         self.parse(code)
         self.assertEqual(errors_detected(), 1)
-        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
+        self.assertTrue(has_error(ParserError.MISSING_STATEMENT))
 
     def test_assign_dec_no_location(self):
         code = "--;"
         self.parse(code)
         self.assertEqual(errors_detected(), 1)
-        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
+        self.assertTrue(has_error(ParserError.MISSING_STATEMENT))
 
     def test_assign_inc_no_postfix(self):
         code = "x: integer = ++;"

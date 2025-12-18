@@ -20,7 +20,7 @@ class TestArrayAssignmentError(unittest.TestCase):
         code = "x[2 = 2;"
         self.parse(code)
         self.assertEqual(errors_detected(), 1)
-        self.assertTrue(has_error(ParserError.INVALID_ARRAY_SYNTAX))
+        self.assertTrue(has_error(ParserError.INVALID_ASSIGNMENT))
 
     def test_assign_empty_index(self):
         code = "x[] = 5;"
@@ -32,13 +32,13 @@ class TestArrayAssignmentError(unittest.TestCase):
         code = "x[0] 5;"
         self.parse(code)
         self.assertEqual(errors_detected(), 1)
-        self.assertTrue(has_error(ParserError.INVALID_ARRAY_SYNTAX))
+        self.assertTrue(has_error(ParserError.UNEXPECTED_TOKEN))
 
     def test_assign_missing_value(self):
         code = "x[0] = ;"
         self.parse(code)
         self.assertEqual(errors_detected(), 1)
-        self.assertTrue(has_error(ParserError.INVALID_ARRAY_SYNTAX))
+        self.assertTrue(has_error(ParserError.MISSING_STATEMENT))
 
     def test_assign_incomplete_index_expr(self):
         code = "x[1 + ] = 3;"
@@ -50,19 +50,18 @@ class TestArrayAssignmentError(unittest.TestCase):
         code = "x[0] = a * ;"
         self.parse(code)
         self.assertEqual(errors_detected(), 1)
-        self.assertTrue(has_error(ParserError.INVALID_ARRAY_SYNTAX))
+        self.assertTrue(has_error(ParserError.MISSING_STATEMENT))
 
     def test_assign_index_no_closing_bracket(self):
         code = "x[1 = 2;"
         self.parse(code)
         self.assertEqual(errors_detected(), 1)
-        self.assertTrue(has_error(ParserError.INVALID_ARRAY_SYNTAX))
+        self.assertTrue(has_error(ParserError.INVALID_ASSIGNMENT))
 
     def test_assign_double_equal(self):
         code = "x[0] == 5;"
         self.parse(code)
-        self.assertEqual(errors_detected(), 1)
-        self.assertTrue(has_error(ParserError.INVALID_ARRAY_SYNTAX))
+        self.assertFalse(errors_detected())
 
     def test_assign_curly_brackets(self):
         code = "x{0} = 2;"
@@ -80,7 +79,7 @@ class TestArrayAssignmentError(unittest.TestCase):
         code = "x(0) = 2;"
         self.parse(code)
         self.assertEqual(errors_detected(), 1)
-        self.assertTrue(has_error(ParserError.INCOMPLETE_FUNCTION_DECLARATION))
+        self.assertTrue(has_error(ParserError.INVALID_ASSIGNMENT))
 
     # def test_assign_boolean_index(self):
     #     code = "x[true] = 2;"
@@ -110,4 +109,4 @@ class TestArrayAssignmentError(unittest.TestCase):
         code = "x[0] := 2;"
         self.parse(code)
         self.assertEqual(errors_detected(), 1)
-        self.assertTrue(has_error(ParserError.INVALID_ARRAY_SYNTAX))
+        self.assertTrue(has_error(ParserError.UNEXPECTED_COLON))

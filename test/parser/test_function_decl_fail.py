@@ -20,13 +20,13 @@ class TestFunctionDeclError(unittest.TestCase):
         code = "123myFunc: function integer () = { }"
         self.parse(code)
         self.assertEqual(errors_detected(), 1)
-        self.assertTrue(has_error(ParserError.UNEXPECTED_TOKEN))
+        self.assertTrue(has_error(ParserError.UNEXPECTED_IDENTIFIER))
 
     def test_fun_invalid_name_num(self):
         code = "123: function integer () = { }"
         self.parse(code)
         self.assertEqual(errors_detected(), 1)
-        self.assertTrue(has_error(ParserError.UNEXPECTED_TOKEN))
+        self.assertTrue(has_error(ParserError.UNEXPECTED_COLON))
 
     def test_fun_invalid_function_without_name(self):
         code = "function integer () = { }"

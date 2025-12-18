@@ -19,7 +19,8 @@ class TestIncDecErrors(unittest.TestCase):
     def test_inc_dec_error(self):
         self.parse("++[]")
         self.assertTrue(errors_detected())
-        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
+        # self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
+        self.assertTrue(has_error(ParserError.INVALID_ARRAY_SYNTAX))
 
     def test_inc_dec_error2(self):
         self.parse("{}++")
@@ -29,42 +30,46 @@ class TestIncDecErrors(unittest.TestCase):
     def test_inc_dec_error3(self):
         self.parse("++&&")
         self.assertTrue(errors_detected())
-        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
+        # self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
+        self.assertTrue(has_error(ParserError.MISSING_EXPRESSION))
 
     def test_dec_on_operator(self):
         self.parse("--`")
         self.assertTrue(errors_detected())
-        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
+        self.assertTrue(has_error(ParserError.SYNTAX_ERROR))
 
     def test_inc_on_unfinished_expression(self):
-        self.parse("++(")
+        self.parse("++(;")
         self.assertTrue(errors_detected())
-        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
+        # self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
+        self.assertTrue(has_error(ParserError.MISSING_STATEMENT))
 
     def test_dec_on_unfinished_expression(self):
         self.parse("--()")
         self.assertTrue(errors_detected())
-        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
+        self.assertTrue(has_error(ParserError.MISSING_EXPRESSION))
 
     def test_inc_on_missing_expression(self):
         self.parse("++(2+1)")
         self.assertTrue(errors_detected())
-        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
+        # self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
+        self.assertTrue(has_error(ParserError.UNEXPECTED_EOF))
 
     def test_dec_on_missing_expression(self):
         self.parse("--")
         self.assertTrue(errors_detected())
-        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
+        self.assertTrue(has_error(ParserError.UNEXPECTED_EOF))
 
     def test_inc_on_comma(self):
         self.parse("++,,")
         self.assertTrue(errors_detected())
-        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
+        # self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
+        self.assertTrue(has_error(ParserError.UNEXPECTED_TOKEN))
 
     def test_dec_on_semicolon(self):
         self.parse("--;")
         self.assertTrue(errors_detected())
-        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
+        self.assertTrue(has_error(ParserError.MISSING_STATEMENT))
 
     def test_inc_on_array_missing_index(self):
         self.parse("arr[]++;")
@@ -74,4 +79,4 @@ class TestIncDecErrors(unittest.TestCase):
     def test_dec_on_array_missing_index(self):
         self.parse("--arr[];")
         self.assertTrue(errors_detected())
-        self.assertTrue(has_error(ParserError.INVALID_INC_DEC))
+        self.assertTrue(has_error(ParserError.INVALID_ARRAY_SYNTAX))

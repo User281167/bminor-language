@@ -655,9 +655,12 @@ class Parser(sly.Parser):
         elif p.value == ")":
             error_type = ParserError.MISSING_EXPRESSION
             message = f"{error_type.value}, unexpected ')' or expected list of parameters after {value}"
+        elif p.value == ",":
+            error_type = ParserError.UNEXPECTED_TOKEN
+            message = f"{error_type.value} near {value}, expected list of parameters after {value}"
         elif p.value == ";":
             error_type = ParserError.MISSING_STATEMENT
-            message = f"{error_type.value} near {value}"
+            message = f"{error_type.value} near {value}, expected statement or expression after {value}"
         elif p.value in [t.lower() for t in Lexer.tokens]:
             error_type = ParserError.UNEXPECTED_TOKEN
             message = f"{error_type.value} {value}"
@@ -666,6 +669,6 @@ class Parser(sly.Parser):
             message = f"{error_type.value} {value}"
         else:
             error_type = ParserError.SYNTAX_ERROR
-            message = f"Unexpected {error_type.value} at {value}"
+            message = f"Unexpected {error_type.value} at {value}, token type: {p.type}"
 
         error(message, lineno, error_type)

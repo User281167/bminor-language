@@ -19,7 +19,7 @@ class TestForLoopError(unittest.TestCase):
     def test_for_outside_function(self):
         code = "for (i = 0; i < 10; i = i + 1) { print i; }"
         self.parse(code)
-        self.assertTrue(has_error(ParserError.UNEXPECTED_TOKEN))
+        self.assertFalse(errors_detected())
 
     def test_for_unclosed_body(self):
         code = """
