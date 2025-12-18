@@ -71,6 +71,7 @@ class TestRecursiveArrayIndexEvaluation(unittest.TestCase):
     # ❌ Casos con error
 
     def test_index_out_of_bounds_literal(self):
+        # No sabemos el valor de N en otros casos puede cambiar antes de ejecutar array[N]
         code = """
         N: integer = 100;
         isprime: array [N] boolean;
@@ -79,9 +80,11 @@ class TestRecursiveArrayIndexEvaluation(unittest.TestCase):
             isprime[120] = false;
         }
         """
-        self.assertError(code, SemanticError.INDEX_OUT_OF_BOUNDS)
+        # self.assertError(code, SemanticError.INDEX_OUT_OF_BOUNDS)
+        self.assertNoError(code)
 
     def test_index_out_of_bounds_variable(self):
+        # A puede cambiar antes de ejecutar array[A]
         code = """
         N: integer = 100;
         A: integer = N;
@@ -93,7 +96,8 @@ class TestRecursiveArrayIndexEvaluation(unittest.TestCase):
             isprime[j] = false;
         }
         """
-        self.assertError(code, SemanticError.INDEX_OUT_OF_BOUNDS)
+        # self.assertError(code, SemanticError.INDEX_OUT_OF_BOUNDS)
+        self.assertNoError(code)
 
     def test_index_negative_literal(self):
         code = """
@@ -107,6 +111,7 @@ class TestRecursiveArrayIndexEvaluation(unittest.TestCase):
         self.assertError(code, SemanticError.INDEX_MUST_BE_POSITIVE)
 
     def test_index_negative_variable(self):
+        # No podemos saber el valor ya que puede cambiar en tiempo de ejecución
         code = """
         N: integer = 100;
         isprime: array [N] boolean;
@@ -116,9 +121,11 @@ class TestRecursiveArrayIndexEvaluation(unittest.TestCase):
             isprime[i] = false;
         }
         """
-        self.assertError(code, SemanticError.INDEX_MUST_BE_POSITIVE)
+        # self.assertError(code, SemanticError.INDEX_MUST_BE_POSITIVE)
+        self.assertNoError(code)
 
     def test_index_negative_nested(self):
+        # No sabemos el valor de arra[size] A y N pueden cambiar antes de ejecutar array[A]
         code = """
         N: integer = 100;
         A: integer = N;
@@ -130,5 +137,5 @@ class TestRecursiveArrayIndexEvaluation(unittest.TestCase):
             isprime[j] = false;
         }
         """
-        self.assertError(code, SemanticError.INDEX_MUST_BE_POSITIVE)
-        self.assertError(code, SemanticError.INDEX_MUST_BE_POSITIVE)
+        # self.assertError(code, SemanticError.INDEX_MUST_BE_POSITIVE)
+        self.assertNoError(code)

@@ -91,11 +91,3 @@ class TestArrayDeclaration(unittest.TestCase):
         self.assertFalse(errors_detected())
         decl = env.get("x")
         self.assertIsNotNone(decl)
-
-    def test_array_size_ternary(self):
-        # error en ejecución
-        code = "x: array [1 + 2 - 3] integer = {1, 2, 3};"
-        env = self.semantic(code)
-        self.assertFalse(errors_detected())
-        decl = env.get("x")
-        self.assertIsNotNone(decl)

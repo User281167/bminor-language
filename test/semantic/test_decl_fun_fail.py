@@ -65,3 +65,8 @@ class TestFunctionDeclarationErrors(unittest.TestCase):
     def test_redeclaretion_type_args(self):
         code = "main: function void(a: integer); main: function void(a: string);"
         self.assertSemanticError(code, SemanticError.REDEFINE_FUNCTION)
+
+    def test_array_size_ternary(self):
+        # error en ejecución
+        code = "x: array [1 + 2 - 3] integer = {1, 2, 3};"
+        self.assertSemanticError(code, SemanticError.ARRAY_SIZE_MISMATCH)

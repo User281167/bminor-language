@@ -23,6 +23,10 @@ class TestArrayAssignmentErrors(unittest.TestCase):
         self.assertTrue(errors_detected())
         self.assertTrue(has_error(expected_error))
 
+    def assertSuccess(self, code):
+        env = self.semantic(code)
+        self.assertFalse(errors_detected())
+
     def test_index_float(self):
         code = """
         a: array [3] integer;
@@ -85,6 +89,7 @@ class TestArrayAssignmentErrors(unittest.TestCase):
         self.assertArrayError(code, SemanticError.INDEX_MUST_BE_POSITIVE)
 
     def test_index_negative_variable(self):
+        # no podemos saber el valor ya que puede cambiar en tiempo de ejecución
         code = """
         i: integer = -1;
         a: array [3] integer;
@@ -93,7 +98,8 @@ class TestArrayAssignmentErrors(unittest.TestCase):
             a[i] = 10;
         }
         """
-        self.assertArrayError(code, SemanticError.INDEX_MUST_BE_POSITIVE)
+        # self.assertArrayError(code, SemanticError.INDEX_MUST_BE_POSITIVE)
+        self.assertSuccess(code)
 
     def test_index_out_of_bounds_literal(self):
         code = """
@@ -105,6 +111,8 @@ class TestArrayAssignmentErrors(unittest.TestCase):
         """
         self.assertArrayError(code, SemanticError.INDEX_OUT_OF_BOUNDS)
 
+    # no podemos saber el valor ya que puede cambiar en tiempo de ejecución
+    # i = Otro valor; antes de llamar a[i];
     def test_index_out_of_bounds_variable(self):
         code = """
         i: integer = 5;
@@ -114,7 +122,8 @@ class TestArrayAssignmentErrors(unittest.TestCase):
             a[i] = 10;
         }
         """
-        self.assertArrayError(code, SemanticError.INDEX_OUT_OF_BOUNDS)
+        # self.assertArrayError(code, SemanticError.INDEX_OUT_OF_BOUNDS)
+        self.assertSuccess(code)
 
     def test_value_type_mismatch(self):
         code = """

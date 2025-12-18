@@ -29,8 +29,7 @@ class TestReturnErrors(unittest.TestCase):
         """
 
         # la gramática no permite return fuera de declaraciones
-        self.assertError(code, ParserError.UNEXPECTED_TOKEN)
-        # self.assertError(code, SemanticError.RETURN_OUT_OF_FUNCTION)
+        self.assertError(code, SemanticError.RETURN_OUT_OF_FUNCTION)
 
     def test_return_type_mismatch_integer_vs_float(self):
         code = """

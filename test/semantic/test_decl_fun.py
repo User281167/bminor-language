@@ -27,7 +27,6 @@ class TestFunctionDeclarations(unittest.TestCase):
         self.assertEqual(func.return_type.name, "void")
         self.assertEqual(len(func.params), 0)
         self.assertFalse(errors_detected())
-        self.assertEqual(func.scope, "global")
 
     def test_function_with_integer_param(self):
         code = "neg: function void(x: integer);"

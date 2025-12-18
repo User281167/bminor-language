@@ -23,6 +23,10 @@ class TestArrayDeclarationErrors(unittest.TestCase):
         self.assertTrue(errors_detected())
         self.assertTrue(has_error(expected_error))
 
+    def assertNoError(self, code):
+        self.semantic(code)
+        self.assertFalse(errors_detected())
+
     def test_multi_dimensional_array(self):
         code = "x: array [1] array [2] integer;"
         self.assertArrayError(code, SemanticError.MULTI_DIMENSIONAL_ARRAYS)
@@ -52,16 +56,20 @@ class TestArrayDeclarationErrors(unittest.TestCase):
         self.assertArrayError(code, SemanticError.ARRAY_SIZE_MUST_BE_POSITIVE)
 
     def test_array_size_negative_variable(self):
+        # No sabemos el valor de a antes de que llegue al array[a]
         code = "a: integer = -3; x: array [a] integer = {1, 2, 3};"
-        self.assertArrayError(code, SemanticError.ARRAY_SIZE_MUST_BE_POSITIVE)
+        # self.assertArrayError(code, SemanticError.ARRAY_SIZE_MUST_BE_POSITIVE)
+        self.assertNoError(code)
 
     def test_array_size_mismatch_literal(self):
         code = "x: array [2] integer = {1, 2, 3};"
         self.assertArrayError(code, SemanticError.ARRAY_SIZE_MISMATCH)
 
     def test_array_size_mismatch_variable(self):
+        # No sabemos el valor de a antes de que llegue al array[a]
         code = "a: integer = 2; x: array [a] integer = {1, 2, 3};"
-        self.assertArrayError(code, SemanticError.ARRAY_SIZE_MISMATCH)
+        # self.assertArrayError(code, SemanticError.ARRAY_SIZE_MISMATCH)
+        self.assertNoError(code)
 
     def test_array_type_mismatch(self):
         code = "x: array [3] integer = {1, true, 3};"

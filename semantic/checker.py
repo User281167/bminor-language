@@ -211,9 +211,10 @@ class Check(Visitor):
         elif isinstance(load_loc, AutoDecl):
             name = "auto " + load_loc.name
 
-        # si son arrays verificar que la base sea la misma no importa el tamaño
+        # auto solo necesita saber si son tienen la misma base
+        # el tamaño no importa
         # get_data: function array[] integer ();
-        # data: array [5] integer;
+        # data: auto = {1, 2};
 
         # main: function void () = {
         #     data = get_data();
@@ -221,7 +222,7 @@ class Check(Visitor):
         if (
             isinstance(n.location.type, ArrayType)
             and isinstance(n.value.type, ArrayType)
-            and not n.value.type.size
+            and isinstance(load_loc, AutoDecl)
         ):
             if n.location.type.base != n.value.type.base:
                 self._error(
@@ -234,11 +235,8 @@ class Check(Visitor):
         if n.location.type == n.value.type:
             return
 
-        loc_type = n.location.type
-        value_type = n.value.type
-
         self._error(
-            f"Assignment {loc_type} != {value_type} in {name!r}",
+            f"Assignment {n.location.type} != {n.value.type} in {name!r}",
             n.lineno,
             SemanticError.MISMATCH_ASSIGNMENT,
         )
@@ -453,8 +451,13 @@ class Check(Visitor):
 
         if n.expr is None and func.return_type == SimpleTypes.VOID.value:
             return
+
         # Si return array no tiene tamaño fijo, permitir return de array[]
-        elif (
+        # example: function array [] integer(){
+        #     array [N] integer;
+        #     return a;
+        # }
+        if (
             n.expr is not None
             and isinstance(func.return_type, ArrayType)
             and isinstance(n.expr.type, ArrayType)
@@ -537,7 +540,7 @@ class Check(Visitor):
         Si la expresión es "+5", esta función devolver  5.
         Si la expresión no es una expresión  unaria de enteros válida (por ejemplo "+5.5"), esta función devolver  None.
         """
-        if isinstance(n.expr, Integer):
+        if isinstance(n.expr, (Integer, Float)):
             if n.oper == "-":
                 return -n.expr.value
             elif n.oper == "+":
@@ -545,95 +548,57 @@ class Check(Visitor):
 
         return None
 
-    def _get_varloc_integer(self, n: VarLoc, env: Symtab, msg: str):
+    def _get_literal_operation(self, op, env: Symtab):
         """
-        Intentar obtener el valor de una variable.
-
-        Uso en index o array size para validar. Si la Si la variable es un array, se produce un error,
-        ya que el tamaño del array debe ser un entero. Si el valor de la variable
-        no es un entero, se produce un error.
-
-        Si el valor de la variable es un entero, se devuelve el valor. Si el valor
-        de la variable es una expresión unaria de enteros válida, se devuelve el valor
-        de la expresión. Si el valor de la variable es una variable, se sigue
-        buscando el valor de la variable.
+        Intentar obtener de una expresión aritmética o unaria el valor de la expresión.
         """
+        if op is None:
+            return
 
-        value_decl = env.get(n.name)
-        size_value = None
+        op_value = None
 
-        if not value_decl:
-            self._error(
-                f"{msg} {n.name!r} is not declared",
-                n.lineno,
-                SemanticError.UNDECLARED_VARIABLE,
-            )
-        elif value_decl.type != SimpleTypes.INTEGER.value:
-            self._error(
-                f"{msg} {n.name!r} no {value_decl.type}",
-                n.lineno,
-                SemanticError.ARRAY_SIZE_MUST_BE_INTEGER,
-            )
-        elif isinstance(value_decl.value, Integer):
-            size_value = value_decl.value.value
-        elif isinstance(value_decl.value, UnaryOper):
-            size_value = self._get_unary_integer(value_decl.value)
-        elif isinstance(value_decl.value, VarLoc):
-            # seguir buscando el valor si es una variable
-            size_value = self._get_varloc_integer(value_decl.value, env, msg)
+        # if self._search_env_name(env, "$func"):
+        # return None
 
-        return size_value
-
-    def _get_array_size(self, size, env: Symtab):
-        """
-        Intentar obtener el valor de un array size.
-        """
-        size_value = None
-
-        if self._search_env_name(env, "$func"):
-            return None
-
-        if isinstance(size, Integer):
-            size_value = size.value
-        elif isinstance(size, UnaryOper):
-            size_value = self._get_unary_integer(size)
-        elif isinstance(size, VarLoc):
-            size_value = self._get_varloc_integer(size, env, "Array size")
-        elif isinstance(size, BinOper):
-            left = self._get_array_size(size.left, env)
-            right = self._get_array_size(size.right, env)
+        if isinstance(op, (Integer, Float)):
+            op_value = op.value
+        elif isinstance(op, UnaryOper):
+            op_value = self._get_unary_integer(op)
+        elif isinstance(op, BinOper):
+            left = self._get_literal_operation(op.left, env)
+            right = self._get_literal_operation(op.right, env)
 
             if left is not None and right is not None:
-                if size.oper == "+":
-                    size_value = left + right
-                elif size.oper == "-":
-                    size_value = left - right
-                elif size.oper == "*":
-                    size_value = left * right
-                elif size.oper == "/":
+                if op.oper == "+":
+                    op_value = left + right
+                elif op.oper == "-":
+                    op_value = left - right
+                elif op.oper == "*":
+                    op_value = left * right
+                elif op.oper == "/":
                     if right == 0:
                         self._error(
                             f"Divide by zero",
-                            size.lineno,
+                            op.lineno,
                             SemanticError.DIVIDE_BY_ZERO,
                         )
                         return
 
-                    size_value = left // right
-                elif size.oper == "%":
+                    op_value = left // right
+                elif op.oper == "%":
                     if right == 0:
                         self._error(
                             f"Divide by zero",
-                            size.lineno,
+                            op.lineno,
                             SemanticError.DIVIDE_BY_ZERO,
                         )
                         return
 
-                    size_value = left % right
-                elif size.oper == "^":
-                    size_value = left**right
+                    op_value = left % right
+                elif op.oper == "^":
+                    op_value = left**right
 
-        return size_value
+        return op_value
 
     def check(self, n: ArrayDecl, env: Symtab):
         # Agregar n.name a symtab
@@ -694,7 +659,7 @@ class Check(Visitor):
             )
             return
 
-        size_value = self._get_array_size(n.type.size, env)
+        size_value = self._get_literal_operation(n.type.size, env)
 
         if size_value is not None:
             if size_value < 0:
@@ -705,7 +670,7 @@ class Check(Visitor):
                 )
             elif size_value != len(n.value) and n.value:
                 self._error(
-                    f"Size in {n.name!r} is {size_value} != {len(n.value)}",
+                    f"Size in {n.name!r} is {size_value} but items count is {len(n.value)}",
                     n.lineno,
                     SemanticError.ARRAY_SIZE_MISMATCH,
                 )
@@ -722,19 +687,13 @@ class Check(Visitor):
 
     def _override_func(self, n: FuncDecl, env: Symtab):
         """
-        Verificar si se intenta sobreescribir una función.
-        Si es así, verificar si los parámetros tienen los mismos tipos.
-
-        Solo sobreescribe funciones definidas en el mismo nivel del scope actual
+        Verificar si se ya se definió el cuerpo de la función.
+        Si se sobreescribe, se verifica que los parámetros sean
+        los mismos y que el tipo de retorno sea el mismo.
 
         Ejemplo:
             fn: function void();
-
             fn: function void() {...} -> Sobreescrita
-
-            {
-                fn: function void() {...} -> No sobreescrita nuevo scope
-            }
         """
 
         old_fun = env.get(n.name, recursive=False)
@@ -1165,7 +1124,6 @@ class Check(Visitor):
         n.type = load_arr.type.base
 
         # check index
-        index_value = None
         n.index.accept(self, env)
 
         if n.index.type != SimpleTypes.INTEGER.value:
@@ -1176,18 +1134,11 @@ class Check(Visitor):
             )
             return
 
-        if isinstance(n.index, Integer):
-            index_value = n.index.value
-        elif isinstance(n.index, UnaryOper):
-            index_value = self._get_unary_integer(n.index)
-        elif isinstance(n.index, VarLoc):
-            index_value = self._get_varloc_integer(n.index, env, "Array index")
-
         # obtener el tamaño del array
-        array_size = None
+        array_size = self._get_literal_operation(load_arr.type.size, env)
+        index_value = self._get_literal_operation(n.index, env)
 
-        if not load_arr.type.size is None:
-            array_size = self._get_array_size(load_arr.type.size, env)
+        print(f"array_size: {array_size}, index_value: {index_value}")
 
         if index_value is not None:
             if index_value < 0:
@@ -1209,15 +1160,6 @@ class Check(Visitor):
         Método de entrada para la verificación semántica.
         Instancia el checker y comienza el recorrido del AST.
         """
-        # Aquí deberías crear una instancia del Checker
-        # Nota: Necesitas saber qué recibe el constructor de tu Checker
-        # Asumiendo que recibe el contexto (ctxt) o el mismo objeto 'interpreter'
-        checker = cls()  # o cls(interpreter_instance)
+        checker = cls()
         checker.interpreter = interpreter_instance
-
-        # Iniciar el recorrido del AST.
-        # Si tu método 'visit' espera el entorno (env), lo pasas aquí:
         node.accept(checker, env)
-
-        # Si tu clase Checker maneja los errores, no necesitas devolver nada.
-        # Los errores se registran en el contexto (ctxt) del intérprete.
