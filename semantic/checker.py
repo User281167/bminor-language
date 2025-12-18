@@ -73,8 +73,9 @@ class Check(Visitor):
 
         arg = n.args[0]
         arg.accept(self, env)
+        self._secure_type(arg)
 
-        if hasattr(arg, "type") and not isinstance(arg.type, ArrayType):
+        if not isinstance(arg.type, ArrayType):
             self._error(
                 f"Expected an array for function {n.name!r} but got {arg.type}",
                 n.lineno,
@@ -177,6 +178,10 @@ class Check(Visitor):
 
     # --- Statements
 
+    def _secure_type(self, n):
+        if not hasattr(n, "type"):
+            n.type = SimpleTypes.UNDEFINED.value
+
     def visit(self, n: Assignment, env: Symtab):
         """
         Validar n.loc (location) y n.expr
@@ -190,6 +195,9 @@ class Check(Visitor):
         n.location.accept(self, env)
         n.value.accept(self, env)
         n.type = n.location.type
+
+        self._secure_type(n.location)
+        self._secure_type(n.value)
 
         name = None
         load_loc = n.location
@@ -517,9 +525,7 @@ class Check(Visitor):
 
         if n.value:
             n.value.accept(self, env)
-
-            if not hasattr(n.value, "type"):
-                n.value.type = SimpleTypes.UNDEFINED.value
+            self._secure_type(n.value)
 
             if n.type != n.value.type:
                 self._error(
@@ -857,6 +863,7 @@ class Check(Visitor):
                     )
         else:
             n.value.accept(self, env)
+            self._secure_type(n.value)
             n.type = n.value.type
 
             if isinstance(n.type, ArrayType) and n.type.size is None:
@@ -1137,8 +1144,6 @@ class Check(Visitor):
         # obtener el tamaño del array
         array_size = self._get_literal_operation(load_arr.type.size, env)
         index_value = self._get_literal_operation(n.index, env)
-
-        print(f"array_size: {array_size}, index_value: {index_value}")
 
         if index_value is not None:
             if index_value < 0:

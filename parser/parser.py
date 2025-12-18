@@ -642,7 +642,9 @@ class Parser(sly.Parser):
             message = f"{error_type.value} unexpected '[' near {value}"
         elif p.value == "]":
             error_type = ParserError.INVALID_ARRAY_SYNTAX
-            message = f"{error_type.value} unexpected ']' near {value}"
+            message = (
+                f"{error_type.value} unexpected ']', expected expression or statement"
+            )
         elif p.value == "{":
             error_type = ParserError.INVALID_STATEMENT
             message = f"{error_type.value} unexpected {value}"
