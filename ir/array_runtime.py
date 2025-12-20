@@ -14,6 +14,8 @@ class ArrayRuntime:
         self._declare_array_size()
         self._declare_array_set()
         self._declare_array_get()
+        self._declare_array_incref()
+        self._declare_array_decref()
 
     def _declare_array_new(self):
         # func(i32, i32, i32, i1) -> i8*
@@ -82,6 +84,26 @@ class ArrayRuntime:
             self.module, f_type, name="_bminor_array_get"
         )
 
+    def _declare_array_incref(self):
+        # func(i8*) -> void
+        f_type = ir.FunctionType(
+            ir.VoidType(),
+            [IrTypes.generic_pointer_t],
+        )
+        self._functions["_bminor_array_incref"] = ir.Function(
+            self.module, f_type, name="_bminor_array_incref"
+        )
+
+    def _declare_array_decref(self):
+        # func(i8*) -> void
+        f_type = ir.FunctionType(
+            ir.VoidType(),
+            [IrTypes.generic_pointer_t],
+        )
+        self._functions["_bminor_array_decref"] = ir.Function(
+            self.module, f_type, name="_bminor_array_decref"
+        )
+
     # --- Métodos de acceso para el generador de código ---
 
     def free(self):
@@ -101,3 +123,9 @@ class ArrayRuntime:
 
     def get(self):
         return self._functions["_bminor_array_get"]
+
+    def incref(self):
+        return self._functions["_bminor_array_incref"]
+
+    def decref(self):
+        return self._functions["_bminor_array_decref"]

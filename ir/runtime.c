@@ -90,9 +90,10 @@ void _bminor_string_free(char* s) {
 
 typedef struct _bminor_array {
     void* data;
-    int32_t element_size;
+    int32_t data_size;
     int32_t size;
     bool is_string;
+    int32_t reference_count;
 } _bminor_array;
 
 
@@ -124,8 +125,9 @@ _bminor_array* _bminor_array_new(int32_t size, int32_t list_size, int32_t type, 
     }
 
     array->size = size;
-    array->element_size = type;
+    array->data_size = type;
     array->is_string = is_string;
+    array->reference_count = 1;
     return array;
 }
 
@@ -163,7 +165,7 @@ void _bminor_array_set(_bminor_array* array, int32_t index, void* value_ptr) {
 
     // Calcular la ubicación de destino (donde queremos escribir)
     char* base_ptr = (char*)array->data;
-    size_t offset = index * array->element_size;
+    size_t offset = index * array->data_size;
     void* destination_ptr = base_ptr + offset; // Puntero a la celda del array
 
     if (array->is_string) {
@@ -179,7 +181,7 @@ void _bminor_array_set(_bminor_array* array, int32_t index, void* value_ptr) {
         *old_string_loc = new_string; // Almacenar el puntero DEEP COPY
     } else {
         // value_ptr es el puntero al alloca temporal del stack que contiene el valor (i32, i1, etc.)
-        memcpy(destination_ptr, value_ptr, array->element_size);
+        memcpy(destination_ptr, value_ptr, array->data_size);
     }
 }
 
@@ -196,11 +198,24 @@ void _bminor_array_get(_bminor_array* array, int32_t index, void* destination_pt
     // Calcular la dirección de la fuente (Source)
     // Usamos (char*) para garantizar la aritmética por bytes.
     char* base_ptr = (char*)array->data;
-    size_t offset = index * array->element_size;
+    size_t offset = index * array->data_size;
     void* source_ptr = base_ptr + offset;
 
     // Copiar los bytes
-    // Copia array->element_size bytes desde source_ptr (el array)
+    // Copia array->data_size bytes desde source_ptr (el array)
     // hasta destination_ptr (el puntero temporal que viene de LLVM).
-    memcpy(destination_ptr, source_ptr, array->element_size);
+    memcpy(destination_ptr, source_ptr, array->data_size);
+}
+
+void _bminor_array_incref(_bminor_array* array) {
+    if (array)
+    {
+        array->reference_count += 1;
+    }
+}
+
+void _bminor_array_decref(_bminor_array* array) {
+    if (array && (--array->reference_count == 0)) {
+        _bminor_array_free(array);
+    }
 }

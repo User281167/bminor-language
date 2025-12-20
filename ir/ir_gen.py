@@ -197,7 +197,10 @@ class IRGenerator(Visitor):
             try:
                 ptr = stmt.accept(self, env, builder, alloca, func)
             except Exception as e:
-                error(f"Unexpected error in statement {stmt}", lineno=stmt.lineno)
+                error(
+                    f"Unexpected error in statement {stmt.__class__.__name__}",
+                    lineno=stmt.lineno,
+                )
                 self._free_strings(builder, env, strings_in_block)
                 continue
 
@@ -279,7 +282,8 @@ class IRGenerator(Visitor):
 
         # llamar a runtime ._bminor_array_size
         size_fn = self.array_runtime.size()
-        size = body_builder.call(size_fn, [local_env.get(n.params[0].name)])
+        load_arr = body_builder.load(local_env.get(n.params[0].name))
+        size = body_builder.call(size_fn, [load_arr])
         body_builder.ret(size)
 
     def visit(
@@ -354,8 +358,23 @@ class IRGenerator(Visitor):
             return self._set_array_location(n, env, builder, alloca, func)
 
         if not n.location.type == SimpleTypes.STRING.value:
+            # Array disminuir referencia
+            if isinstance(n.location.type, ArrayType):
+                dec = self.array_runtime.decref()
+                old = builder.load(loc, f"{n.location.name}_array_dec")
+                builder.call(dec, [old])
+
             new_value_ir = n.value.accept(self, env, builder, alloca, func)
             builder.store(new_value_ir, loc)
+
+            # Array aumentar referencia
+            # Evitar aumentar en llamado de función ya que este devuelve el puntero aumentado
+            if isinstance(n.value.type, ArrayType) and not isinstance(
+                n.value, FuncCall
+            ):
+                inc = self.array_runtime.incref()
+                builder.call(inc, [new_value_ir])
+
             return new_value_ir
 
         # Liberar el valor antiguo.
@@ -625,15 +644,9 @@ class IRGenerator(Visitor):
             val = n.expr.accept(self, env, builder, alloca, func)
 
             if isinstance(n.expr, VarLoc) and isinstance(n.expr.type, ArrayType):
-                # Verificar si es un parámetro de la función actual
+                # i**8 to i8*
                 loc_ptr = env.get(n.expr.name)
-
-                if loc_ptr.type == IrTypes.generic_pointer_t:
-                    array_ptr = loc_ptr  # ya es un puntero de referencia
-                elif loc_ptr.type == IrTypes.generic_pointer_t.as_pointer():
-                    array_ptr = builder.load(
-                        loc_ptr, name=f"{n.expr.name}_ptr_for_call"
-                    )
+                array_ptr = builder.load(loc_ptr, name=f"{n.expr.name}_return_ptr")
 
                 return array_ptr
             elif n.expr.type == SimpleTypes.STRING.value and isinstance(
@@ -743,18 +756,13 @@ class IRGenerator(Visitor):
         self.visit(arr, env, builder, alloca, func)
 
     def _auto_array_decl_assign(self, n, env, builder, alloca, func):
-        arr = ArrayDecl(
-            n.name,
-            n.type,
-            n.value,
-        )
-
         if self.global_scope:
             var = ir.GlobalVariable(self.module, IrTypes.generic_pointer_t, n.name)
             var.initializer = IrTypes.null_pointer
             var.linkage = "dso_local"
         else:
             var = alloca.alloca(IrTypes.generic_pointer_t, name=n.name)
+            alloca.store(IrTypes.null_pointer, var)
 
         env.add(n.name, var)
 
@@ -852,7 +860,7 @@ class IRGenerator(Visitor):
         temp_alloca=None,
         free=False,
     ):
-        self.comment(builder, "Set array index")
+        self.comment(builder, f"Init array index {index}")
         index_llvm = IrTypes.const_int(index)
         value_llvm = val_ast.accept(self, env, builder, alloca, func)
         set_fn = self.array_runtime.set()  # El set unificado
@@ -902,6 +910,7 @@ class IRGenerator(Visitor):
             var.linkage = "dso_local"
         else:
             var = alloca.alloca(IrTypes.generic_pointer_t, name=n.name)
+            builder.store(IrTypes.null_pointer, var)
 
         if isinstance(n.type.size, int):
             # Auto array posible size como entero de len(n.value)
@@ -983,7 +992,7 @@ class IRGenerator(Visitor):
             # Si el parámetro es STRING, se pasa por REFERENCIA (i8**),
             # por lo que el tipo de argumento es puntero al puntero del string.
             if isinstance(p.type, ArrayType):
-                param_types.append(llvm_type)
+                param_types.append(llvm_type.as_pointer())
             elif p.type == SimpleTypes.STRING.value:
                 param_types.append(llvm_type.as_pointer())  # Convierte i8* a i8**
             else:
@@ -1387,21 +1396,19 @@ class IRGenerator(Visitor):
                     free_ref_temps.append(temp_ptr)
             elif isinstance(arg, VarLoc) and isinstance(arg.type, ArrayType):
                 loc_ptr = env.get(arg.name)
-
-                # Chequea si el tipo es i8*
-                # Si loc_ptr es de tipo i8** (es una variable local como 'x') -> Cárgalo.
-                # Genera la instrucción de carga: %"a_ptr_for_call" = load i8*, i8** %"a"
-                if loc_ptr.type == IrTypes.generic_pointer_t:
-                    array_ptr = loc_ptr  # ya es un puntero de referencia
-                elif loc_ptr.type == IrTypes.generic_pointer_t.as_pointer():
-                    array_ptr = builder.load(loc_ptr, name=f"{arg.name}_ptr_for_call")
-
-                args.append(array_ptr)
+                args.append(loc_ptr)
+            elif isinstance(arg.type, ArrayType):
+                # Array literal, ejemplo return de una función, conver i8* a i8**
+                temp = builder.alloca(IrTypes.generic_pointer_t, name=f"temp_array_loc")
+                builder.store(arg.accept(self, env, builder, alloca, func), temp)
+                args.append(temp)
             elif not arg.type == SimpleTypes.STRING.value:
                 # Tipos primitivos (int, float, bool, etc.)
                 args.append(arg.accept(self, env, builder, alloca, func))
 
+        # print("Calling", n.name, args[0])
         val = builder.call(fun_name, args)
+        # print("Returned", val)
 
         # limpiar los temporales
         for ptr in free_ref_temps:
@@ -1449,7 +1456,7 @@ class IRGenerator(Visitor):
         if array_var.type == IrTypes.generic_pointer_t:
             array_ptr = array_var
         else:
-            array_ptr = builder.load(array_var, name=f"{n.array.name}_struct_ptr")
+            array_ptr = builder.load(array_var, name=f"{n.array.name}_array_ptr")
 
         index = n.index.accept(self, env, builder, alloca, func)
 
