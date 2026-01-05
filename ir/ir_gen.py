@@ -103,7 +103,7 @@ class IRGenerator(Visitor):
 
         # Visitar todas las declaraciones
         # liberar string antes de salir
-        free_strings = gen._run_block(
+        free_strings, free_arrays = gen._run_block(
             n.body,
             env,
             run_builder,
@@ -135,6 +135,7 @@ class IRGenerator(Visitor):
             if main_func and isinstance(main_func, ir.Function):
                 result = run_builder.call(main_func, [])
                 gen._free_strings(run_builder, env, free_strings)
+                gen._decref_arrays(run_builder, env, free_arrays)
 
                 if user_main.type == SimpleTypes.INTEGER.value:
                     # Llamar a main y retornar su resultado
@@ -145,6 +146,7 @@ class IRGenerator(Visitor):
         else:
             # No hay main, retornar 0
             gen._free_strings(run_builder, env, free_strings)
+            gen._decref_arrays(run_builder, env, free_arrays)
             run_builder.ret(IrTypes.i32_zero)
 
         return module
@@ -166,6 +168,27 @@ class IRGenerator(Visitor):
         strings_in_block.clear()
         self.comment(builder, "End free strings")
 
+    def _decref_arrays(self, builder: ir.IRBuilder, env: Symtab, arrays_in_block: list):
+        if not arrays_in_block:
+            return
+
+        self.comment(builder, "Decref arrays")
+        decref_fn = self.array_runtime.decref()
+
+        for array in arrays_in_block:
+            name = (
+                array.name
+                if isinstance(array, (VarDecl, ArrayDecl))
+                else array.location.name
+            )
+
+            loc = env.get(name, recursive=False)
+            arr_ptr = builder.load(loc, name=f"{name}_array_decref")
+            builder.call(decref_fn, [arr_ptr])
+
+        arrays_in_block.clear()
+        self.comment(builder, "End decref arrays")
+
     def _run_block(
         self,
         n,
@@ -175,7 +198,7 @@ class IRGenerator(Visitor):
         func,
         merge=None,
         is_global=False,
-    ) -> list:
+    ) -> tuple:
         """
         Ejecuta un bloque de sentencias, manejando el scope y liberando strings.
 
@@ -185,12 +208,17 @@ class IRGenerator(Visitor):
             Si no es global_scope, devuelve una lista vacía.
         """
         strings_in_block = []
+        arrays_in_block = []
 
         for stmt in n or []:
             self.global_scope = is_global
 
             if isinstance(stmt, VarDecl) and stmt.type == SimpleTypes.STRING.value:
                 strings_in_block.append(stmt)
+            elif isinstance(stmt, (ArrayDecl, Assignment, AutoDecl)) and isinstance(
+                stmt.type, ArrayType
+            ):
+                arrays_in_block.append(stmt)
             elif isinstance(stmt, (BreakStmt, ContinueStmt)):
                 self._free_strings(builder, env, strings_in_block)
 
@@ -202,6 +230,7 @@ class IRGenerator(Visitor):
                     lineno=stmt.lineno,
                 )
                 self._free_strings(builder, env, strings_in_block)
+                self._decref_arrays(builder, env, arrays_in_block)
                 continue
 
             # free string flotantes
@@ -211,9 +240,14 @@ class IRGenerator(Visitor):
             ):
                 free = self.string_runtime.free()
                 builder.call(free, [ptr])
+            elif isinstance(stmt, FuncCall) and isinstance(stmt.type, ArrayType):
+                # retorno de un array sin asignar a variable
+                dec = self.array_runtime.decref()
+                builder.call(dec, [ptr])
             # liberar después de calcular return para evitar free prematuro
             elif isinstance(stmt, ReturnStmt):
                 self._free_strings(builder, env, strings_in_block)
+                self._decref_arrays(builder, env, arrays_in_block)
 
                 if ptr:
                     builder.ret(ptr)
@@ -224,14 +258,15 @@ class IRGenerator(Visitor):
         self.global_scope = is_global
 
         if is_global:
-            return strings_in_block
+            return strings_in_block, arrays_in_block
         else:
             self._free_strings(builder, env, strings_in_block)
+            self._decref_arrays(builder, env, arrays_in_block)
 
         if merge and not builder.block.is_terminated:
             builder.branch(merge)
 
-        return []
+        return tuple()
 
     def comment(self, builder: ir.IRBuilder, msg: str = None):
         if not msg:
@@ -647,6 +682,9 @@ class IRGenerator(Visitor):
                 # i**8 to i8*
                 loc_ptr = env.get(n.expr.name)
                 array_ptr = builder.load(loc_ptr, name=f"{n.expr.name}_return_ptr")
+
+                inc_array = self.array_runtime.incref()
+                builder.call(inc_array, [array_ptr], "return_array")
 
                 return array_ptr
             elif n.expr.type == SimpleTypes.STRING.value and isinstance(
@@ -1355,11 +1393,14 @@ class IRGenerator(Visitor):
         alloca: ir.IRBuilder,
         func: ir.Function,
     ):
+        self.comment(builder, f"Function call: {n.name}")
+
         fun_name = env.get(n.name)
         args = []
         free_ref_temps = (
             []
         )  # Para allocas temporales de strings pasados por referencia (i8**)
+        array_args = []
 
         for i, arg in enumerate(n.args):
             if arg.type == SimpleTypes.STRING.value:
@@ -1397,23 +1438,33 @@ class IRGenerator(Visitor):
             elif isinstance(arg, VarLoc) and isinstance(arg.type, ArrayType):
                 loc_ptr = env.get(arg.name)
                 args.append(loc_ptr)
+                array_args.append(loc_ptr)
             elif isinstance(arg.type, ArrayType):
                 # Array literal, ejemplo return de una función, conver i8* a i8**
                 temp = builder.alloca(IrTypes.generic_pointer_t, name=f"temp_array_loc")
                 builder.store(arg.accept(self, env, builder, alloca, func), temp)
                 args.append(temp)
+                array_args.append(temp)
             elif not arg.type == SimpleTypes.STRING.value:
                 # Tipos primitivos (int, float, bool, etc.)
                 args.append(arg.accept(self, env, builder, alloca, func))
 
-        # print("Calling", n.name, args[0])
+        for array in array_args:
+            inc_fn = self.array_runtime.incref()
+            builder.call(inc_fn, [builder.load(array, name="array_arg")])
+
         val = builder.call(fun_name, args)
-        # print("Returned", val)
 
         # limpiar los temporales
         for ptr in free_ref_temps:
             str_to_free = builder.load(ptr, name="arg_temp_to_free")
             builder.call(self.string_runtime.free(), [str_to_free])
+
+        for array in array_args:
+            dec_fn = self.array_runtime.decref()
+            builder.call(dec_fn, [builder.load(array, name="array_arg")])
+
+        self.comment(builder, f"End function call: {n.name}")
 
         return val
 
