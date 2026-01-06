@@ -225,10 +225,15 @@ class IRGenerator(Visitor):
             try:
                 ptr = stmt.accept(self, env, builder, alloca, func)
             except Exception as e:
-                error(
-                    f"Unexpected error in statement {stmt.__class__.__name__}",
-                    lineno=stmt.lineno,
-                )
+                if isinstance(stmt, FuncCall) and stmt.name == "main":
+                    warning(
+                        f"{stmt.lineno} Calling main function: program call implicitly main function, don't call by yourself in global scope"
+                    )
+                else:
+                    error(
+                        f"Unexpected error in statement {stmt.__class__.__name__}",
+                        lineno=stmt.lineno,
+                    )
                 self._free_strings(builder, env, strings_in_block)
                 self._decref_arrays(builder, env, arrays_in_block)
                 continue
