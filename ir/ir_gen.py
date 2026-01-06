@@ -1400,7 +1400,7 @@ class IRGenerator(Visitor):
         free_ref_temps = (
             []
         )  # Para allocas temporales de strings pasados por referencia (i8**)
-        array_args = []
+        array_args = []  # (is_var, ptr)
 
         for i, arg in enumerate(n.args):
             if arg.type == SimpleTypes.STRING.value:
@@ -1438,20 +1438,20 @@ class IRGenerator(Visitor):
             elif isinstance(arg, VarLoc) and isinstance(arg.type, ArrayType):
                 loc_ptr = env.get(arg.name)
                 args.append(loc_ptr)
-                array_args.append(loc_ptr)
+                array_args.append((True, loc_ptr))
             elif isinstance(arg.type, ArrayType):
                 # Array literal, ejemplo return de una función, conver i8* a i8**
                 temp = builder.alloca(IrTypes.generic_pointer_t, name=f"temp_array_loc")
                 builder.store(arg.accept(self, env, builder, alloca, func), temp)
                 args.append(temp)
-                array_args.append(temp)
+                array_args.append((False, temp))
             elif not arg.type == SimpleTypes.STRING.value:
                 # Tipos primitivos (int, float, bool, etc.)
                 args.append(arg.accept(self, env, builder, alloca, func))
 
         for array in array_args:
             inc_fn = self.array_runtime.incref()
-            builder.call(inc_fn, [builder.load(array, name="array_arg")])
+            builder.call(inc_fn, [builder.load(array[1], name="array_arg")])
 
         val = builder.call(fun_name, args)
 
@@ -1462,7 +1462,16 @@ class IRGenerator(Visitor):
 
         for array in array_args:
             dec_fn = self.array_runtime.decref()
-            builder.call(dec_fn, [builder.load(array, name="array_arg")])
+            builder.call(dec_fn, [builder.load(array[1], name="array_arg")])
+
+            if array[0] is False:
+                # liberar el array temporal creado
+                # Return aumenta y como arg de función aumenta de nuevo
+                # como tal, debe ser decref dos veces
+                free_fn = self.array_runtime.decref()
+                builder.call(
+                    free_fn, [builder.load(array[1], name="array_temp_to_free")]
+                )
 
         self.comment(builder, f"End function call: {n.name}")
 
